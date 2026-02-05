@@ -1,0 +1,103 @@
+.cashflow-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.cashflow-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.cashflow-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.chart-container {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.chart-container h3 {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  color: #2d5a87;
+  text-align: center;
+  font-weight: 600;
+}
+
+.break-even-alert {
+  padding: 1.5rem;
+  background: rgba(45, 90, 135, 0.08);
+  border: 1px solid rgba(45, 90, 135, 0.25);
+  border-radius: 12px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.break-even-alert h4 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #2d5a87;
+  font-weight: 600;
+}
+
+.break-even-alert p {
+  color: #2c3e50;
+  margin: 0.5rem 0;
+}
+
+.break-even-alert strong {
+  color: #2d5a87;
+}
+
+.cashflow-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-label {
+  color: #5a6c7d;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.summary-value {
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+@media (max-width: 1200px) {
+  .cashflow-charts {
+    grid-template-columns: 1fr;
+  }
+}
