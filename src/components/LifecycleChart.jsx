@@ -12,15 +12,45 @@ const stages = [
 
 function generateStreamData() {
   const years = []
-  for (let y = 2020; y <= 2030; y++) {
-    const t = (y - 2020) / 10
+  const startYear = 1965
+  const endYear = 2030
+  for (let y = startYear; y <= endYear; y++) {
+    const t = (y - startYear) / (endYear - startYear)
+    const norm = (x) => Math.max(0, x)
+    const razvedka = norm(
+      18 * Math.exp(-Math.pow((y - 1982) / 18, 2)) +
+      4 * Math.exp(-Math.pow((y - 2025) / 6, 2)) +
+      2 * (1 + 0.3 * Math.sin((y - 1965) * 0.25))
+    )
+    const razrabotka = norm(
+      8 + 14 * (1 - Math.pow(t - 0.35, 2) * 2) +
+      3 * Math.sin((y - 1970) * 0.15) +
+      2 * Math.sin((y - 2010) * 0.2)
+    )
+    const burenie = norm(
+      5 + 20 * Math.exp(-Math.pow((y - 1975) / 12, 2)) +
+      8 * Math.exp(-Math.pow((y - 1992) / 8, 2)) +
+      6 * Math.exp(-Math.pow((y - 2008) / 6, 2)) +
+      4 * Math.exp(-Math.pow((y - 2022) / 5, 2)) +
+      2 * Math.sin((y - 1965) * 0.2)
+    )
+    const dobycha = norm(
+      3 + 25 * (1 - 0.5 * Math.pow(Math.max(0, t - 0.4), 1.5)) +
+      4 * Math.sin((y - 1985) * 0.12) +
+      2 * Math.sin((y - 2015) * 0.15)
+    )
+    const zavershenie = norm(
+      1 + 12 * Math.pow(t, 2) +
+      3 * Math.exp(-Math.pow((y - 2005) / 15, 2)) +
+      2 * Math.sin((y - 1995) * 0.1)
+    )
     years.push({
       year: String(y),
-      razvedka: 12 + 8 * Math.sin(t * Math.PI) + 3 * Math.sin(t * 4),
-      razrabotka: 18 + 12 * Math.sin(t * Math.PI + 0.3) + 4 * Math.sin(t * 3),
-      burenie: 22 + 18 * Math.sin(t * Math.PI + 0.5) + 5 * Math.sin(t * 2.5),
-      dobycha: 20 + 15 * Math.sin(t * Math.PI + 0.7) + 4 * Math.sin(t * 2),
-      zavershenie: 10 + 10 * Math.sin(t * Math.PI + 0.9) + 2 * Math.sin(t * 3),
+      razvedka: Math.round(razvedka * 10) / 10,
+      razrabotka: Math.round(razrabotka * 10) / 10,
+      burenie: Math.round(burenie * 10) / 10,
+      dobycha: Math.round(dobycha * 10) / 10,
+      zavershenie: Math.round(zavershenie * 10) / 10,
     })
   }
   return years
@@ -34,7 +64,7 @@ function LifecycleChart() {
     <div className="lifecycle-container">
       <div className="lifecycle-header">
         <h3>Этапы жизненного цикла актива</h3>
-        <p>Поток по этапам во времени (стиль streamgraph)</p>
+        <p>Поток по этапам во времени, 1965–2030 (стиль streamgraph)</p>
       </div>
 
       <div className="lifecycle-chart lifecycle-streamgraph">
@@ -53,6 +83,8 @@ function LifecycleChart() {
               axisLine={{ stroke: '#e2e8f0' }}
               tick={{ fill: '#5a6c7d', fontSize: 12 }}
               tickLine={false}
+              interval="preserveStartEnd"
+              minTickGap={40}
             />
             <YAxis hide domain={['auto', 'auto']} />
             <Tooltip

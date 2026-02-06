@@ -30,7 +30,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <img src="/emblem.png" alt="ЦДА" className="app-header-emblem" />
+        <img src={`${import.meta.env.BASE_URL}emblem.png`} alt="ЦДА" className="app-header-emblem" />
         <div className="app-header-text">
           <h1>ЛИЦО ЦДА</h1>
           <p>(Цифровой Двойник Актива)</p>

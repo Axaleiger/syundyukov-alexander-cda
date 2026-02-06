@@ -28,9 +28,8 @@ const RISK_ZONE_OPACITY = 0.4
 const RISK_TINT_BY_LEVEL = ['#e8a84a', '#5a9d6e', '#5b8dc9', '#5a9d6e', '#e8a84a']
 
 const RISK_VOLUME_COLORS = {
-  red: new THREE.Color('#b71c1c'),
-  yellow: new THREE.Color('#ffc107'),
-  green: new THREE.Color('#1b5e20'),
+  red: new THREE.Color('#d32f2f'),
+  green: new THREE.Color('#2e7d32'),
 }
 
 function getPlaneY(levelIndex) {
@@ -112,44 +111,47 @@ const riskVolumeVertexShader = `
 `
 const riskVolumeFragmentShader = `
   uniform vec3 colorRed;
-  uniform vec3 colorYellow;
   uniform vec3 colorGreen;
   uniform float opacity;
+  uniform float uNpv;
+  uniform float uReserves;
+  uniform float uExtraction;
   varying vec3 vPosition;
-  float smoothSlope(float t, float a, float b) {
-    return smoothstep(a, b, t);
-  }
   void main() {
     float h = 1.15;
     float x = vPosition.x / h;
     float y = vPosition.y / h;
     float z = vPosition.z / h;
-    float s1 = sin(z * 2.1) * 0.25 + sin(y * 1.7) * 0.2;
-    float s2 = sin(x * 2.3) * 0.2 + sin((z + y) * 1.5) * 0.25;
-    float s3 = sin((x - y) * 1.9) * 0.2 + sin(z * 2.0) * 0.2;
-    float r = smoothSlope(x + 0.5 * y + s1, -0.4, 0.5);
-    float yw = smoothSlope(-0.7 * x + 0.6 * y + 0.4 * z + s2, -0.3, 0.55);
-    float g = smoothSlope(0.5 * z - 0.3 * x + 0.5 * y + s3, -0.35, 0.5);
-    float sum = r + yw + g + 0.001;
-    vec3 col = (r * colorRed + yw * colorYellow + g * colorGreen) / sum;
-    float max1 = max(max(r, yw), g);
-    float max2 = max(min(r, yw), min(max(r, yw), g));
-    float boundary = smoothstep(0.02, 0.10, max1 - max2);
-    vec3 borderColor = vec3(0.2, 0.15, 0.1);
-    col = mix(borderColor, col, 1.0 - boundary * 0.92);
-    gl_FragColor = vec4(col, opacity);
+    float shift = uNpv * 0.5 + uReserves * 0.3 + uExtraction * 0.4;
+    float s1 = sin((z + shift) * 2.1) * 0.3 + sin((y + shift * 0.7) * 1.7) * 0.25;
+    float s2 = sin((x + shift * 0.5) * 2.3) * 0.25 + sin((z + y + shift) * 1.5) * 0.3;
+    float v1 = x + 0.5 * y + s1;
+    float v2 = -0.7 * x + 0.6 * y + 0.4 * z + s2;
+    float t = v1 - v2;
+    float voidWidth = 0.12;
+    float isRed = step(voidWidth, t);
+    float isGreen = step(voidWidth, -t);
+    float inVoid = 1.0 - step(voidWidth, abs(t));
+    vec3 col = isRed * colorRed + isGreen * colorGreen;
+    float alpha = (1.0 - inVoid) * opacity;
+    gl_FragColor = vec4(col, alpha);
   }
 `
 
-function RiskZones() {
+function RiskZones({ npv = 50, reserves = 50, extraction = 50 }) {
+  const npvNorm = npv / 100
+  const resNorm = reserves / 100
+  const extNorm = extraction / 100
   const uniforms = useMemo(
     () => ({
       colorRed: { value: RISK_VOLUME_COLORS.red },
-      colorYellow: { value: RISK_VOLUME_COLORS.yellow },
       colorGreen: { value: RISK_VOLUME_COLORS.green },
       opacity: { value: RISK_ZONE_OPACITY },
+      uNpv: { value: npvNorm },
+      uReserves: { value: resNorm },
+      uExtraction: { value: extNorm },
     }),
-    []
+    [npvNorm, resNorm, extNorm]
   )
   const geom = useMemo(
     () => new THREE.BoxGeometry(CUBE_HALF * 2 - 0.02, CUBE_HALF * 2 - 0.02, CUBE_HALF * 2 - 0.02),
@@ -237,29 +239,30 @@ const planeRiskVertexShader = `
 `
 const planeRiskFragmentShader = `
   uniform vec3 colorRed;
-  uniform vec3 colorYellow;
   uniform vec3 colorGreen;
   uniform float opacity;
+  uniform float uNpv;
+  uniform float uReserves;
+  uniform float uExtraction;
   varying vec2 vUv;
   void main() {
     float x = vUv.x - 0.5;
     float z = vUv.y - 0.5;
-    float t1 = x * 1.2 + z * 0.8 + 0.1 * sin(z * 12.0);
-    float t2 = -x * 0.8 + z * 1.0 + 0.1 * sin(x * 10.0);
-    float r = smoothstep(-0.2, 0.35, t1);
-    float yw = smoothstep(-0.15, 0.4, t2) * (1.0 - smoothstep(0.3, 0.5, t1));
-    float g = 1.0 - r - yw * 0.9;
-    g = clamp(g, 0.0, 1.0);
-    float sum = r + yw + g + 0.001;
-    vec3 col = (r * colorRed + yw * colorYellow + g * colorGreen) / sum;
-    float boundary = smoothstep(0.005, 0.06, abs(t1 - 0.35)) * smoothstep(0.005, 0.06, abs(t2 - 0.2));
-    boundary += smoothstep(0.005, 0.04, abs(t1 + 0.1)) * smoothstep(0.005, 0.04, abs(t2 - 0.5));
-    col = mix(vec3(0.18, 0.12, 0.08), col, 1.0 - boundary * 0.88);
-    gl_FragColor = vec4(col, opacity);
+    float shift = uNpv * 2.0 + uReserves * 1.5 + uExtraction * 2.5;
+    float t1 = x * 1.2 + z * 0.8 + 0.15 * sin((z + shift) * 12.0);
+    float t2 = -x * 0.8 + z * 1.0 + 0.15 * sin((x + shift * 0.7) * 10.0);
+    float t = t1 - t2;
+    float voidWidth = 0.08;
+    float isRed = step(voidWidth, t);
+    float isGreen = step(voidWidth, -t);
+    float inVoid = 1.0 - step(voidWidth, abs(t));
+    vec3 col = isRed * colorRed + isGreen * colorGreen;
+    float alpha = (1.0 - inVoid) * opacity;
+    gl_FragColor = vec4(col, alpha);
   }
 `
 
-function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, selectedPlanePoint, getEntityLabel, showRisks, riskTint }) {
+function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, selectedPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
   const planeY = getPlaneY(levelIndex)
   const size = getPlaneSize(levelIndex)
   const n = POINTS_PER_LEVEL[levelIndex]
@@ -270,12 +273,14 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, selectedPlan
   const planeOpacity = showRisks ? 0.72 : 0.85
   const planeRiskUniforms = useMemo(
     () => ({
-      colorRed: { value: new THREE.Color('#b71c1c') },
-      colorYellow: { value: new THREE.Color('#ffc107') },
-      colorGreen: { value: new THREE.Color('#1b5e20') },
+      colorRed: { value: new THREE.Color('#d32f2f') },
+      colorGreen: { value: new THREE.Color('#2e7d32') },
       opacity: { value: 0.72 },
+      uNpv: { value: npv / 100 },
+      uReserves: { value: reserves / 100 },
+      uExtraction: { value: extraction / 100 },
     }),
-    []
+    [npv, reserves, extraction]
   )
 
   return (
@@ -327,7 +332,7 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, selectedPlan
   )
 }
 
-function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, getEntityLabel, showRisks }) {
+function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50 }) {
   const n0 = POINTS_PER_LEVEL[0]
   const fluxCurvesCubeToL0 = useMemo(() => {
     return Array.from({ length: Math.min(NUM_FLUX_CURVES, n0 * 7) }, (_, i) => {
@@ -401,6 +406,9 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
           getEntityLabel={getEntityLabel}
           showRisks={showRisks}
           riskTint={showRisks ? RISK_TINT_BY_LEVEL[idx] : null}
+          npv={npv}
+          reserves={reserves}
+          extraction={extraction}
         />
       ))}
       <Html position={[0, bottomY - 0.35, 0]} center>
@@ -423,7 +431,7 @@ function Scene({ npv, reserves, extraction, onPointClick, selectedVariantId, onC
       <pointLight position={[4, 4, 4]} intensity={1} />
       <pointLight position={[-4, -4, 4]} intensity={0.4} />
 
-      {showRisks && <RiskZones />}
+      {showRisks && <RiskZones npv={npv} reserves={reserves} extraction={extraction} />}
       <group>
         <WireframeCube />
         {points.map((id) => (
@@ -445,6 +453,9 @@ function Scene({ npv, reserves, extraction, onPointClick, selectedVariantId, onC
         onPlanePointClick={onPlanePointClick}
         getEntityLabel={getEntityLabel}
         showRisks={showRisks}
+        npv={npv}
+        reserves={reserves}
+        extraction={extraction}
       />
 
       <OrbitControls

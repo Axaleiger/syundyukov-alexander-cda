@@ -94,20 +94,22 @@ function WindRose({
             />
           )
         })}
-        {/* Базовая серия — только для левой розы */}
+        {/* Базовая серия — только для левой розы; при выборе сектора рисуем только у выбранного, чтобы не было двух линий (база + значение) у остальных */}
         {isLeft &&
-          segments.map((s, i) => (
-            <line
-              key={`base-${i}`}
-              x1={CENTER_X}
-              y1={CENTER_Y}
-              x2={s.xBase}
-              y2={s.yBase}
-              stroke="#b85a4a"
-              strokeWidth={1.8}
-              strokeOpacity={0.7}
-            />
-          ))}
+          segments.map((s, i) =>
+            selectedIndex == null || selectedIndex === i ? (
+              <line
+                key={`base-${i}`}
+                x1={CENTER_X}
+                y1={CENTER_Y}
+                x2={s.xBase}
+                y2={s.yBase}
+                stroke="#b85a4a"
+                strokeWidth={1.8}
+                strokeOpacity={0.7}
+              />
+            ) : null
+          )}
         {/* Лепестки (линии значений) */}
         {segments.map((seg, index) => {
           const isSelected = selectedIndex === index
