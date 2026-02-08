@@ -1,0 +1,167 @@
+.scenarios-list {
+  padding: 1.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.scenarios-title {
+  font-size: 1.75rem;
+  color: #1e3a5f;
+  margin: 0 0 1.25rem;
+  font-weight: 600;
+}
+
+.scenarios-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.scenarios-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.scenarios-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #475569;
+  user-select: none;
+}
+
+.scenarios-chip input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.scenarios-chip-on {
+  background: #e0f2fe;
+  border-color: #2d5a87;
+  color: #1e3a5f;
+  font-weight: 500;
+}
+
+.scenarios-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.scenarios-period-select {
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.95rem;
+  color: #334155;
+  background: #fff;
+}
+
+.scenarios-custom-period {
+  width: 140px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.scenarios-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.scenarios-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.scenarios-create-btn {
+  padding: 0.6rem 1.25rem;
+  background: #2d5a87;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+}
+
+.scenarios-create-btn:hover {
+  background: #1e4a77;
+}
+
+.scenarios-subcategory {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.scenarios-subcategory-title {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  font-size: 1.2rem;
+  color: #1e3a5f;
+  font-weight: 600;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.scenarios-table-wrap {
+  overflow-x: auto;
+}
+
+.scenarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.scenarios-table th,
+.scenarios-table td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.scenarios-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.scenarios-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.scenarios-name-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: #2d5a87;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.scenarios-name-link:hover {
+  color: #1e4a77;
+}

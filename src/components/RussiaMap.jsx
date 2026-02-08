@@ -115,15 +115,24 @@ function CFArrowsLayer({ show, arrows, hoveredIndex, setHoveredIndex }) {
 }
 
 function getCdPageUrl(nodeName) {
-  return `${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}?cd=${encodeURIComponent(nodeName)}`
+  if (typeof window === 'undefined') return '#'
+  const base = window.location.origin + (window.location.pathname || '/')
+  const sep = base.includes('?') ? '&' : '?'
+  return `${base}${sep}cd=${encodeURIComponent(nodeName)}`
 }
 
-function RussiaMap() {
+function RussiaMap({ onAssetSelect }) {
   const [selectedId, setSelectedId] = useState(null)
   const [hoveredId, setHoveredId] = useState(null)
   const [showBudgetFill, setShowBudgetFill] = useState(false)
   const [showCFArrows, setShowCFArrows] = useState(false)
   const [hoveredArrowIndex, setHoveredArrowIndex] = useState(null)
+
+  const handlePointClick = (p) => {
+    const next = selectedId === p.id ? null : p.id
+    setSelectedId(next)
+    onAssetSelect?.(next)
+  }
 
   const chain = selectedId ? chainsData[selectedId] : null
   const point = selectedId ? mapPointsData.find((p) => p.id === selectedId) : null
@@ -237,7 +246,7 @@ function RussiaMap() {
               <Annotation key={p.id} subject={[p.lon, p.lat]} dx={0} dy={0}>
                 <g
                   className="map-marker"
-                  onClick={() => setSelectedId(selectedId === p.id ? null : p.id)}
+                  onClick={() => handlePointClick(p)}
                   onMouseEnter={() => setHoveredId(p.id)}
                   onMouseLeave={() => setHoveredId(null)}
                 >
@@ -288,7 +297,13 @@ function RussiaMap() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="map-chain-node-link"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          window.open(getCdPageUrl(name), '_blank', 'noopener,noreferrer')
+                        }}
                       >
+                        <rect x={14} y={-6} width={120} height={22} fill="transparent" />
                         <text
                           textAnchor="start"
                           x={16}

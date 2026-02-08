@@ -3,24 +3,31 @@ import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 import './CashFlowChart.css'
 
 const CURRENT_YEAR = 2026
+const END_YEAR = 2065
 
-// Генерируем данные для графика
-const generateData = (years, baseCashFlow, declineRate) => {
-  return Array.from({ length: years }, (_, i) => ({
-    year: 2024 + i,
-    cashFlow: baseCashFlow * Math.pow(1 - declineRate, i),
-    production: 100 * Math.pow(1 - declineRate * 0.8, i), // Добыча снижается медленнее
-    npv: baseCashFlow * Math.pow(1 - declineRate, i) * (years - i) * 0.1
-  }))
+const generateData = (startYear, endYear, baseCashFlow, declineRate) => {
+  const years = endYear - startYear + 1
+  return Array.from({ length: years }, (_, i) => {
+    const y = startYear + i
+    const iFromStart = y - startYear
+    return {
+      year: y,
+      cashFlow: baseCashFlow * Math.pow(1 - declineRate, iFromStart),
+      production: 100 * Math.pow(1 - declineRate * 0.8, iFromStart),
+      npv: baseCashFlow * Math.pow(1 - declineRate, iFromStart) * (endYear - y) * 0.1,
+      isHistory: y <= CURRENT_YEAR,
+    }
+  })
 }
 
 function CashFlowChart() {
   const [baseCashFlow, setBaseCashFlow] = useState(1000)
   const [declineRate, setDeclineRate] = useState(0.1)
-  const [years, setYears] = useState(20)
+  const [years, setYears] = useState(Math.min(40, END_YEAR - 2024))
 
   const chartData = useMemo(() => {
-    return generateData(years, baseCashFlow, declineRate)
+    const endY = Math.min(2024 + years, END_YEAR)
+    return generateData(2024, endY, baseCashFlow, declineRate)
   }, [baseCashFlow, declineRate, years])
 
   // Вычисляем точку выхода за рамки профиля
@@ -31,56 +38,48 @@ function CashFlowChart() {
 
   return (
     <div className="cashflow-container">
-      <div className="cashflow-controls">
-        <div className="control-group">
-          <label>
-            Базовый Cash Flow (млн руб/год): {baseCashFlow}
-            <input
-              type="range"
-              min="100"
-              max="5000"
-              step="100"
-              value={baseCashFlow}
-              onChange={(e) => setBaseCashFlow(Number(e.target.value))}
-              className="slider"
-            />
-          </label>
+      <div className="cashflow-controls cashflow-controls-full">
+        <div className="cashflow-control-group cashflow-control-group-flex">
+          <label className="cashflow-slider-label">Базовый Cash Flow (млн руб/год): {baseCashFlow}</label>
+          <input
+            type="range"
+            min="100"
+            max="5000"
+            step="100"
+            value={baseCashFlow}
+            onChange={(e) => setBaseCashFlow(Number(e.target.value))}
+            className="slider"
+          />
         </div>
-
-        <div className="control-group">
-          <label>
-            Темп снижения (%/год): {(declineRate * 100).toFixed(1)}
-            <input
-              type="range"
-              min="0"
-              max="30"
-              step="0.5"
-              value={declineRate * 100}
-              onChange={(e) => setDeclineRate(Number(e.target.value) / 100)}
-              className="slider"
-            />
-          </label>
+        <div className="cashflow-control-group cashflow-control-group-flex">
+          <label className="cashflow-slider-label">Темп снижения (%/год): {(declineRate * 100).toFixed(1)}</label>
+          <input
+            type="range"
+            min="0"
+            max="30"
+            step="0.5"
+            value={declineRate * 100}
+            onChange={(e) => setDeclineRate(Number(e.target.value) / 100)}
+            className="slider"
+          />
         </div>
-
-        <div className="control-group">
-          <label>
-            Период прогноза (лет): {years}
-            <input
-              type="range"
-              min="5"
-              max="30"
-              step="1"
-              value={years}
-              onChange={(e) => setYears(Number(e.target.value))}
-              className="slider"
-            />
-          </label>
+        <div className="cashflow-control-group cashflow-control-group-flex">
+          <label className="cashflow-slider-label">Период прогноза (лет): {years}</label>
+          <input
+            type="range"
+            min="5"
+            max={END_YEAR - 2024}
+            step="1"
+            value={years}
+            onChange={(e) => setYears(Number(e.target.value))}
+            className="slider"
+          />
         </div>
       </div>
 
       <div className="cashflow-charts">
         <div className="chart-container">
-          <h3>Cash Flow</h3>
+          <h3>Кеш-флоу</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
               <defs>
@@ -95,7 +94,7 @@ function CashFlowChart() {
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0' }}
               />
-              <ReferenceLine x={CURRENT_YEAR} stroke="#f87171" strokeWidth={2} />
+              <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis 
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0' }}
@@ -122,16 +121,18 @@ function CashFlowChart() {
         </div>
 
         <div className="chart-container">
-          <h3>График добычи</h3>
+          <h3>Добыча: текущая и прогнозная</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="year" 
                 stroke="#a0aec0"
-                tick={{ fill: '#a0aec0' }}
+                tick={{ fill: '#a0aec0', fontSize: 11 }}
+                interval="preserveStartEnd"
+                minTickGap={24}
               />
-              <ReferenceLine x={CURRENT_YEAR} stroke="#f87171" strokeWidth={2} />
+              <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis 
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0' }}
@@ -158,7 +159,11 @@ function CashFlowChart() {
           </ResponsiveContainer>
         </div>
       </div>
-      <p className="cashflow-prognoz-hint">Вертикальная линия — текущий срез ({CURRENT_YEAR}). Справа — прогноз.</p>
+      <div className="cashflow-period-legend">
+        <span className="cashflow-legend-item cashflow-legend-history">● История (до {CURRENT_YEAR})</span>
+        <span className="cashflow-legend-item cashflow-legend-forecast">● Прогнозный период (после {CURRENT_YEAR})</span>
+      </div>
+      <p className="cashflow-prognoz-hint">Красная линия — текущий срез {CURRENT_YEAR} г.</p>
 
       {breakEvenPoint && (
         <div className="break-even-alert">

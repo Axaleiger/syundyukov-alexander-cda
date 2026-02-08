@@ -1,0 +1,78 @@
+.results-tab {
+  padding: 1.5rem 2rem;
+  background: #f1f5f9;
+  min-height: 100%;
+}
+
+.results-tab-title {
+  margin: 0 0 1.5rem;
+  font-size: 1.75rem;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.results-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.results-widget {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.results-widget h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.results-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.results-kpi-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.results-kpi-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #2d5a87;
+}
+
+.results-kpi-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.results-mini-table table {
+  width: 100%;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+}
+
+.results-mini-table th,
+.results-mini-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.results-mini-table th {
+  color: #64748b;
+  font-weight: 600;
+}

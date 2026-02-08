@@ -8,6 +8,20 @@ import LifecycleChart from './components/LifecycleChart'
 import CashFlowChart from './components/CashFlowChart'
 import CDPage from './components/CDPage'
 import BPMBoard from './components/BPMBoard'
+import RightPanel from './components/RightPanel'
+import ScenariosList from './components/ScenariosList'
+import OntologyTab from './components/OntologyTab'
+import ResultsTab from './components/ResultsTab'
+import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
+import mapPointsData from './data/mapPoints.json'
+
+const TABS = [
+  { id: 'scenarios', label: 'Список сценариев' },
+  { id: 'face', label: 'Лицо ЦДА' },
+  { id: 'planning', label: 'Планирование' },
+  { id: 'ontology', label: 'Онтология' },
+  { id: 'results', label: 'Результаты' },
+]
 
 function getBpmPageUrl(highlight) {
   const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''
@@ -16,11 +30,14 @@ function getBpmPageUrl(highlight) {
 }
 
 function App() {
+  const [activeTab, setActiveTab] = useState('face')
   const [selectedLeftStageIndex, setSelectedLeftStageIndex] = useState(null)
   const [selectedRightObjectIndex, setSelectedRightObjectIndex] = useState(null)
   const [cdPageNode, setCdPageNode] = useState(null)
   const [showBpm, setShowBpm] = useState(false)
   const [bpmHighlight, setBpmHighlight] = useState(null)
+  const [selectedAssetId, setSelectedAssetId] = useState(null)
+  const [scenariosStageFilter, setScenariosStageFilter] = useState(null)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -49,6 +66,21 @@ function App() {
     setSelectedRightObjectIndex((prev) => (prev === index ? null : index))
   }
 
+  const handleMapAssetSelect = (pointId) => {
+    setSelectedAssetId(pointId || null)
+    setActiveTab('face')
+  }
+
+  const handleLifecycleStageClick = (stageName) => {
+    setScenariosStageFilter(stageName)
+    setActiveTab('scenarios')
+  }
+
+  const selectedAssetPoint = selectedAssetId ? mapPointsData.find((p) => p.id === selectedAssetId) : null
+  const assetStatus = selectedAssetId ? getAssetStatus(selectedAssetId) : null
+  const assetStatusLabel = assetStatus ? getAssetStatusLabel(assetStatus) : null
+  const assetStatusIcon = assetStatus ? getAssetStatusIcon(assetStatus) : null
+
   if (cdPageNode) {
     return (
       <div className="app">
@@ -69,7 +101,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app app-with-sidebar">
       <header className="app-header">
         <img src={`${import.meta.env.BASE_URL}emblem.png`} alt="ЦДА" className="app-header-emblem" />
         <div className="app-header-text">
@@ -78,57 +110,108 @@ function App() {
         </div>
       </header>
 
-      <div className="app-content">
-        {/* Карта объектов ЦДА */}
-        <section className="section map-section">
-          <h2>Карта объектов ЦДА</h2>
-          <RussiaMap />
-        </section>
+      {selectedAssetId && selectedAssetPoint && assetStatus && (
+        <div className="app-asset-sticky">
+          <span className="app-asset-sticky-name">{selectedAssetPoint.name}</span>
+          <span className="app-asset-sticky-status">{assetStatusLabel}</span>
+          {assetStatusIcon && (
+            <span className={`app-asset-sticky-icon app-asset-sticky-icon-${assetStatusIcon.color}`} title={assetStatusLabel}>
+              {assetStatusIcon.type === 'check' && '✓'}
+              {assetStatusIcon.type === 'exclamation' && '!'}
+              {assetStatusIcon.type === 'question' && '?'}
+            </span>
+          )}
+          <button type="button" className="app-asset-sticky-close" onClick={() => setSelectedAssetId(null)} aria-label="Сбросить">×</button>
+        </div>
+      )}
 
-        {/* Карта здоровья цифровых двойников */}
-        <section className="section wind-rose-section">
-          <h2 className="wind-rose-section-title">Карта здоровья цифровых двойников</h2>
-          <div className="wind-rose-container">
-            <div className="wind-rose-item">
-              <h3>ЦД производственных этапов</h3>
-              <WindRose
-                type="left"
-                data={PRODUCTION_STAGES}
-                centerTitle="ЦД этапов"
-                selectedIndex={selectedLeftStageIndex}
-                onSegmentClick={handleLeftSegmentClick}
-              />
+      <div className="app-body">
+        <nav className="app-sidebar">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`app-sidebar-tab ${activeTab === t.id ? 'app-sidebar-tab-active' : ''}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <main className="app-main">
+          {activeTab === 'scenarios' && (
+            <ScenariosList
+              activeStageFilter={scenariosStageFilter}
+              onScenarioClick={() => {}}
+            />
+          )}
+
+          {activeTab === 'face' && (
+            <div className="app-content app-content-face">
+              <section className="section map-section">
+                <h2>Карта объектов ЦДА</h2>
+                <RussiaMap onAssetSelect={handleMapAssetSelect} />
+              </section>
+
+              <section className="section wind-rose-section">
+                <h2 className="wind-rose-section-title">Карта здоровья цифровых двойников</h2>
+                <div className="wind-rose-container">
+                  <div className="wind-rose-item">
+                    <h3>ЦД производственных этапов</h3>
+                    <WindRose
+                      type="left"
+                      data={PRODUCTION_STAGES}
+                      centerTitle="ЦД этапов"
+                      selectedIndex={selectedLeftStageIndex}
+                      onSegmentClick={handleLeftSegmentClick}
+                    />
+                  </div>
+                  <div className="wind-rose-item">
+                    <h3>ЦД объектов</h3>
+                    <WindRose
+                      type="right"
+                      data={rightRoseData}
+                      centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
+                      selectedIndex={selectedRightObjectIndex}
+                      onSegmentClick={handleRightSegmentClick}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="section hypercube-section">
+                <h2>Гиперкуб рычагов влияния</h2>
+                <Hypercube3D onOpenBpm={(highlight) => window.open(getBpmPageUrl(highlight), '_blank')} />
+              </section>
+
+              <section className="section cashflow-section">
+                <h2>Динамика кеш-флоу и добычи: текущая и прогнозная</h2>
+                <CashFlowChart />
+              </section>
+
+              <section className="section lifecycle-section">
+                <h2>Этап выбранного жизненного цикла актива</h2>
+                <LifecycleChart onStageClick={handleLifecycleStageClick} />
+              </section>
             </div>
-            <div className="wind-rose-item">
-              <h3>ЦД объектов</h3>
-              <WindRose
-                type="right"
-                data={rightRoseData}
-                centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
-                selectedIndex={selectedRightObjectIndex}
-                onSegmentClick={handleRightSegmentClick}
-              />
+          )}
+
+          {activeTab === 'planning' && (
+            <div className="app-content app-content-bpm">
+              <BPMBoard onClose={() => setActiveTab('face')} />
             </div>
-          </div>
-        </section>
+          )}
 
-        {/* NPV, запасы, добыча — гиперкуб */}
-        <section className="section hypercube-section">
-          <h2>NPV, Запасы, Добыча</h2>
-          <Hypercube3D onOpenBpm={(highlight) => window.open(getBpmPageUrl(highlight), '_blank')} />
-        </section>
+          {activeTab === 'ontology' && <OntologyTab />}
+          {activeTab === 'results' && <ResultsTab />}
+        </main>
 
-        {/* Cash Flow и график добычи */}
-        <section className="section cashflow-section">
-          <h2>Cash Flow и график добычи</h2>
-          <CashFlowChart />
-        </section>
-
-        {/* Жизненный цикл актива */}
-        <section className="section lifecycle-section">
-          <h2>Этап выбранного жизненного цикла актива</h2>
-          <LifecycleChart />
-        </section>
+        {activeTab === 'face' && (
+          <aside className="app-right-panel">
+            <RightPanel />
+          </aside>
+        )}
       </div>
     </div>
   )

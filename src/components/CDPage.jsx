@@ -2,13 +2,30 @@ import React, { useState } from 'react'
 import { getCdPageInfo } from '../data/cdEmblems'
 import './CDPage.css'
 
-const DEFAULT_EMBLEM = (import.meta.env.BASE_URL || '/') + 'emblem.png'
+const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+const DEFAULT_EMBLEM = BASE + '/emblem.png'
+const isCdPlasta = (name) => /пласта|Пласта/i.test(name || '')
 
 function CDPage({ nodeName, onBack }) {
   const info = getCdPageInfo(nodeName)
   const [emblemSrc, setEmblemSrc] = useState(info.emblemUrl)
+  const showPlastaImages = isCdPlasta(nodeName)
 
   const handleEmblemError = () => setEmblemSrc(DEFAULT_EMBLEM)
+
+  if (showPlastaImages) {
+    return (
+      <div className="cd-page cd-page-plasta">
+        <button type="button" className="cd-page-back" onClick={onBack}>
+          ← Закрыть
+        </button>
+        <div className="cd-page-plasta-images">
+          <img src={`${BASE}/ЦД Пласта 1.png`} alt="ЦД Пласта 1" className="cd-page-plasta-img" />
+          <img src={`${BASE}/ЦД Пласта 2.png`} alt="ЦД Пласта 2" className="cd-page-plasta-img" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="cd-page">

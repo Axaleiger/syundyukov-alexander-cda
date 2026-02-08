@@ -136,7 +136,8 @@
 
 .map-chain-node-link .map-chain-node-label {
   text-decoration: underline;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .map-chain-fo {

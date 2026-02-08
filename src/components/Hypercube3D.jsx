@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Text, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import {
@@ -122,43 +122,51 @@ const riskVolumeFragmentShader = `
     float x = vPosition.x / h;
     float y = vPosition.y / h;
     float z = vPosition.z / h;
-    float shift = uNpv * 0.5 + uReserves * 0.3 + uExtraction * 0.4;
-    float s1 = sin((z + shift) * 2.1) * 0.3 + sin((y + shift * 0.7) * 1.7) * 0.25;
-    float s2 = sin((x + shift * 0.5) * 2.3) * 0.25 + sin((z + y + shift) * 1.5) * 0.3;
+    float sumNorm = (uNpv + uReserves + uExtraction) / 3.0;
+    float shift = sumNorm * 8.0 - 2.0;
+    float s1 = sin((z + shift) * 3.0) * 0.25 + sin((y + shift * 0.8) * 2.5) * 0.2;
+    float s2 = sin((x + shift * 0.6) * 3.2) * 0.2 + sin((z + y + shift) * 2.2) * 0.25;
     float v1 = x + 0.5 * y + s1;
     float v2 = -0.7 * x + 0.6 * y + 0.4 * z + s2;
-    float t = v1 - v2;
-    float voidWidth = 0.12;
-    float isRed = step(voidWidth, t);
-    float isGreen = step(voidWidth, -t);
+    float t = v1 - v2 + shift * 1.2;
+    float voidWidth = 0.05;
+    float redMul = 1.0 - sumNorm;
+    float greenMul = sumNorm;
+    float isRed = step(voidWidth, t) * redMul;
+    float isGreen = step(voidWidth, -t) * greenMul;
     float inVoid = 1.0 - step(voidWidth, abs(t));
     vec3 col = isRed * colorRed + isGreen * colorGreen;
-    float alpha = (1.0 - inVoid) * opacity;
-    gl_FragColor = vec4(col, alpha);
+    float alpha = (1.0 - inVoid) * opacity * max(redMul, greenMul) * 1.2;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.85));
   }
 `
 
 function RiskZones({ npv = 50, reserves = 50, extraction = 50 }) {
-  const npvNorm = npv / 100
-  const resNorm = reserves / 100
-  const extNorm = extraction / 100
+  const meshRef = useRef(null)
   const uniforms = useMemo(
     () => ({
-      colorRed: { value: RISK_VOLUME_COLORS.red },
-      colorGreen: { value: RISK_VOLUME_COLORS.green },
+      colorRed: { value: RISK_VOLUME_COLORS.red.clone() },
+      colorGreen: { value: RISK_VOLUME_COLORS.green.clone() },
       opacity: { value: RISK_ZONE_OPACITY },
-      uNpv: { value: npvNorm },
-      uReserves: { value: resNorm },
-      uExtraction: { value: extNorm },
+      uNpv: { value: npv / 100 },
+      uReserves: { value: reserves / 100 },
+      uExtraction: { value: extraction / 100 },
     }),
-    [npvNorm, resNorm, extNorm]
+    []
   )
+  useFrame(() => {
+    if (!meshRef.current?.material?.uniforms) return
+    const u = meshRef.current.material.uniforms
+    u.uNpv.value = npv / 100
+    u.uReserves.value = reserves / 100
+    u.uExtraction.value = extraction / 100
+  })
   const geom = useMemo(
     () => new THREE.BoxGeometry(CUBE_HALF * 2 - 0.02, CUBE_HALF * 2 - 0.02, CUBE_HALF * 2 - 0.02),
     []
   )
   return (
-    <mesh geometry={geom}>
+    <mesh ref={meshRef} geometry={geom}>
       <shaderMaterial
         vertexShader={riskVolumeVertexShader}
         fragmentShader={riskVolumeFragmentShader}
@@ -178,18 +186,33 @@ function valueToColor(t) {
   return `hsl(${H}, ${S}%, ${L}%)`
 }
 
-const POINT_STATUS_COLORS = {
-  ok: null,
+const PLANE_POINT_STATUS_COLORS = {
+  ok: '#5b8dc9',
   critical: '#b91c1c',
   no_data: '#6b7280',
   bad_calc: '#ea580c',
+  fluctuation: '#a16207',
+  bad_excess: '#c2410c',
+  asymmetry: '#7c3aed',
+  non_normal: '#0d9488',
+  no_executor: '#dc2626',
+  no_approver: '#ca8a04',
+  no_deadline: '#b45309',
 }
 
-function getPointStatus(variantId) {
-  const k = variantId % 11
+function getPlanePointStatus(levelIndex, pointIndex) {
+  const n = levelIndex * 13 + pointIndex
+  const k = n % 17
   if (k === 0) return 'critical'
   if (k === 1 || k === 5) return 'no_data'
   if (k === 2 || k === 6) return 'bad_calc'
+  if (k === 3) return 'fluctuation'
+  if (k === 7) return 'bad_excess'
+  if (k === 4) return 'asymmetry'
+  if (k === 8) return 'non_normal'
+  if (k === 9) return 'no_executor'
+  if (k === 10) return 'no_approver'
+  if (k === 11) return 'no_deadline'
   return 'ok'
 }
 
@@ -203,9 +226,7 @@ function VariantPoint({ variantId, npv, reserves, extraction, onPointClick }) {
   const nz = (z + CUBE_HALF) / (2 * CUBE_HALF)
   const t = (nx * (npv / 100) * 0.4 + ny * (reserves / 100) * 0.35 + nz * (extraction / 100) * 0.25) + (variantId % 19) / 190
   const T = Math.min(1, Math.max(0, t))
-  const status = getPointStatus(variantId)
-  const statusColor = POINT_STATUS_COLORS[status]
-  const color = statusColor != null ? statusColor : valueToColor(T)
+  const color = valueToColor(T)
 
   return (
     <mesh
@@ -265,17 +286,20 @@ const planeRiskFragmentShader = `
   void main() {
     float x = vUv.x - 0.5;
     float z = vUv.y - 0.5;
-    float shift = uNpv * 2.0 + uReserves * 1.5 + uExtraction * 2.5;
-    float t1 = x * 1.2 + z * 0.8 + 0.15 * sin((z + shift) * 12.0);
-    float t2 = -x * 0.8 + z * 1.0 + 0.15 * sin((x + shift * 0.7) * 10.0);
-    float t = t1 - t2;
-    float voidWidth = 0.08;
-    float isRed = step(voidWidth, t);
-    float isGreen = step(voidWidth, -t);
+    float sumNorm = (uNpv + uReserves + uExtraction) / 3.0;
+    float shift = sumNorm * 10.0 - 2.5;
+    float t1 = x * 1.2 + z * 0.8 + 0.12 * sin((z + shift) * 14.0);
+    float t2 = -x * 0.8 + z * 1.0 + 0.12 * sin((x + shift * 0.8) * 12.0);
+    float t = t1 - t2 + shift * 0.8;
+    float voidWidth = 0.04;
+    float redMul = 1.0 - sumNorm;
+    float greenMul = sumNorm;
+    float isRed = step(voidWidth, t) * redMul;
+    float isGreen = step(voidWidth, -t) * greenMul;
     float inVoid = 1.0 - step(voidWidth, abs(t));
     vec3 col = isRed * colorRed + isGreen * colorGreen;
-    float alpha = (1.0 - inVoid) * opacity;
-    gl_FragColor = vec4(col, alpha);
+    float alpha = (1.0 - inVoid) * opacity * max(redMul, greenMul);
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.85));
   }
 `
 
@@ -288,6 +312,7 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
   const isSelected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex
   const planeColor = !showRisks ? '#e8eef4' : null
   const planeOpacity = showRisks ? 0.72 : 0.85
+  const planeMeshRef = useRef(null)
   const planeRiskUniforms = useMemo(
     () => ({
       colorRed: { value: new THREE.Color('#d32f2f') },
@@ -297,12 +322,19 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
       uReserves: { value: reserves / 100 },
       uExtraction: { value: extraction / 100 },
     }),
-    [npv, reserves, extraction]
+    []
   )
+  useFrame(() => {
+    if (!showRisks || !planeMeshRef.current?.material?.uniforms) return
+    const u = planeMeshRef.current.material.uniforms
+    u.uNpv.value = npv / 100
+    u.uReserves.value = reserves / 100
+    u.uExtraction.value = extraction / 100
+  })
 
   return (
     <group position={[0, planeY, 0]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      <mesh ref={planeMeshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <primitive object={planeGeom} attach="geometry" />
         {showRisks ? (
           <shaderMaterial
@@ -319,6 +351,8 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
       {points.map((idx) => {
         const [x, , z] = getPlanePointPosition(levelIndex, idx)
         const selected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex && selectedPlanePoint.pointIndex === idx
+        const planeStatus = getPlanePointStatus(levelIndex, idx)
+        const pointColor = selected ? '#2d5a87' : (PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok)
         return (
           <mesh
             key={idx}
@@ -332,7 +366,7 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
             onPointerOut={() => { document.body.style.cursor = 'default' }}
           >
             <sphereGeometry args={[n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025, 6, 6]} />
-            <meshBasicMaterial color={selected ? '#2d5a87' : color} />
+            <meshBasicMaterial color={pointColor} />
           </mesh>
         )
       })}
@@ -486,15 +520,15 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         enableRotate
       />
 
-      <Text position={[CUBE_HALF + 0.4, 0, 0]} fontSize={0.26} color="#2d5a87" anchorX="center" anchorY="middle">
-        NPV
-      </Text>
-      <Text position={[0, CUBE_HALF + 0.4, 0]} fontSize={0.26} color="#2d5a87" anchorX="center" anchorY="middle">
-        Запасы
-      </Text>
-      <Text position={[0, 0, CUBE_HALF + 0.4]} fontSize={0.26} color="#2d5a87" anchorX="center" anchorY="middle">
-        Добыча (Q)
-      </Text>
+      <Html position={[CUBE_HALF + 0.4, 0, 0]} center>
+        <span className="cube-axis-label" title="NPV — оперативный рычаг, деньги за год (млн руб)">NPV</span>
+      </Html>
+      <Html position={[0, CUBE_HALF + 0.4, 0]} center>
+        <span className="cube-axis-label" title="Запасы — стратегический рычаг, суммарная добыча нефти/КИН за 30 лет (млн т)">Запасы</span>
+      </Html>
+      <Html position={[0, 0, CUBE_HALF + 0.4]} center>
+        <span className="cube-axis-label" title="Добыча (Q) — оперативный рычаг добычи нефти за год (млн т)">Добыча (Q)</span>
+      </Html>
       <Html position={[0, CUBE_HALF + 0.25, 0]} center>
         <span className="cube-label-activa">ЦД Актива</span>
       </Html>
@@ -539,8 +573,10 @@ function Hypercube3D({ onOpenBpm }) {
   return (
     <div className="hypercube-container">
       <div className="hypercube-controls">
-        <div className="control-group control-group-inline" title="NPV (оперативный рычаг — деньги за год)">
-          <label>NPV: {npv}% ({npvMillions} млн руб)</label>
+        <div className="control-group control-group-inline">
+          <label className="slider-full-label">
+            NPV (оперативный рычаг — деньги за год): {npv}% ({npvMillions} млн руб)
+          </label>
           <input
             type="range"
             min="0"
@@ -550,8 +586,10 @@ function Hypercube3D({ onOpenBpm }) {
             className="slider"
           />
         </div>
-        <div className="control-group control-group-inline" title="Запасы (стратегический рычаг — суммарная добыча нефти/КИН за 30 лет)">
-          <label>Запасы: {reserves}% ({reservesMillions} млн т)</label>
+        <div className="control-group control-group-inline">
+          <label className="slider-full-label">
+            Запасы (стратегический рычаг — суммарная добыча нефти/КИН за 30 лет): {reserves}% ({reservesMillions} млн т)
+          </label>
           <input
             type="range"
             min="0"
@@ -561,8 +599,10 @@ function Hypercube3D({ onOpenBpm }) {
             className="slider"
           />
         </div>
-        <div className="control-group control-group-inline" title="Добыча (Q, млн т) — оперативный рычаг добычи нефти за год">
-          <label>Добыча: {extraction}% ({extractionMillions} млн т)</label>
+        <div className="control-group control-group-inline">
+          <label className="slider-full-label">
+            Добыча (Q, млн т) — оперативный рычаг добычи нефти за год: {extraction}% ({extractionMillions} млн т)
+          </label>
           <input
             type="range"
             min="0"
@@ -576,7 +616,7 @@ function Hypercube3D({ onOpenBpm }) {
 
       <div className="hypercube-visualization">
         <div className="cube-info">
-          <h3>Гиперкуб (параметры в млн)</h3>
+          <h3>Гиперкуб рычагов влияния (параметры в млн)</h3>
           <div className="cube-metrics">
             <div className="metric">
               <span className="metric-label">NPV, млн руб</span>
@@ -592,12 +632,28 @@ function Hypercube3D({ onOpenBpm }) {
             </div>
           </div>
           <p className="cube-palette-hint">
-            Цвета точек куба: по рычагам (холодные/горячие) и по статусу ЦД — красный: критично, серый: нет данных, оранжевый: плохой расчёт по автоанализу.
+            Точки внутри куба — по рычагам (холодные/горячие). Точки на плоскостях уровней — по статусу ЦД (см. легенду).
           </p>
           <div className="cube-palette-legend">
             <span className="cube-legend-cold">Низкие</span>
             <div className="cube-legend-gradient" />
             <span className="cube-legend-hot">Высокие</span>
+          </div>
+          <div className="cube-plane-legend">
+            <span className="cube-plane-legend-title">Статусы на плоскостях уровней:</span>
+            <div className="cube-plane-legend-items">
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.critical }}>● Критично</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_data }}>● Нет данных</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.bad_calc }}>● Плохой расчёт (автоанализ)</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.fluctuation }}>● Флуктуации данных</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.bad_excess }}>● Плохой эксцесс</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.asymmetry }}>● Асимметрия распределения</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.non_normal }}>● Распределение ненормальное</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_executor }}>● Не назначен исполнитель</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_approver }}>● Нет согласующего</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_deadline }}>● Нет срока</span>
+              <span style={{ color: PLANE_POINT_STATUS_COLORS.ok }}>● Норма</span>
+            </div>
           </div>
           <label className="cube-risks-toggle">
             <input
@@ -650,7 +706,7 @@ function Hypercube3D({ onOpenBpm }) {
       </div>
 
       <div className="hypercube-instructions">
-        <p>Оси подписаны на гиперкубе (NPV, Запасы, Добыча). Цвет точек куба зависит от рычагов; точки уровней воронки — фиксированного цвета. Нажмите на точку куба — под ним откроется воронка сквозных сценариев: пять уровней (ЦД программы, ЦД объекта, сервисы, микросервисы, функции) с точками и кривыми между ними; выбранный сценарий выделен яркой линией. Перетаскивайте сцену вверх-вниз, чтобы промотать до нижнего уровня.</p>
+        <p>Наведите на названия осей (NPV, Запасы, Добыча) для полного описания. Точки куба — по рычагам; точки на плоскостях воронки — по статусу ЦД (см. легенду). Нажмите на точку куба — откроется воронка сквозных сценариев.</p>
       </div>
     </div>
   )

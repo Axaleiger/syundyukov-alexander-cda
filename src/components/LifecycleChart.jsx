@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import './LifecycleChart.css'
+
+const CURRENT_YEAR = 2026
 
 const stages = [
   { key: 'geologorazvedka', name: 'Геологоразведка и работа с ресурсной базой', color: '#5b8dc9' },
@@ -10,10 +12,12 @@ const stages = [
   { key: 'dobycha', name: 'Добыча', color: '#6bc4a0' },
 ]
 
+const END_YEAR = 2065
+
 function generateStreamData() {
   const years = []
   const startYear = 1965
-  const endYear = 2030
+  const endYear = END_YEAR
   for (let y = startYear; y <= endYear; y++) {
     const t = (y - startYear) / (endYear - startYear)
     const norm = (x) => Math.max(0, x)
@@ -56,17 +60,12 @@ function generateStreamData() {
   return years
 }
 
-function LifecycleChart() {
+function LifecycleChart({ onStageClick }) {
   const [selectedStage, setSelectedStage] = useState(null)
   const streamData = useMemo(() => generateStreamData(), [])
 
   return (
     <div className="lifecycle-container">
-      <div className="lifecycle-header">
-        <h3>Этапы жизненного цикла актива</h3>
-        <p>Поток по этапам во времени, 1965–2030 (стиль streamgraph)</p>
-      </div>
-
       <div className="lifecycle-chart lifecycle-streamgraph">
         <ResponsiveContainer width="100%" height={380}>
           <AreaChart data={streamData} margin={{ top: 20, right: 24, left: 8, bottom: 8 }} stackOffset="wiggle">
@@ -78,13 +77,14 @@ function LifecycleChart() {
                 </linearGradient>
               ))}
             </defs>
+            <ReferenceLine x={String(CURRENT_YEAR)} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
             <XAxis
               dataKey="year"
               axisLine={{ stroke: '#e2e8f0' }}
-              tick={{ fill: '#5a6c7d', fontSize: 12 }}
+              tick={{ fill: '#5a6c7d', fontSize: 11 }}
               tickLine={false}
               interval="preserveStartEnd"
-              minTickGap={40}
+              minTickGap={32}
             />
             <YAxis hide domain={['auto', 'auto']} />
             <Tooltip
@@ -121,6 +121,11 @@ function LifecycleChart() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      <div className="lifecycle-period-legend">
+        <span className="lifecycle-legend-history">● История (до {CURRENT_YEAR})</span>
+        <span className="lifecycle-legend-forecast">● Прогнозный период (после {CURRENT_YEAR})</span>
+      </div>
+      <p className="lifecycle-redline-hint">Красная линия — текущий срез {CURRENT_YEAR} г.</p>
 
       <div className="lifecycle-stages">
         <h4>Детализация этапов</h4>
@@ -129,7 +134,11 @@ function LifecycleChart() {
             <div
               key={stage.key}
               className={`stage-card ${selectedStage === stage.name ? 'selected' : ''}`}
-              onClick={() => setSelectedStage(selectedStage === stage.name ? null : stage.name)}
+              onClick={() => {
+                const next = selectedStage === stage.name ? null : stage.name
+                setSelectedStage(next)
+                if (next) onStageClick?.(next)
+              }}
               style={{ borderLeftColor: stage.color }}
             >
               <div className="stage-header">

@@ -1,80 +1,442 @@
-import React, { useState, useCallback } from 'react'
-import { BPM_STAGES, BPM_CARDS_BY_STAGE, cardMatchesHighlight } from '../data/bpmData'
+import React, { useState, useCallback, useMemo } from 'react'
+import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, cardMatchesHighlight } from '../data/bpmData'
+import { parseBoardFromExcel, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
 import './BPMBoard.css'
+
+function toTask(card) {
+  return {
+    id: card.id,
+    name: card.name,
+    executor: PERSONNEL[0],
+    approver: PERSONNEL[0],
+    deadline: new Date(),
+    status: 'в работе',
+    date: new Date().toLocaleDateString('ru-RU'),
+    entries: [{ system: '', input: '', output: '' }],
+  }
+}
+
+function initialTasks() {
+  const out = {}
+  BPM_STAGES.forEach((stage) => {
+    out[stage] = (BPM_CARDS_BY_STAGE[stage] || []).map(toTask)
+  })
+  return out
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+function generateOilFlowHtml(stages, tasks) {
+  const nodes = []
+  const edges = []
+  let id = 0
+  const stageIds = []
+  stages.forEach((stageName, si) => {
+    const sid = id++
+    stageIds.push(sid)
+    nodes.push({
+      id: sid,
+      label: stageName.length > 35 ? stageName.slice(0, 32) + '...' : stageName,
+      x: 100 + si * 200,
+      y: 80,
+      color: { background: '#3b82f6', border: '#1e40af' },
+      font: { color: '#fff', size: 14 },
+      shape: 'box',
+    })
+    const list = tasks[stageName] || []
+    list.forEach((task, ti) => {
+      const tid = id++
+      nodes.push({
+        id: tid,
+        label: `${task.id} — ${(task.name || '').slice(0, 30)}${(task.name || '').length > 30 ? '...' : ''}`,
+        x: 120 + si * 200,
+        y: 180 + ti * 70,
+        color: { background: '#fff', border: '#94a3b8' },
+        font: { color: '#1f2937', size: 12 },
+        shape: 'box',
+      })
+      if (ti === 0) edges.push({ from: sid, to: tid, arrows: 'to' })
+      else edges.push({ from: stageIds[si] + 1 + ti - 1, to: tid, arrows: 'to' })
+    })
+  })
+  for (let i = 0; i < stageIds.length - 1; i++) edges.push({ from: stageIds[i], to: stageIds[i + 1], arrows: 'to' })
+  const nodesJson = JSON.stringify(nodes)
+  const edgesJson = JSON.stringify(edges)
+  return `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>OilFlow</title><script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"><\/script></head><body style="margin:0;background:#f1f5f9;"><div id="mynetwork" style="width:100vw;height:100vh;"></div><script>
+var nodes=new vis.DataSet(${nodesJson});var edges=new vis.DataSet(${edgesJson});
+var n=new vis.Network(document.getElementById("mynetwork"),{nodes:nodes,edges:edges},{physics:false,edges:{arrows:'to'}});
+<\/script></body></html>`
+}
+
+function buildGraph(stages, tasks) {
+  const nodes = new Map()
+  const edges = []
+  stages.forEach((stage) => {
+    const skey = `Этап: ${stage}`
+    nodes.set(skey, skey)
+    ;(tasks[stage] || []).forEach((task) => {
+      const ckey = `Карточка: ${task.name}`
+      nodes.set(ckey, ckey)
+      edges.push([skey, ckey])
+      ;(task.entries || []).forEach((e) => {
+        if (!e.system) return
+        const sysKey = `Система: ${e.system}`
+        nodes.set(sysKey, sysKey)
+        edges.push([ckey, sysKey])
+      })
+    })
+  })
+  return { nodes: Array.from(nodes.keys()), edges }
+}
 
 function BPMBoard({ highlightCardName, onClose }) {
   const [stages, setStages] = useState(BPM_STAGES)
-  const [cardsByStage, setCardsByStage] = useState(BPM_CARDS_BY_STAGE)
+  const [tasks, setTasks] = useState(initialTasks())
+  const [viewMode, setViewMode] = useState('Подробный вид')
+  const [expanded, setExpanded] = useState({})
+  const [editingTask, setEditingTask] = useState(null)
+  const [editingStage, setEditingStage] = useState(null)
+  const [stageNameEdit, setStageNameEdit] = useState('')
   const [dragged, setDragged] = useState(null)
+  const [uploadError, setUploadError] = useState(null)
 
-  const handleDragStart = useCallback((e, stageName, cardId) => {
-    setDragged({ stageName, cardId })
+  const toggleExpanded = useCallback((key) => {
+    setExpanded((e) => ({ ...e, [key]: !e[key] }))
+  }, [])
+
+  const handleFileUpload = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadError(null)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const { stages: s, tasks: t } = parseBoardFromExcel(ev.target.result)
+        setStages(s)
+        setTasks(t)
+      } catch (err) {
+        setUploadError(err.message || 'Ошибка загрузки')
+      }
+    }
+    reader.readAsArrayBuffer(file)
+    e.target.value = ''
+  }, [])
+
+  const handleDownloadBoard = useCallback(() => {
+    const buf = generateBoardExcel(stages, tasks)
+    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'tasks_board.xlsx')
+  }, [stages, tasks])
+
+  const handleDownloadTemplate = useCallback(() => {
+    const buf = generateTemplateExcel()
+    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'template.xlsx')
+  }, [])
+
+  const handleDownloadOilFlow = useCallback(() => {
+    const html = generateOilFlowHtml(stages, tasks)
+    downloadBlob(new Blob([html], { type: 'text/html' }), 'oilflow_graph.html')
+  }, [stages, tasks])
+
+  const handleOntology = useCallback(() => {
+    const { nodes, edges } = buildGraph(stages, tasks)
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="padding:20px;font-family:sans-serif"><h2>Анализ графа</h2><p>Узлов: ${nodes.length}</p><p>Связей: ${edges.length}</p></body></html>`
+    downloadBlob(new Blob([html], { type: 'text/html' }), 'ontology.html')
+    const buf = generateOntologyExcel(edges)
+    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'граф_анализ.xlsx')
+  }, [stages, tasks])
+
+  const addStage = useCallback(() => {
+    const name = 'Новый этап'
+    setStages((s) => [name, ...s])
+    setTasks((t) => ({ ...t, [name]: [] }))
+    setEditingStage(0)
+    setStageNameEdit(name)
+  }, [])
+
+  const saveStageEdit = useCallback(() => {
+    if (editingStage == null) return
+    const newName = stageNameEdit.trim() || stages[editingStage]
+    if (newName !== stages[editingStage]) {
+      const old = stages[editingStage]
+      setStages((s) => s.map((x, i) => (i === editingStage ? newName : x)))
+      setTasks((t) => {
+        const next = { ...t }
+        next[newName] = next[old] || []
+        delete next[old]
+        return next
+      })
+    }
+    setEditingStage(null)
+  }, [editingStage, stageNameEdit, stages])
+
+  const deleteStage = useCallback((idx) => {
+    const name = stages[idx]
+    setStages((s) => s.filter((_, i) => i !== idx))
+    setTasks((t) => {
+      const next = { ...t }
+      delete next[name]
+      return next
+    })
+    setEditingStage(null)
+  }, [stages])
+
+  const moveStage = useCallback((idx, dir) => {
+    if (dir < 0 && idx <= 0) return
+    if (dir > 0 && idx >= stages.length - 1) return
+    const next = [...stages]
+    const j = idx + dir
+    ;[next[idx], next[j]] = [next[j], next[idx]]
+    setStages(next)
+  }, [stages])
+
+  const addTask = useCallback((stageName) => {
+    const id = `M${15000 + Math.floor(Math.random() * 85000)}`
+    const task = {
+      id,
+      name: 'Новая задача',
+      executor: PERSONNEL[0],
+      approver: PERSONNEL[0],
+      deadline: new Date(),
+      status: 'в работе',
+      date: new Date().toLocaleDateString('ru-RU'),
+      entries: [{ system: '', input: '', output: '' }],
+    }
+    setTasks((t) => ({ ...t, [stageName]: [...(t[stageName] || []), task] }))
+    setEditingTask({ stageName, taskIdx: (tasks[stageName] || []).length })
+  }, [tasks])
+
+  const saveTaskEdit = useCallback((stageName, taskIdx, form) => {
+    setTasks((t) => {
+      const list = [...(t[stageName] || [])]
+      list[taskIdx] = { ...list[taskIdx], ...form }
+      return { ...t, [stageName]: list }
+    })
+    setEditingTask(null)
+  }, [])
+
+  const deleteTask = useCallback((stageName, taskIdx) => {
+    setTasks((t) => ({
+      ...t,
+      [stageName]: (t[stageName] || []).filter((_, i) => i !== taskIdx),
+    }))
+    setEditingTask(null)
+  }, [])
+
+  const handleDragStart = useCallback((e, stageName, taskIdx) => {
+    setDragged({ stageName, taskIdx })
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', JSON.stringify({ stageName, cardId }))
+    e.dataTransfer.setData('text/plain', JSON.stringify({ stageName, taskIdx }))
   }, [])
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-  }, [])
-
-  const handleDrop = useCallback((e, targetStageName) => {
+  const handleDrop = useCallback((e, targetStage) => {
     e.preventDefault()
     if (!dragged) return
-    const { stageName: fromStage, cardId } = dragged
-    if (fromStage === targetStageName) {
+    const { stageName: fromStage, taskIdx } = dragged
+    const list = tasks[fromStage] || []
+    const task = list[taskIdx]
+    if (!task || fromStage === targetStage) {
       setDragged(null)
       return
     }
-    const card = cardsByStage[fromStage]?.find((c) => c.id === cardId)
-    if (!card) {
-      setDragged(null)
-      return
-    }
-    setCardsByStage((prev) => {
-      const next = { ...prev }
-      next[fromStage] = (next[fromStage] || []).filter((c) => c.id !== cardId)
-      next[targetStageName] = [...(next[targetStageName] || []), card]
+    setTasks((t) => {
+      const next = { ...t }
+      next[fromStage] = list.filter((_, i) => i !== taskIdx)
+      next[targetStage] = [...(next[targetStage] || []), task]
       return next
     })
     setDragged(null)
-  }, [dragged, cardsByStage])
+  }, [dragged, tasks])
+
+  const iterations = useMemo(() => {
+    if (stages.length < 2) return []
+    const stageWidth = 220
+    const its = []
+    const n = stages.length
+    if (n >= 2) its.push({ label: '2 итерация', left: 20, width: Math.max(260, 2 * stageWidth - 100), color: '#4ECDC4', top: 20 })
+    if (n >= 3) its.push({ label: '3 итерация', left: 20 + stageWidth, width: Math.max(300, 3 * stageWidth - 100), color: '#FFD166', top: 80 })
+    if (n >= 2) its.push({ label: '2 итерация', left: Math.max(0, (n - 2) * stageWidth - 40), width: Math.max(260, 2 * stageWidth - 100), color: '#FF6B6B', top: 140 })
+    return its
+  }, [stages.length])
 
   return (
     <div className="bpm-board-wrap">
       <div className="bpm-board-header">
-        <h2>BPM-платформа</h2>
-        <button type="button" className="bpm-board-close" onClick={onClose}>
-          Закрыть
-        </button>
+        <h2>Планировщик производственных задач</h2>
+        <div className="bpm-header-actions">
+          <label className="bpm-upload-btn">
+            Загрузить из Excel
+            <input type="file" accept=".xlsx" onChange={handleFileUpload} hidden />
+          </label>
+          <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
+          <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
+          <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
+        </div>
       </div>
-      <div className="bpm-board">
-        {stages.map((stageName) => (
+      {uploadError && <div className="bpm-error">{uploadError}</div>}
+      <div className="bpm-toolbar">
+        <label className="bpm-radio">
+          <input type="radio" name="view" checked={viewMode === 'Упрощенный вид'} onChange={() => setViewMode('Упрощенный вид')} />
+          Упрощенный вид
+        </label>
+        <label className="bpm-radio">
+          <input type="radio" name="view" checked={viewMode === 'Подробный вид'} onChange={() => setViewMode('Подробный вид')} />
+          Подробный вид
+        </label>
+        <button type="button" className="bpm-btn" onClick={handleDownloadOilFlow}>Скачать OilFlow граф</button>
+        <button type="button" className="bpm-btn" onClick={handleOntology}>Онтология</button>
+        <button type="button" className="bpm-btn bpm-btn-primary" onClick={addStage}>+ Добавить этап</button>
+      </div>
+      <div className="bpm-board" onDragOver={(e) => e.preventDefault()}>
+        {stages.map((stageName, stageIdx) => (
           <div
             key={stageName}
             className="bpm-stage-column"
-            onDragOver={handleDragOver}
+            onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, stageName)}
           >
-            <div className="bpm-stage-title">{stageName}</div>
+            <div className="bpm-stage-header">
+              {editingStage === stageIdx ? (
+                <>
+                  <input value={stageNameEdit} onChange={(e) => setStageNameEdit(e.target.value)} className="bpm-input" />
+                  <button type="button" className="bpm-btn-sm" onClick={saveStageEdit}>OK</button>
+                </>
+              ) : (
+                <>
+                  <span className="bpm-stage-title">{stageName}</span>
+                  <div className="bpm-stage-btns">
+                    <button type="button" className="bpm-btn-icon" onClick={() => { setEditingStage(stageIdx); setStageNameEdit(stageName) }} title="Редактировать">✏️</button>
+                    <button type="button" className="bpm-btn-icon" onClick={() => deleteStage(stageIdx)} title="Удалить">🗑️</button>
+                    {stageIdx > 0 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, -1)}>←</button>}
+                    {stageIdx < stages.length - 1 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, 1)}>→</button>}
+                  </div>
+                </>
+              )}
+            </div>
             <div className="bpm-stage-cards">
-              {(cardsByStage[stageName] || []).map((card) => {
-                const isHighlight = cardMatchesHighlight(card.name, highlightCardName)
+              {(tasks[stageName] || []).map((task, taskIdx) => {
+                const isHighlight = cardMatchesHighlight(task.name, highlightCardName)
+                const key = `${stageIdx}-${taskIdx}`
+                const isExp = viewMode === 'Подробный вид' || expanded[key]
+                const isEdit = editingTask?.stageName === stageName && editingTask?.taskIdx === taskIdx
                 return (
                   <div
-                    key={card.id}
+                    key={task.id}
                     className={`bpm-card ${isHighlight ? 'bpm-card-highlight' : ''}`}
                     draggable
-                    onDragStart={(e) => handleDragStart(e, stageName, card.id)}
+                    onDragStart={(e) => handleDragStart(e, stageName, taskIdx)}
                   >
-                    <span className="bpm-card-id">{card.id}</span>
-                    <span className="bpm-card-name">{card.name}</span>
+                    <div className="bpm-card-head" onClick={() => toggleExpanded(key)}>
+                      <span className="bpm-card-id">{task.id}</span>
+                      <span className="bpm-card-name">{task.name}</span>
+                    </div>
+                    {isExp && (
+                      <div className="bpm-card-body">
+                        {isEdit ? (
+                          <TaskEditForm
+                            task={task}
+                            onSave={(form) => saveTaskEdit(stageName, taskIdx, form)}
+                            onCancel={() => setEditingTask(null)}
+                            onDelete={() => deleteTask(stageName, taskIdx)}
+                          />
+                        ) : (
+                          <>
+                            <p><strong>Статус:</strong> <span style={{ color: task.status === 'завершен' ? 'green' : task.status === 'ошибка' ? 'red' : '#2d5a87' }}>{task.status}</span></p>
+                            <p><strong>Срок:</strong> {task.deadline instanceof Date ? task.deadline.toLocaleDateString('ru-RU') : task.deadline}</p>
+                            <p><strong>Исполнитель:</strong> {task.executor}</p>
+                            <p><strong>Согласующий:</strong> {task.approver}</p>
+                            {(task.entries || []).filter((e) => e.system).length > 0 && (
+                              <p><strong>Системы:</strong> {(task.entries || []).filter((e) => e.system).map((e) => e.system).join(', ')}</p>
+                            )}
+                            <button type="button" className="bpm-btn-sm" onClick={() => setEditingTask({ stageName, taskIdx })}>Редактировать</button>
+                            <button type="button" className="bpm-btn-sm bpm-btn-danger" onClick={() => deleteTask(stageName, taskIdx)}>Удалить</button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
             </div>
+            <button type="button" className="bpm-add-task" onClick={() => addTask(stageName)}>+ Добавить задачу</button>
           </div>
         ))}
+      </div>
+      {iterations.length > 0 && (
+        <div className="bpm-iterations">
+          <h4>Итерации</h4>
+          {iterations.map((it, i) => (
+            <div key={i} className="bpm-iteration-bar" style={{ left: it.left, width: it.width, top: it.top, background: it.color }}>{it.label}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TaskEditForm({ task, onSave, onCancel, onDelete }) {
+  const [name, setName] = useState(task.name)
+  const [executor, setExecutor] = useState(task.executor)
+  const [approver, setApprover] = useState(task.approver)
+  const [deadline, setDeadline] = useState(task.deadline instanceof Date ? task.deadline.toISOString().slice(0, 10) : task.deadline)
+  const [status, setStatus] = useState(task.status)
+  const [entries, setEntries] = useState(task.entries?.length ? task.entries : [{ system: '', input: '', output: '' }])
+
+  const addEntry = () => setEntries((e) => [...e, { system: '', input: '', output: '' }])
+  const removeEntry = (i) => setEntries((e) => e.filter((_, j) => j !== i))
+  const updateEntry = (i, field, value) => setEntries((e) => e.map((x, j) => (j === i ? { ...x, [field]: value } : x)))
+
+  const handleSave = () => {
+    onSave({
+      name,
+      executor,
+      approver,
+      deadline: new Date(deadline),
+      status,
+      entries: entries.filter((e) => e.system?.trim()),
+    })
+  }
+
+  return (
+    <div className="bpm-task-edit">
+      <label>Название <input className="bpm-input" value={name} onChange={(e) => setName(e.target.value)} /></label>
+      <label>Исполнитель
+        <select className="bpm-select" value={executor} onChange={(e) => setExecutor(e.target.value)}>
+          {PERSONNEL.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </label>
+      <label>Согласующий
+        <select className="bpm-select" value={approver} onChange={(e) => setApprover(e.target.value)}>
+          {PERSONNEL.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </label>
+      <label>Срок <input type="date" className="bpm-input" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></label>
+      <label>Статус
+        <select className="bpm-select" value={status} onChange={(e) => setStatus(e.target.value)}>
+          {['в работе', 'завершен', 'ошибка', 'пауза'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </label>
+      <div className="bpm-entries">
+        <strong>Системы / Вход / Выход</strong>
+        {entries.map((ent, i) => (
+          <div key={i} className="bpm-entry-row">
+            <input placeholder="Система" value={ent.system} onChange={(e) => updateEntry(i, 'system', e.target.value)} />
+            <input placeholder="Вход" value={ent.input} onChange={(e) => updateEntry(i, 'input', e.target.value)} />
+            <input placeholder="Выход" value={ent.output} onChange={(e) => updateEntry(i, 'output', e.target.value)} />
+            <button type="button" className="bpm-btn-icon" onClick={() => removeEntry(i)}>✕</button>
+          </div>
+        ))}
+        <button type="button" className="bpm-btn-sm" onClick={addEntry}>+ Строка</button>
+      </div>
+      <div className="bpm-edit-actions">
+        <button type="button" className="bpm-btn-sm" onClick={handleSave}>Сохранить</button>
+        <button type="button" className="bpm-btn-sm" onClick={onCancel}>Отмена</button>
+        <button type="button" className="bpm-btn-sm bpm-btn-danger" onClick={onDelete}>Удалить</button>
       </div>
     </div>
   )
