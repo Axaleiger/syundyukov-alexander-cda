@@ -23,6 +23,10 @@
   gap: 0.25rem;
 }
 
+.app-sidebar-secondary {
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .app-sidebar-tab {
   padding: 0.75rem 1rem;
   text-align: left;

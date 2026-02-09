@@ -13,6 +13,7 @@ import ScenariosList from './components/ScenariosList'
 import OntologyTab from './components/OntologyTab'
 import ResultsTab from './components/ResultsTab'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
+import { SCENARIO_STAGE_FILTERS } from './data/scenariosData'
 import mapPointsData from './data/mapPoints.json'
 
 const TABS = [
@@ -44,6 +45,9 @@ function App() {
   const [bpmHighlight, setBpmHighlight] = useState(null)
   const [selectedAssetId, setSelectedAssetId] = useState(null)
   const [scenariosStageFilter, setScenariosStageFilter] = useState(null)
+  const [scenarioStageFilters, setScenarioStageFilters] = useState(() =>
+    SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {})
+  )
   const [rightPanelCardColors, setRightPanelCardColors] = useState([null, null, null])
 
   useEffect(() => {
@@ -119,11 +123,6 @@ function App() {
           <h1>ЦДА</h1>
           <p>(Цифровой Двойник Актива)</p>
         </div>
-        <div className="app-header-zones-legend">
-          <span className="app-header-zone app-header-zone-red" title="Критическое состояние">🔴 ! Критическое состояние</span>
-          <span className="app-header-zone app-header-zone-yellow" title="Требует внимания">🟡 ? Требует внимания</span>
-          <span className="app-header-zone app-header-zone-green" title="Устойчивое развитие">🟢 ✓ Устойчивое развитие</span>
-        </div>
       </header>
 
       {selectedAssetId && selectedAssetPoint && assetStatus && (
@@ -155,10 +154,27 @@ function App() {
           ))}
         </nav>
 
+        {activeTab === 'scenarios' && (
+          <nav className="app-sidebar app-sidebar-secondary">
+            {SCENARIO_STAGE_FILTERS.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={`app-sidebar-tab ${scenarioStageFilters[name] ? 'app-sidebar-tab-active' : ''}`}
+                onClick={() => setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))}
+              >
+                {name}
+              </button>
+            ))}
+          </nav>
+        )}
+
         <main className="app-main">
           {activeTab === 'scenarios' && (
             <ScenariosList
               activeStageFilter={scenariosStageFilter}
+              stageFilters={scenarioStageFilters}
+              onStageFilterToggle={(name) => setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))}
               onScenarioClick={() => {}}
             />
           )}
@@ -235,7 +251,7 @@ function App() {
 
         {activeTab === 'face' && selectedAssetId && (
           <aside className="app-right-panel">
-            <RightPanel scenarioCardColors={rightPanelCardColors} />
+            <RightPanel scenarioCardColors={rightPanelCardColors} assetId={selectedAssetId} />
           </aside>
         )}
       </div>

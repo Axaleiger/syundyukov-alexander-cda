@@ -26,8 +26,9 @@ export function getAssetStatus(assetId) {
 }
 
 export function getAssetStatusLabel(status) {
-  if (status === 'stable') return 'Устойчиво'
-  return 'Под управленческим риском'
+  if (status === 'stable') return 'Устойчивое развитие'
+  if (status === 'risk_red') return 'Критическое состояние'
+  return 'Требует внимания'
 }
 
 export function getAssetStatusIcon(status) {

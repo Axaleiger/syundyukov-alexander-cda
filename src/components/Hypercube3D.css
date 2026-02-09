@@ -93,11 +93,29 @@
   transform: scale(1.2);
 }
 
+.slider.slider-low::-webkit-slider-thumb {
+  background: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+.slider.slider-low::-moz-range-thumb {
+  background: #dc2626;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+.slider.slider-high::-webkit-slider-thumb {
+  background: #16a34a;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+}
+.slider.slider-high::-moz-range-thumb {
+  background: #16a34a;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+}
+
 .hypercube-visualization {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 2rem;
-  align-items: start;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  align-items: stretch;
+  min-height: 520px;
 }
 
 .hypercube-window {
@@ -106,16 +124,17 @@
   gap: 0;
   min-height: 520px;
   background: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   overflow: hidden;
 }
 
 .cube-info {
-  padding: 1.5rem;
+  padding: 1rem;
   background: #f8fafc;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  overflow-y: auto;
 }
 
 .cube-info h3 {
@@ -163,6 +182,26 @@
   min-height: 420px;
 }
 
+.cube-close-funnel-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2d5a87;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #2d5a87;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.cube-close-funnel-btn:hover {
+  background: #2d5a87;
+  color: #fff;
+}
+
 .cube-fullscreen-btn {
   position: absolute;
   top: 10px;
@@ -185,12 +224,14 @@
 
 .cube-canvas {
   width: 100%;
-  height: 420px;
-  flex-shrink: 0;
+  height: 480px;
+  min-height: 480px;
+  flex: 1;
 }
 
 .hypercube-window-funnel-open .cube-canvas {
   height: 560px;
+  min-height: 560px;
 }
 
 .hypercube-window-fullscreen {
@@ -246,16 +287,68 @@
   cursor: pointer;
 }
 
+.cube-axis-label-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
 .cube-axis-label {
   font-size: 14px;
   color: #2d5a87;
   font-weight: 700;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0.25rem 0.5rem;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 6px;
   border: 1px solid rgba(45, 90, 135, 0.25);
-  cursor: help;
+  display: block;
+}
+.cube-axis-label-wrap:hover .cube-axis-label {
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+}
+.cube-axis-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  white-space: normal;
+  max-width: 280px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.cube-indicator-legend-item {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.cube-indicator-legend-item:hover {
+  text-decoration: underline;
+}
+.cube-indicator-legend-item-on {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.cube-legend-point {
+  display: inline-block;
+  margin-right: 0.25rem;
 }
 
 .cube-plane-legend {
@@ -311,17 +404,6 @@
   font-weight: 600;
   color: #475569;
   margin-bottom: 0.25rem;
-}
-
-.cube-axis-label {
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.cube-axis-label:hover {
-  max-width: none;
-  overflow: visible;
 }
 
 .cube-risks-legend {

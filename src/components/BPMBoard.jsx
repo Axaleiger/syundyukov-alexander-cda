@@ -155,6 +155,20 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
     }
   }, [initialBoardId])
 
+  useEffect(() => {
+    if (initialBoardId !== 'hantos') return
+    const base = import.meta.env.BASE_URL || '/'
+    fetch(`${base}hantos.xlsx`)
+      .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
+      .then((arrayBuffer) => {
+        const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
+        setStages(s)
+        setTasks(t)
+        setUploadError(null)
+      })
+      .catch(() => {})
+  }, [initialBoardId])
+
   const toggleExpanded = useCallback((key) => {
     setExpanded((e) => ({ ...e, [key]: !e[key] }))
   }, [])
@@ -321,7 +335,7 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
       <div className="bpm-board-wrap bpm-calculate-wrap">
         <div className="bpm-board-header">
           <h2>Рассчитать — граф и аналитика</h2>
-          <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(false)}>← Назад к доске</button>
+          <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(false)}>Назад к доске</button>
         </div>
         <div className="bpm-calculate-layout">
           <div className="bpm-calculate-graph">
@@ -385,8 +399,6 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
           <input type="radio" name="view" checked={viewMode === 'Подробный вид'} onChange={() => setViewMode('Подробный вид')} />
           Подробный вид
         </label>
-        <button type="button" className="bpm-btn" onClick={handleDownloadOilFlow}>Скачать OilFlow граф</button>
-        <button type="button" className="bpm-btn" onClick={handleOntology}>Онтология</button>
         <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)}>Рассчитать</button>
         <button type="button" className="bpm-btn bpm-btn-primary" onClick={addStage}>+ Добавить этап</button>
       </div>
@@ -408,10 +420,10 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
                 <>
                   <span className="bpm-stage-title">{stageName}</span>
                   <div className="bpm-stage-btns">
-                    <button type="button" className="bpm-btn-icon" onClick={() => { setEditingStage(stageIdx); setStageNameEdit(stageName) }} title="Редактировать">✏️</button>
-                    <button type="button" className="bpm-btn-icon" onClick={() => deleteStage(stageIdx)} title="Удалить">🗑️</button>
-                    {stageIdx > 0 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, -1)}>←</button>}
-                    {stageIdx < stages.length - 1 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, 1)}>→</button>}
+                    <button type="button" className="bpm-btn-icon" onClick={() => { setEditingStage(stageIdx); setStageNameEdit(stageName) }} title="Редактировать">Ред.</button>
+                    <button type="button" className="bpm-btn-icon" onClick={() => deleteStage(stageIdx)} title="Удалить">Удал.</button>
+                    {stageIdx > 0 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, -1)} title="Влево">◀</button>}
+                    {stageIdx < stages.length - 1 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, 1)} title="Вправо">▶</button>}
                   </div>
                 </>
               )}

@@ -4,6 +4,7 @@ import './CashFlowChart.css'
 
 const CURRENT_YEAR = 2026
 const END_YEAR = 2065
+const CHART_YEAR_TICKS = [2024, 2025, 2026, 2028, 2030, 2032, 2035, 2040, 2045, 2050, 2055, 2060, 2065]
 
 const generateData = (startYear, endYear, baseCashFlow, declineRate) => {
   const years = endYear - startYear + 1
@@ -93,7 +94,7 @@ function CashFlowChart() {
                 dataKey="year" 
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
-                ticks={[2024, 2025, 2026, END_YEAR]}
+                ticks={CHART_YEAR_TICKS}
                 tickFormatter={(v) => (v === END_YEAR && chartData[chartData.length - 1]?.year < END_YEAR - 1 ? `… ${v}` : String(v))}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
@@ -131,7 +132,7 @@ function CashFlowChart() {
                 dataKey="year" 
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
-                ticks={[2024, 2025, 2026, END_YEAR]}
+                ticks={CHART_YEAR_TICKS}
                 tickFormatter={(v) => (v === END_YEAR && chartData[chartData.length - 1]?.year < END_YEAR - 1 ? `… ${v}` : String(v))}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
@@ -169,7 +170,7 @@ function CashFlowChart() {
 
       {breakEvenPoint && (
         <div className="break-even-alert">
-          <h4>⚠️ Выход за рамки профиля</h4>
+          <h4>Выход за рамки профиля</h4>
           <p>При текущих параметрах Cash Flow упадет ниже 50% от базового значения к <strong>{breakEvenPoint}</strong> году.</p>
           <p>Рекомендуется пересмотреть стратегию разработки месторождения.</p>
         </div>

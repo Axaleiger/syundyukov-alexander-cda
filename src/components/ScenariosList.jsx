@@ -4,8 +4,10 @@ import './ScenariosList.css'
 
 const ALL_SCENARIOS = generateScenarios()
 
-function ScenariosList({ activeStageFilter, onScenarioClick }) {
-  const [stageFilters, setStageFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
+function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onStageFilterToggle, onScenarioClick }) {
+  const [internalFilters, setInternalFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
+  const stageFilters = controlledFilters != null ? controlledFilters : internalFilters
+  const setStageFilters = onStageFilterToggle != null ? (name) => onStageFilterToggle(name) : (name) => setInternalFilters((prev) => ({ ...prev, [name]: !prev[name] }))
   const [period, setPeriod] = useState('1m')
   const [customPeriod, setCustomPeriod] = useState('')
 
@@ -17,14 +19,9 @@ function ScenariosList({ activeStageFilter, onScenarioClick }) {
     return next
   }, [stageFilters, activeStageFilter])
 
-  const toggleFilter = (name) => {
-    if (activeStageFilter) return
-    setStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))
-  }
-
   const filteredScenarios = useMemo(() => {
     const anyActive = Object.values(effectiveFilters).some(Boolean)
-    if (!anyActive) return ALL_SCENARIOS
+    if (!anyActive) return []
     return ALL_SCENARIOS.filter((s) => effectiveFilters[s.stageType])
   }, [effectiveFilters])
 
@@ -33,24 +30,6 @@ function ScenariosList({ activeStageFilter, onScenarioClick }) {
       <h1 className="scenarios-title">Список сценариев</h1>
 
       <div className="scenarios-layout">
-        <aside className="scenarios-sidebar">
-          <h3 className="scenarios-sidebar-title">Этапы</h3>
-          <ul className="scenarios-stage-list">
-            {SCENARIO_STAGE_FILTERS.map((name) => (
-              <li key={name}>
-                <label className={`scenarios-stage-item ${effectiveFilters[name] ? 'scenarios-stage-item-on' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={effectiveFilters[name]}
-                    onChange={() => toggleFilter(name)}
-                    disabled={!!activeStageFilter}
-                  />
-                  <span>— {name}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </aside>
         <div className="scenarios-main">
       <div className="scenarios-toolbar">
         <div className="scenarios-toolbar-right">
