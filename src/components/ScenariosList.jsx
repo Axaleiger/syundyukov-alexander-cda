@@ -30,22 +30,29 @@ function ScenariosList({ activeStageFilter, onScenarioClick }) {
 
   return (
     <div className="scenarios-list">
-      <h1 className="scenarios-title">Планировщик производственных задач</h1>
+      <h1 className="scenarios-title">Список сценариев</h1>
 
+      <div className="scenarios-layout">
+        <aside className="scenarios-sidebar">
+          <h3 className="scenarios-sidebar-title">Этапы</h3>
+          <ul className="scenarios-stage-list">
+            {SCENARIO_STAGE_FILTERS.map((name) => (
+              <li key={name}>
+                <label className={`scenarios-stage-item ${effectiveFilters[name] ? 'scenarios-stage-item-on' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={effectiveFilters[name]}
+                    onChange={() => toggleFilter(name)}
+                    disabled={!!activeStageFilter}
+                  />
+                  <span>— {name}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </aside>
+        <div className="scenarios-main">
       <div className="scenarios-toolbar">
-        <div className="scenarios-filters">
-          {SCENARIO_STAGE_FILTERS.map((name) => (
-            <label key={name} className={`scenarios-chip ${effectiveFilters[name] ? 'scenarios-chip-on' : ''}`}>
-              <input
-                type="checkbox"
-                checked={effectiveFilters[name]}
-                onChange={() => toggleFilter(name)}
-                disabled={!!activeStageFilter}
-              />
-              <span>{name}</span>
-            </label>
-          ))}
-        </div>
         <div className="scenarios-toolbar-right">
           <select
             className="scenarios-period-select"
@@ -119,6 +126,8 @@ function ScenariosList({ activeStageFilter, onScenarioClick }) {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
         </div>
       </div>
     </div>

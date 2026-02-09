@@ -8,6 +8,12 @@ const INITIAL_NODES = [
   { id: 'n4', type: 'output', label: 'Результат', x: 680, y: 120 },
 ]
 
+function getNodesCenter(nodes) {
+  if (!nodes.length) return { x: 500, y: 300 }
+  const sum = nodes.reduce((a, n) => ({ x: a.x + n.x + 100, y: a.y + n.y + 22 }), { x: 0, y: 0 })
+  return { x: sum.x / nodes.length, y: sum.y / nodes.length }
+}
+
 const INITIAL_EDGES = [
   { id: 'e1', from: 'n1', to: 'n2' },
   { id: 'e2', from: 'n2', to: 'n3' },
@@ -20,9 +26,14 @@ function OntologyTab() {
   const [dragId, setDragId] = useState(null)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [scale, setScale] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const center = useMemo(() => getNodesCenter(INITIAL_NODES), [])
+  const [pan, setPan] = useState(() => ({ x: 500 - center.x, y: 300 - center.y }))
   const canvasRef = useRef(null)
   const panStartRef = useRef(null)
+
+  React.useEffect(() => {
+    setPan({ x: 500 - center.x, y: 300 - center.y })
+  }, [center.x, center.y])
 
   const getNode = (id) => nodes.find((n) => n.id === id)
 

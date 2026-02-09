@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react'
-import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, cardMatchesHighlight, BOARD_PRESETS, getInitialBoard } from '../data/bpmData'
+import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, cardMatchesHighlight, getInitialBoard } from '../data/bpmData'
 import { parseBoardFromExcel, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
 import './BPMBoard.css'
 
@@ -132,10 +132,10 @@ function computeAnalytics(stages, tasks) {
   }
 }
 
-function BPMBoard({ highlightCardName, onClose }) {
-  const [currentBoardId, setCurrentBoardId] = useState('hantos')
-  const [stages, setStages] = useState(() => (getInitialBoard('hantos')?.stages ?? BPM_STAGES))
-  const [tasks, setTasks] = useState(() => (getInitialBoard('hantos')?.tasks ?? initialTasks()))
+function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardName, onClose }) {
+  const boardData = useMemo(() => getInitialBoard(initialBoardId) || { stages: BPM_STAGES, tasks: initialTasks() }, [initialBoardId])
+  const [stages, setStages] = useState(() => boardData.stages)
+  const [tasks, setTasks] = useState(() => boardData.tasks)
   const [viewMode, setViewMode] = useState('Подробный вид')
   const [expanded, setExpanded] = useState({})
   const [editingTask, setEditingTask] = useState(null)
@@ -147,15 +147,13 @@ function BPMBoard({ highlightCardName, onClose }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
-  const loadBoard = useCallback((boardId) => {
-    const data = getInitialBoard(boardId)
+  useEffect(() => {
+    const data = getInitialBoard(initialBoardId)
     if (data) {
-      setCurrentBoardId(boardId)
       setStages(data.stages)
       setTasks(data.tasks)
-      setUploadError(null)
     }
-  }, [])
+  }, [initialBoardId])
 
   const toggleExpanded = useCallback((key) => {
     setExpanded((e) => ({ ...e, [key]: !e[key] }))
@@ -356,7 +354,7 @@ function BPMBoard({ highlightCardName, onClose }) {
   return (
     <div className="bpm-board-wrap">
       <div className="bpm-board-header">
-        <h2>Планировщик производственных задач</h2>
+        <h2>Планирование{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
         <div className="bpm-header-actions">
           <label className="bpm-upload-btn">
             Загрузить из Excel
@@ -366,19 +364,6 @@ function BPMBoard({ highlightCardName, onClose }) {
           <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
           <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
         </div>
-      </div>
-      <div className="bpm-board-selector">
-        <span className="bpm-board-selector-label">Доска:</span>
-        {Object.entries(BOARD_PRESETS).map(([id, preset]) => (
-          <button
-            key={id}
-            type="button"
-            className={`bpm-board-option ${currentBoardId === id ? 'active' : ''}`}
-            onClick={() => loadBoard(id)}
-          >
-            {preset.label}
-          </button>
-        ))}
       </div>
       {uploadError && <div className="bpm-error">{uploadError}</div>}
       <div className="bpm-toolbar">

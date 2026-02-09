@@ -284,6 +284,46 @@
   white-space: nowrap;
 }
 
+.cube-plane-legend-items-rows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+}
+
+.cube-points-legend {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.cube-legend-point-desc {
+  font-size: 0.85rem;
+  color: #5a6c7d;
+}
+
+.cube-indicator-basket {
+  margin-top: 0.5rem;
+}
+
+.cube-indicator-basket-name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.cube-axis-label {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cube-axis-label:hover {
+  max-width: none;
+  overflow: visible;
+}
+
 .cube-risks-legend {
   display: flex;
   flex-wrap: wrap;

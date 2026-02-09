@@ -73,15 +73,15 @@ function ArrowIcon({ type }) {
   return <span className="right-panel-arrow">—</span>
 }
 
-function RightPanel() {
+function RightPanel({ scenarioCardColors = [] }) {
   return (
     <aside className="right-panel">
       <section className="right-panel-section">
         <h3 className="right-panel-heading">Сравнение сценариев развития актива</h3>
         <p className="right-panel-note">Альтернативные управленческие логики при единых допущениях</p>
         <div className="right-panel-scenarios">
-          {SCENARIOS.map((s) => (
-            <div key={s.id} className={`right-panel-scenario right-panel-scenario-${s.color}`}>
+          {SCENARIOS.map((s, i) => (
+            <div key={s.id} className={`right-panel-scenario right-panel-scenario-${scenarioCardColors[i] || s.color}`}>
               <h4 className="right-panel-scenario-title">Сценарий {s.id}: {s.title}</h4>
               <div className="right-panel-effects">
                 <span className="right-panel-effects-label">Ключевые эффекты</span>

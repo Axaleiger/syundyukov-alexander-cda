@@ -15,11 +15,11 @@ const NUM_FLUX_CURVES = 28
 const PLANE_SPACING = 0.7
 
 const FUNNEL_LEVELS = [
-  { title: 'ЦД программ', layerTitle: 'Слой ЦД программ' },
-  { title: 'ЦД объекта', layerTitle: 'Слой ЦД объекта' },
-  { title: 'Сервисы', layerTitle: 'Слой Сервисы' },
-  { title: 'Микросервисы', layerTitle: 'Слой Микросервисы' },
-  { title: 'Функции', layerTitle: 'Слой Функции' },
+  { title: 'ЦД программ' },
+  { title: 'ЦД объекта' },
+  { title: 'Сервисы' },
+  { title: 'Микросервисы' },
+  { title: 'Функции' },
 ]
 
 const PLANE_LEVEL_COLORS = ['#7a9cba', '#6b8caa', '#5c7d9a', '#4d6e8a', '#3e5f7a']
@@ -102,6 +102,22 @@ function WireframeCube() {
   )
 }
 
+function AxesFromOrigin() {
+  const axisLen = CUBE_HALF - 0.05
+  const [gX, gY, gZ] = useMemo(() => [
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(axisLen, 0, 0)]),
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, axisLen, 0)]),
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, axisLen)]),
+  ], [])
+  return (
+    <group>
+      <line geometry={gX}><lineBasicMaterial color="#b91c1c" /></line>
+      <line geometry={gY}><lineBasicMaterial color="#16a34a" /></line>
+      <line geometry={gZ}><lineBasicMaterial color="#2d5a87" /></line>
+    </group>
+  )
+}
+
 const riskVolumeVertexShader = `
   varying vec3 vPosition;
   void main() {
@@ -180,9 +196,10 @@ function RiskZones({ npv = 50, reserves = 50, extraction = 50 }) {
 }
 
 function valueToColor(t) {
-  const H = 260 - t * 220
-  const S = 75 + t * 15
-  const L = 45 + t * 25
+  const T = Math.min(1, Math.max(0, t))
+  const H = 120 - T * 120
+  const S = 70 + T * 25
+  const L = 42 + T * 18
   return `hsl(${H}, ${S}%, ${L}%)`
 }
 
@@ -198,6 +215,26 @@ const PLANE_POINT_STATUS_COLORS = {
   no_executor: '#dc2626',
   no_approver: '#ca8a04',
   no_deadline: '#b45309',
+}
+
+const INDICATOR_BASKETS = {
+  'Проблемы в данных': [
+    { key: 'no_data', label: 'Нет данных', color: '#6b7280' },
+    { key: 'fluctuation', label: 'Флуктуации данных', color: '#a16207' },
+    { key: 'asymmetry', label: 'Асимметрия распределения', color: '#7c3aed' },
+    { key: 'non_normal', label: 'Распределение ненормальное', color: '#0d9488' },
+  ],
+  'Проблемы с расчётом': [
+    { key: 'bad_calc', label: 'Невалидный расчёт', color: '#ea580c' },
+    { key: 'bad_excess', label: 'Невалидный коэффициент эксцесса', color: '#c2410c' },
+  ],
+  'Пользовательский путь': [
+    { key: 'no_executor', label: 'Не назначен исполнитель', color: '#dc2626' },
+    { key: 'no_approver', label: 'Нет согласующего', color: '#ca8a04' },
+    { key: 'no_deadline', label: 'Нет срока', color: '#b45309' },
+    { key: 'critical', label: 'Критично', color: '#b91c1c' },
+    { key: 'ok', label: 'Норма', color: '#5b8dc9' },
+  ],
 }
 
 function getPlanePointStatus(levelIndex, pointIndex) {
@@ -303,13 +340,15 @@ const planeRiskFragmentShader = `
   }
 `
 
-function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
+function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, onPlanePointToggle, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
   const planeY = getPlaneY(levelIndex)
   const size = getPlaneSize(levelIndex)
   const n = POINTS_PER_LEVEL[levelIndex]
   const planeGeom = useMemo(() => new THREE.PlaneGeometry(size, size), [size])
   const points = useMemo(() => Array.from({ length: n }, (_, i) => i), [n])
   const isSelected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex
+  const showOnlyFiltered = filterPlanePoint != null
+  const showPoint = (pointIdx) => !showOnlyFiltered || (filterPlanePoint.levelIndex === levelIndex && filterPlanePoint.pointIndex === pointIdx)
   const planeColor = !showRisks ? '#e8eef4' : null
   const planeOpacity = showRisks ? 0.72 : 0.85
   const planeMeshRef = useRef(null)
@@ -349,6 +388,7 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
         )}
       </mesh>
       {points.map((idx) => {
+        if (!showPoint(idx)) return null
         const [x, , z] = getPlanePointPosition(levelIndex, idx)
         const selected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex && selectedPlanePoint.pointIndex === idx
         const planeStatus = getPlanePointStatus(levelIndex, idx)
@@ -359,8 +399,7 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
             position={[x, 0.01, z]}
             onClick={(e) => {
               e.stopPropagation()
-              onPointClick(levelIndex, idx)
-              if (getEntityLabel && onOpenBpm) onOpenBpm(getEntityLabel(levelIndex, idx))
+              onPlanePointToggle(levelIndex, idx)
             }}
             onPointerOver={() => { document.body.style.cursor = 'pointer' }}
             onPointerOut={() => { document.body.style.cursor = 'default' }}
@@ -370,8 +409,8 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
           </mesh>
         )
       })}
-      <Html position={[size / 2 + 0.12, 0.06, 0]} center>
-        <span className="funnel-level-label">{layerTitle}</span>
+      <Html position={[size / 2 + 0.28, 0.06, 0]} center>
+        <span className="funnel-level-label">{levelTitle}</span>
       </Html>
       {isSelected && selectedPlanePoint && getEntityLabel && (
         <Html position={[0, 0.15, 0]} center>
@@ -384,7 +423,7 @@ function FunnelLevel({ levelIndex, layerTitle, color, onPointClick, onOpenBpm, s
   )
 }
 
-function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50 }) {
+function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, filterPlanePoint, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50 }) {
   const n0 = POINTS_PER_LEVEL[0]
   const fluxCurvesCubeToL0 = useMemo(() => {
     return Array.from({ length: Math.min(NUM_FLUX_CURVES, n0 * 7) }, (_, i) => {
@@ -451,9 +490,11 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
         <FunnelLevel
           key={level.title}
           levelIndex={idx}
-          layerTitle={level.layerTitle}
+          levelTitle={level.title}
           color={PLANE_LEVEL_COLORS[idx]}
           onPointClick={onPlanePointClick}
+          onPlanePointToggle={onPlanePointToggle}
+          filterPlanePoint={filterPlanePoint}
           onOpenBpm={onOpenBpm}
           selectedPlanePoint={selectedPlanePoint}
           getEntityLabel={getEntityLabel}
@@ -464,7 +505,7 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
           extraction={extraction}
         />
       ))}
-      <Html position={[0, bottomY - 0.35, 0]} center>
+      <Html position={[0, bottomY - 0.55, 0]} center>
         <div className="variant-space-3d-close">
           <button type="button" onClick={onCloseVariant} aria-label="Закрыть">
             Закрыть воронку сквозных сценариев
@@ -475,7 +516,7 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
   )
 }
 
-function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, getEntityLabel, showRisks }) {
+function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, filterPlanePoint, getEntityLabel, showRisks }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
 
   return (
@@ -485,6 +526,7 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
       <pointLight position={[-4, -4, 4]} intensity={0.4} />
 
       {showRisks && <RiskZones npv={npv} reserves={reserves} extraction={extraction} />}
+      <AxesFromOrigin />
       <group>
         <WireframeCube />
         {points.map((id) => (
@@ -504,6 +546,8 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         onCloseVariant={onCloseVariant}
         selectedPlanePoint={selectedPlanePoint}
         onPlanePointClick={onPlanePointClick}
+        onPlanePointToggle={onPlanePointToggle}
+        filterPlanePoint={filterPlanePoint}
         onOpenBpm={onOpenBpm}
         getEntityLabel={getEntityLabel}
         showRisks={showRisks}
@@ -529,9 +573,6 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
       <Html position={[0, 0, CUBE_HALF + 0.4]} center>
         <span className="cube-axis-label" title="Добыча (Q) — оперативный рычаг добычи нефти за год (млн т)">Добыча (Q)</span>
       </Html>
-      <Html position={[0, CUBE_HALF + 0.25, 0]} center>
-        <span className="cube-label-activa">ЦД Актива</span>
-      </Html>
     </>
   )
 }
@@ -546,10 +587,24 @@ function Hypercube3D({ onOpenBpm }) {
   const [extraction, setExtraction] = useState(50)
   const [selectedVariantId, setSelectedVariantId] = useState(null)
   const [selectedPlanePoint, setSelectedPlanePoint] = useState(null)
+  const [filterPlanePoint, setFilterPlanePoint] = useState(null)
   const [getEntityLabel, setGetEntityLabel] = useState(() => defaultGetEntityLabel)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showRisks, setShowRisks] = useState(false)
   const cubeCanvasRef = useRef(null)
+
+  const handlePlanePointToggle = useCallback((levelIndex, pointIndex) => {
+    const same = filterPlanePoint && filterPlanePoint.levelIndex === levelIndex && filterPlanePoint.pointIndex === pointIndex
+    if (same) {
+      setFilterPlanePoint(null)
+      setSelectedPlanePoint(null)
+    } else {
+      setFilterPlanePoint({ levelIndex, pointIndex })
+      setSelectedPlanePoint({ levelIndex, pointIndex })
+      const label = getEntityLabel(levelIndex, pointIndex)
+      onOpenBpm(label)
+    }
+  }, [filterPlanePoint, getEntityLabel, onOpenBpm])
 
   useEffect(() => {
     loadFunnelFromExcel()
@@ -632,28 +687,31 @@ function Hypercube3D({ onOpenBpm }) {
             </div>
           </div>
           <p className="cube-palette-hint">
-            Точки внутри куба — по рычагам (холодные/горячие). Точки на плоскостях уровней — по статусу ЦД (см. легенду).
+            Точки на плоскостях — по индикаторам состояния (см. ниже). Клик по точке: показать только её; повторный клик — показать все.
           </p>
           <div className="cube-palette-legend">
             <span className="cube-legend-cold">Низкие</span>
             <div className="cube-legend-gradient" />
             <span className="cube-legend-hot">Высокие</span>
           </div>
-          <div className="cube-plane-legend">
-            <span className="cube-plane-legend-title">Статусы на плоскостях уровней:</span>
-            <div className="cube-plane-legend-items">
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.critical }}>● Критично</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_data }}>● Нет данных</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.bad_calc }}>● Плохой расчёт (автоанализ)</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.fluctuation }}>● Флуктуации данных</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.bad_excess }}>● Плохой эксцесс</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.asymmetry }}>● Асимметрия распределения</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.non_normal }}>● Распределение ненормальное</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_executor }}>● Не назначен исполнитель</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_approver }}>● Нет согласующего</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.no_deadline }}>● Нет срока</span>
-              <span style={{ color: PLANE_POINT_STATUS_COLORS.ok }}>● Норма</span>
+          <div className="cube-points-legend">
+            <span className="cube-plane-legend-title">Точки внутри куба:</span>
+            <div className="cube-plane-legend-items cube-plane-legend-items-rows">
+              <span className="cube-legend-point-desc">По уровню рычагов: низкие — зелёные, высокие — красные</span>
             </div>
+          </div>
+          <div className="cube-plane-legend">
+            <span className="cube-plane-legend-title">Индикаторы состояния</span>
+            {Object.entries(INDICATOR_BASKETS).map(([groupName, items]) => (
+              <div key={groupName} className="cube-indicator-basket">
+                <span className="cube-indicator-basket-name">{groupName}</span>
+                <div className="cube-plane-legend-items cube-plane-legend-items-rows">
+                  {items.map(({ key, label, color }) => (
+                    <span key={key} style={{ color }}>● {label}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
           <label className="cube-risks-toggle">
             <input
@@ -692,9 +750,11 @@ function Hypercube3D({ onOpenBpm }) {
                 extraction={extraction}
                 onPointClick={setSelectedVariantId}
                 selectedVariantId={selectedVariantId}
-                onCloseVariant={() => { setSelectedVariantId(null); setSelectedPlanePoint(null) }}
+                onCloseVariant={() => { setSelectedVariantId(null); setSelectedPlanePoint(null); setFilterPlanePoint(null) }}
                 selectedPlanePoint={selectedPlanePoint}
                 onPlanePointClick={(levelIndex, pointIndex) => setSelectedPlanePoint({ levelIndex, pointIndex })}
+                onPlanePointToggle={handlePlanePointToggle}
+                filterPlanePoint={filterPlanePoint}
                 onOpenBpm={onOpenBpm}
                 getEntityLabel={getEntityLabel}
                 showRisks={showRisks}

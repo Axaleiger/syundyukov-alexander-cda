@@ -64,6 +64,16 @@
   background: rgba(249, 115, 22, 0.08);
 }
 
+.right-panel-scenario-blue {
+  border-left-color: #2d5a87;
+  background: rgba(45, 90, 135, 0.08);
+}
+
+.right-panel-scenario-teal {
+  border-left-color: #0d9488;
+  background: rgba(13, 148, 136, 0.08);
+}
+
 .right-panel-scenario-title {
   font-size: 0.95rem;
   margin: 0 0 0.5rem;

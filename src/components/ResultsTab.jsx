@@ -164,11 +164,11 @@ function ResultsTab() {
           <GaugeWidget value={98} label="план года" />
         </div>
         <div className="results-widget results-widget-span-2 results-widget-line">
-          <h3>Динамика NPV и CF</h3>
+          <h3>Динамика NPV и Cash flow</h3>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={LINE_DATA}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="year" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="year" tick={{ fontSize: 11, angle: -90, textAnchor: 'end' }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
               <Legend />

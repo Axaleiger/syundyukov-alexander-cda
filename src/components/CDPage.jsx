@@ -14,14 +14,16 @@ function CDPage({ nodeName, onBack }) {
   const handleEmblemError = () => setEmblemSrc(DEFAULT_EMBLEM)
 
   if (showPlastaImages) {
+    const plastaImages = ['ЦД Пласта 1.png', 'ЦД Пласта 2.png', 'ЦД Пласта 3.png']
     return (
       <div className="cd-page cd-page-plasta">
         <button type="button" className="cd-page-back" onClick={onBack}>
           ← Закрыть
         </button>
         <div className="cd-page-plasta-images">
-          <img src={`${BASE}/ЦД Пласта 1.png`} alt="ЦД Пласта 1" className="cd-page-plasta-img" />
-          <img src={`${BASE}/ЦД Пласта 2.png`} alt="ЦД Пласта 2" className="cd-page-plasta-img" />
+          {plastaImages.map((name, i) => (
+            <img key={i} src={`${BASE}/${name}`} alt={name.replace('.png', '')} className="cd-page-plasta-img" />
+          ))}
         </div>
       </div>
     )

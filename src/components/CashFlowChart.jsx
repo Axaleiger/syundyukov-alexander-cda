@@ -79,7 +79,7 @@ function CashFlowChart() {
 
       <div className="cashflow-charts">
         <div className="chart-container">
-          <h3>Кеш-флоу</h3>
+          <h3>Cash flow</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
               <defs>
@@ -92,7 +92,9 @@ function CashFlowChart() {
               <XAxis 
                 dataKey="year" 
                 stroke="#a0aec0"
-                tick={{ fill: '#a0aec0' }}
+                tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
+                ticks={[2024, 2025, 2026, END_YEAR]}
+                tickFormatter={(v) => (v === END_YEAR && chartData[chartData.length - 1]?.year < END_YEAR - 1 ? `… ${v}` : String(v))}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis 
@@ -128,9 +130,9 @@ function CashFlowChart() {
               <XAxis 
                 dataKey="year" 
                 stroke="#a0aec0"
-                tick={{ fill: '#a0aec0', fontSize: 11 }}
-                interval="preserveStartEnd"
-                minTickGap={24}
+                tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
+                ticks={[2024, 2025, 2026, END_YEAR]}
+                tickFormatter={(v) => (v === END_YEAR && chartData[chartData.length - 1]?.year < END_YEAR - 1 ? `… ${v}` : String(v))}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis 

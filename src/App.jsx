@@ -16,8 +16,8 @@ import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/
 import mapPointsData from './data/mapPoints.json'
 
 const TABS = [
+  { id: 'face', label: 'Главная страница' },
   { id: 'scenarios', label: 'Список сценариев' },
-  { id: 'face', label: 'Лицо ЦДА' },
   { id: 'planning', label: 'Планирование' },
   { id: 'ontology', label: 'Онтология' },
   { id: 'results', label: 'Результаты' },
@@ -29,6 +29,12 @@ function getBpmPageUrl(highlight) {
   return `${base}${sep}bpm=1&highlight=${encodeURIComponent(highlight || '')}`
 }
 
+function getBoardIdForAsset(assetId) {
+  if (assetId === 'do-megion') return 'mgn'
+  if (assetId === 'do-noyabrsk' || assetId === 'novy-port') return 'nng'
+  return 'hantos'
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('face')
   const [selectedLeftStageIndex, setSelectedLeftStageIndex] = useState(null)
@@ -38,6 +44,7 @@ function App() {
   const [bpmHighlight, setBpmHighlight] = useState(null)
   const [selectedAssetId, setSelectedAssetId] = useState(null)
   const [scenariosStageFilter, setScenariosStageFilter] = useState(null)
+  const [rightPanelCardColors, setRightPanelCardColors] = useState([null, null, null])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -69,6 +76,10 @@ function App() {
   const handleMapAssetSelect = (pointId) => {
     setSelectedAssetId(pointId || null)
     setActiveTab('face')
+    if (pointId) {
+      const palette = ['green', 'yellow', 'orange', 'blue', 'teal']
+      setRightPanelCardColors([palette[Math.floor(Math.random() * palette.length)], palette[Math.floor(Math.random() * palette.length)], palette[Math.floor(Math.random() * palette.length)]])
+    }
   }
 
   const handleLifecycleStageClick = (stageName) => {
@@ -105,8 +116,13 @@ function App() {
       <header className="app-header">
         <img src={`${import.meta.env.BASE_URL}emblem.png`} alt="ЦДА" className="app-header-emblem" />
         <div className="app-header-text">
-          <h1>ЛИЦО ЦДА</h1>
+          <h1>ЦДА</h1>
           <p>(Цифровой Двойник Актива)</p>
+        </div>
+        <div className="app-header-zones-legend">
+          <span className="app-header-zone app-header-zone-red" title="Критическое состояние">🔴 ! Критическое состояние</span>
+          <span className="app-header-zone app-header-zone-yellow" title="Требует внимания">🟡 ? Требует внимания</span>
+          <span className="app-header-zone app-header-zone-green" title="Устойчивое развитие">🟢 ✓ Устойчивое развитие</span>
         </div>
       </header>
 
@@ -182,11 +198,16 @@ function App() {
 
               <section className="section hypercube-section">
                 <h2>Гиперкуб рычагов влияния</h2>
-                <Hypercube3D onOpenBpm={(highlight) => window.open(getBpmPageUrl(highlight), '_blank')} />
+                <Hypercube3D
+                  onOpenBpm={(highlight) => {
+                    setBpmHighlight(highlight || null)
+                    setActiveTab('planning')
+                  }}
+                />
               </section>
 
               <section className="section cashflow-section">
-                <h2>Динамика кеш-флоу и добычи: текущая и прогнозная</h2>
+                <h2>Динамика Cash flow и добычи: текущая и прогнозная</h2>
                 <CashFlowChart />
               </section>
 
@@ -199,7 +220,12 @@ function App() {
 
           {activeTab === 'planning' && (
             <div className="app-content app-content-bpm">
-              <BPMBoard onClose={() => setActiveTab('face')} />
+              <BPMBoard
+                initialBoardId={selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos'}
+                selectedAssetName={selectedAssetPoint?.name}
+                highlightCardName={bpmHighlight}
+                onClose={() => setActiveTab('face')}
+              />
             </div>
           )}
 
@@ -207,9 +233,9 @@ function App() {
           {activeTab === 'results' && <ResultsTab />}
         </main>
 
-        {activeTab === 'face' && (
+        {activeTab === 'face' && selectedAssetId && (
           <aside className="app-right-panel">
-            <RightPanel />
+            <RightPanel scenarioCardColors={rightPanelCardColors} />
           </aside>
         )}
       </div>

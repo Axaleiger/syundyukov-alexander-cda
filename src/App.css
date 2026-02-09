@@ -67,6 +67,23 @@
   border-left: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.app-header-zones-legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #5a6c7d;
+}
+
+.app-header-zone {
+  white-space: nowrap;
+}
+
+.app-header-zone-red { color: #b91c1c; }
+.app-header-zone-yellow { color: #ca8a04; }
+.app-header-zone-green { color: #16a34a; }
+
 .app-asset-sticky {
   display: flex;
   align-items: center;

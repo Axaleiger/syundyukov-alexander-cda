@@ -11,44 +11,75 @@
   font-weight: 600;
 }
 
-.scenarios-toolbar {
+.scenarios-layout {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 1.5rem;
+  align-items: flex-start;
 }
 
-.scenarios-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.scenarios-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  background: #f1f5f9;
+.scenarios-sidebar {
+  flex: 0 0 220px;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
+}
+
+.scenarios-sidebar-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.scenarios-stage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.scenarios-stage-list li {
+  margin-bottom: 0.25rem;
+}
+
+.scenarios-stage-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   color: #475569;
   user-select: none;
 }
 
-.scenarios-chip input {
-  margin: 0;
+.scenarios-stage-item input {
+  margin: 0.25rem 0 0;
   cursor: pointer;
 }
 
-.scenarios-chip-on {
+.scenarios-stage-item span {
+  flex: 1;
+}
+
+.scenarios-stage-item-on {
   background: #e0f2fe;
-  border-color: #2d5a87;
   color: #1e3a5f;
   font-weight: 500;
+}
+
+.scenarios-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.scenarios-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .scenarios-toolbar-right {
