@@ -83,6 +83,72 @@ export function parseBoardFromExcel(arrayBuffer) {
   return { stages, tasks }
 }
 
+const COL_ALIASES = {
+  'Этап Название': ['Этап Название', 'Этап', 'Название этапа', 'Stage'],
+  'Карточка ID': ['Карточка ID', 'Карточка ID', 'ID', 'Card ID'],
+  'Карточка Название': ['Карточка Название', 'Карточка', 'Название', 'Card Name'],
+  'Исполнитель': ['Исполнитель', 'Executor'],
+  'Согласующий': ['Согласующий', 'Approver'],
+  'Срок сдачи': ['Срок сдачи', 'Срок', 'Deadline'],
+  'Статус': ['Статус', 'Status'],
+  'Дата создания': ['Дата создания', 'Дата', 'Date'],
+  'Используемые системы': ['Используемые системы', 'Системы', 'Systems'],
+  'Входные данные': ['Входные данные', 'Вход', 'Input'],
+  'Выходные данные': ['Выходные данные', 'Выход', 'Output'],
+}
+
+function getCol(row, key) {
+  const aliases = COL_ALIASES[key]
+  for (const a of aliases) {
+    if (row[a] !== undefined && row[a] !== null) return row[a]
+  }
+  return row[key]
+}
+
+export function parseBoardFromExcelLenient(arrayBuffer) {
+  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' })
+  const ws = wb.Sheets[wb.SheetNames[0]]
+  const rows = XLSX.utils.sheet_to_json(ws)
+  if (!rows.length) return { stages: [], tasks: {} }
+  const first = rows[0]
+  const keys = Object.keys(first)
+  const stageKey = keys.find((k) => /этап|stage|название/i.test(k)) || keys[0]
+  const cardIdKey = keys.find((k) => /id|карточка|card/i.test(k) && !/создан|date/i.test(k)) || keys[1] || keys[0]
+  const cardNameKey = keys.find((k) => /название|name|карточка/i.test(k) && k !== stageKey) || keys[2] || cardIdKey
+  const stages = []
+  const tasks = {}
+  const seenStages = new Set()
+  const seenTasks = {}
+  for (const row of rows) {
+    let stage = row[stageKey]
+    if (stage == null || String(stage).trim() === '') continue
+    stage = String(stage).trim()
+    if (!seenStages.has(stage)) {
+      seenStages.add(stage)
+      stages.push(stage)
+      tasks[stage] = []
+      seenTasks[stage] = new Set()
+    }
+    let cardId = row[cardIdKey]
+    if (cardId == null || String(cardId).trim() === '') continue
+    cardId = String(cardId).trim()
+    if (!seenTasks[stage].has(cardId)) {
+      seenTasks[stage].add(cardId)
+      tasks[stage].push({
+        id: cardId,
+        name: (row[cardNameKey] != null ? String(row[cardNameKey]).trim() : '') || cardId,
+        executor: '',
+        approver: '',
+        deadline: new Date(),
+        status: 'в работе',
+        date: '',
+        entries: [],
+      })
+    }
+  }
+  return { stages, tasks }
+}
+
 export function generateBoardExcel(stages, tasks) {
   const rows = []
   for (const stage of stages) {

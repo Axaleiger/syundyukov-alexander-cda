@@ -4,6 +4,11 @@ import './ScenariosList.css'
 
 const ALL_SCENARIOS = generateScenarios()
 
+function scenarioDisplayName(name) {
+  if (!name || typeof name !== 'string') return name
+  return name.replace(/\s*\(раздел\s*"[^"]*"\)\s*$/i, '').trim() || name
+}
+
 function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onStageFilterToggle, onScenarioClick }) {
   const [internalFilters, setInternalFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
   const stageFilters = controlledFilters != null ? controlledFilters : internalFilters
@@ -53,7 +58,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
           )}
           <div className="scenarios-user">
             <span className="scenarios-user-name">Сюндюков А.В. · Ведущий эксперт</span>
-            <img src={`${import.meta.env.BASE_URL || '/'}emblem.png`} alt="" className="scenarios-user-avatar" />
+            <img src={`${import.meta.env.BASE_URL || '/'}sanya-bodibilder.png`} alt="" className="scenarios-user-avatar" />
           </div>
         </div>
       </div>
@@ -88,7 +93,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                       className="scenarios-name-link"
                       onClick={() => onScenarioClick?.(row)}
                     >
-                      {row.name}
+                      {scenarioDisplayName(row.name)}
                     </button>
                   </td>
                   <td>{row.id}</td>

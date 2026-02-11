@@ -175,7 +175,11 @@ function App() {
               activeStageFilter={scenariosStageFilter}
               stageFilters={scenarioStageFilters}
               onStageFilterToggle={(name) => setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))}
-              onScenarioClick={() => {}}
+              onScenarioClick={(row) => {
+              if (row?.name && row.name.includes('Управление добычей с учетом ближайшего бурения')) {
+                setActiveTab('planning')
+              }
+            }}
             />
           )}
 

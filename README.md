@@ -58,7 +58,12 @@ npm run preview
 
 ## Деплой на GitHub Pages
 
-При пуше в `main` приложение автоматически собирается и публикуется. Сайт: **https://grinya774.github.io/cda/**
+При пуше в ветку `main` приложение автоматически собирается и публикуется на **https://axaleiger.github.io/cda/**
+
+**Чтобы сайт открывался по этому адресу:**
+1. Репозиторий должен называться **`cda`** и находиться в аккаунте **axaleiger**.
+2. В настройках репозитория: **Settings → Pages → Source** — выберите **GitHub Actions**.
+3. Сделайте `git push` в `main` или запустите workflow **Deploy to GitHub Pages** вручную (Actions → Deploy to GitHub Pages → Run workflow).
 
 ## Технологии
 

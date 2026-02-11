@@ -25,6 +25,11 @@
 
 .app-sidebar-secondary {
   border-right: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 0.82rem;
+}
+.app-sidebar-secondary .app-sidebar-tab {
+  padding: 0.5rem 0.75rem;
+  font-size: inherit;
 }
 
 .app-sidebar-tab {

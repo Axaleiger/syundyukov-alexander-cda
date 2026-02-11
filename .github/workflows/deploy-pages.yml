@@ -32,7 +32,8 @@ jobs:
 
       - name: Build
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/
+          # Для https://axaleiger.github.io/cda/ репозиторий должен называться "cda"
+          VITE_BASE: /cda/
         run: npm run build
 
       - name: Setup Pages

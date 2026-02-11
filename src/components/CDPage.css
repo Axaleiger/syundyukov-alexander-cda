@@ -5,9 +5,6 @@
 }
 
 .cd-page-back {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   margin-bottom: 1.5rem;
   padding: 0.5rem 1rem;
   font-size: 1rem;
@@ -79,22 +76,12 @@
 }
 
 .cd-page-plasta {
-  padding: 0;
+  padding: 2rem;
   min-height: 100vh;
-  padding-top: 52px;
 }
 
 .cd-page-plasta .cd-page-back {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  margin: 0;
-  border-radius: 0;
-  border-left: none;
-  border-right: none;
-  border-top: none;
+  margin-bottom: 1.5rem;
 }
 
 .cd-page-plasta-images {

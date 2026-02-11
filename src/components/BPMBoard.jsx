@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, cardMatchesHighlight, getInitialBoard } from '../data/bpmData'
-import { parseBoardFromExcel, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
+import { parseBoardFromExcel, parseBoardFromExcelLenient, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
 import './BPMBoard.css'
 
 function toTask(card) {
@@ -146,6 +146,7 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   const [showCalculateView, setShowCalculateView] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [draggedStageIndex, setDraggedStageIndex] = useState(null)
 
   useEffect(() => {
     const data = getInitialBoard(initialBoardId)
@@ -157,13 +158,19 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
 
   useEffect(() => {
     if (initialBoardId !== 'hantos') return
-    const base = import.meta.env.BASE_URL || '/'
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
     fetch(`${base}hantos.xlsx`)
       .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
       .then((arrayBuffer) => {
-        const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
-        setStages(s)
-        setTasks(t)
+        try {
+          const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
+          setStages(s)
+          setTasks(t)
+        } catch {
+          const { stages: s, tasks: t } = parseBoardFromExcelLenient(arrayBuffer)
+          setStages(s)
+          setTasks(t)
+        }
         setUploadError(null)
       })
       .catch(() => {})
@@ -257,6 +264,43 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
     ;[next[idx], next[j]] = [next[j], next[idx]]
     setStages(next)
   }, [stages])
+
+  const reorderStages = useCallback((fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return
+    const next = [...stages]
+    const [removed] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, removed)
+    const newTasks = {}
+    next.forEach((s) => { newTasks[s] = tasks[s] || [] })
+    setStages(next)
+    setTasks(newTasks)
+    setDraggedStageIndex(null)
+  }, [stages, tasks])
+
+  const handleStageDragStart = useCallback((e, stageIdx, stageName) => {
+    setDraggedStageIndex(stageIdx)
+    e.dataTransfer.setData('text/plain', String(stageIdx))
+    e.dataTransfer.effectAllowed = 'move'
+    const count = (tasks[stageName] || []).length
+    const el = document.createElement('div')
+    el.className = 'bpm-stage-column bpm-stage-column-drag-preview'
+    el.innerHTML = `<div class="bpm-stage-header"><span class="bpm-stage-title">${stageName}</span></div><div class="bpm-stage-cards">${count} карточек</div>`
+    el.style.position = 'absolute'
+    el.style.top = '-9999px'
+    el.style.left = '0'
+    el.style.width = '220px'
+    el.style.pointerEvents = 'none'
+    document.body.appendChild(el)
+    e.dataTransfer.setDragImage(el, 110, 24)
+    setTimeout(() => document.body.removeChild(el), 0)
+  }, [tasks])
+
+  const handleStageDrop = useCallback((e, dropIdx) => {
+    e.preventDefault()
+    const fromIdx = draggedStageIndex
+    if (fromIdx == null) return
+    reorderStages(fromIdx, dropIdx)
+  }, [draggedStageIndex, reorderStages])
 
   const addTask = useCallback((stageName) => {
     const id = `M${15000 + Math.floor(Math.random() * 85000)}`
@@ -406,11 +450,16 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
         {stages.map((stageName, stageIdx) => (
           <div
             key={stageName}
-            className="bpm-stage-column"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, stageName)}
+            className={`bpm-stage-column ${draggedStageIndex === stageIdx ? 'bpm-stage-column-dragging' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
+            onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleDrop(e, stageName); }}
           >
-            <div className="bpm-stage-header">
+            <div
+              className="bpm-stage-header"
+              draggable
+              onDragStart={(e) => handleStageDragStart(e, stageIdx, stageName)}
+              onDragEnd={() => setDraggedStageIndex(null)}
+            >
               {editingStage === stageIdx ? (
                 <>
                   <input value={stageNameEdit} onChange={(e) => setStageNameEdit(e.target.value)} className="bpm-input" />
@@ -422,8 +471,6 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
                   <div className="bpm-stage-btns">
                     <button type="button" className="bpm-btn-icon" onClick={() => { setEditingStage(stageIdx); setStageNameEdit(stageName) }} title="Редактировать">Ред.</button>
                     <button type="button" className="bpm-btn-icon" onClick={() => deleteStage(stageIdx)} title="Удалить">Удал.</button>
-                    {stageIdx > 0 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, -1)} title="Влево">◀</button>}
-                    {stageIdx < stages.length - 1 && <button type="button" className="bpm-btn-icon" onClick={() => moveStage(stageIdx, 1)} title="Вправо">▶</button>}
                   </div>
                 </>
               )}

@@ -4,7 +4,8 @@ import './CashFlowChart.css'
 
 const CURRENT_YEAR = 2026
 const END_YEAR = 2065
-const CHART_YEAR_TICKS = [2024, 2025, 2026, 2028, 2030, 2032, 2035, 2040, 2045, 2050, 2055, 2060, 2065]
+const CHART_ELLIPSIS_YEAR = 2048
+const CHART_YEAR_TICKS = [2024, 2026, 2028, 2030, 2032, CHART_ELLIPSIS_YEAR, 2063, 2065]
 
 const generateData = (startYear, endYear, baseCashFlow, declineRate) => {
   const years = endYear - startYear + 1
@@ -81,7 +82,7 @@ function CashFlowChart() {
       <div className="cashflow-charts">
         <div className="chart-container">
           <h3>Cash flow</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={340}>
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorCashFlow" x1="0" y1="0" x2="0" y2="1">
@@ -92,10 +93,11 @@ function CashFlowChart() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="year" 
+                domain={[2024, 2065]}
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
                 ticks={CHART_YEAR_TICKS}
-                tickFormatter={(v) => (v === END_YEAR && chartData[chartData.length - 1]?.year < END_YEAR - 1 ? `… ${v}` : String(v))}
+                tickFormatter={(v) => (v === CHART_ELLIPSIS_YEAR ? '…' : String(v))}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis 
@@ -125,15 +127,16 @@ function CashFlowChart() {
 
         <div className="chart-container">
           <h3>Добыча: текущая и прогнозная</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={340}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="year" 
+                domain={[2024, 2065]}
                 stroke="#a0aec0"
                 tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
                 ticks={CHART_YEAR_TICKS}
-                tickFormatter={(v) => (v === END_YEAR && chartData[chartData.length - 1]?.year < END_YEAR - 1 ? `… ${v}` : String(v))}
+                tickFormatter={(v) => (v === CHART_ELLIPSIS_YEAR ? '…' : String(v))}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis 
@@ -149,14 +152,13 @@ function CashFlowChart() {
                   color: '#e2e8f0'
                 }}
               />
-              <Legend />
               <Line 
                 type="monotone" 
                 dataKey="production" 
                 stroke="#48bb78" 
                 strokeWidth={3}
                 dot={{ fill: '#48bb78', r: 4 }}
-                name="Добыча"
+                name=""
               />
             </LineChart>
           </ResponsiveContainer>

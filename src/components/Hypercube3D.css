@@ -93,23 +93,6 @@
   transform: scale(1.2);
 }
 
-.slider.slider-low::-webkit-slider-thumb {
-  background: #dc2626;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
-}
-.slider.slider-low::-moz-range-thumb {
-  background: #dc2626;
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
-}
-.slider.slider-high::-webkit-slider-thumb {
-  background: #16a34a;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
-}
-.slider.slider-high::-moz-range-thumb {
-  background: #16a34a;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
-}
-
 .hypercube-visualization {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -179,7 +162,9 @@
   position: relative;
   width: 100%;
   flex: 1;
-  min-height: 420px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .cube-close-funnel-btn {
@@ -224,14 +209,13 @@
 
 .cube-canvas {
   width: 100%;
-  height: 480px;
-  min-height: 480px;
   flex: 1;
+  min-height: 420px;
+  height: 100%;
 }
 
 .hypercube-window-funnel-open .cube-canvas {
-  height: 560px;
-  min-height: 560px;
+  min-height: 480px;
 }
 
 .hypercube-window-fullscreen {
@@ -291,6 +275,14 @@
   position: relative;
   display: inline-block;
   cursor: help;
+}
+.cube-axis-tick-label {
+  font-size: 10px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 .cube-axis-label {
   font-size: 14px;

@@ -24,12 +24,12 @@ const FUNNEL_LEVELS = [
 
 const PLANE_LEVEL_COLORS = ['#7a9cba', '#6b8caa', '#5c7d9a', '#4d6e8a', '#3e5f7a']
 
-const RISK_ZONE_OPACITY = 0.4
+const RISK_ZONE_OPACITY = 0.72
 const RISK_TINT_BY_LEVEL = ['#e8a84a', '#5a9d6e', '#5b8dc9', '#5a9d6e', '#e8a84a']
 
 const RISK_VOLUME_COLORS = {
-  red: new THREE.Color('#d32f2f'),
-  green: new THREE.Color('#2e7d32'),
+  red: new THREE.Color('#dc2626'),
+  green: new THREE.Color('#16a34a'),
 }
 
 function getPlaneY(levelIndex) {
@@ -106,6 +106,8 @@ const AXIS_ORIGIN = -CUBE_HALF + 0.05
 const AXIS_LEN = CUBE_HALF * 2 - 0.1
 const TICK_STEP = 0.5
 const TICK_SIZE = 0.03
+const AXIS_SCALES = { x: 800, y: 120, z: 15 }
+const AXIS_UNITS = { x: 'млн руб', y: 'млн т', z: 'млн т' }
 
 function AxisLine({ from, to, color }) {
   const geom = useMemo(() => new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...from), new THREE.Vector3(...to)]), [from, to])
@@ -113,25 +115,38 @@ function AxisLine({ from, to, color }) {
 }
 
 function AxisArrow({ end, dir, color }) {
-  const coneH = 0.08
-  const coneR = 0.04
-  const pos = [...end]
-  const rot = dir === 'x' ? [0, -Math.PI / 2, 0] : dir === 'y' ? [Math.PI / 2, 0, 0] : [0, 0, 0]
+  const size = 0.08
+  const geom = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    let vertices
+    if (dir === 'x') {
+      vertices = new Float32Array([size, 0, 0, -size * 0.5, size * 0.8, 0, -size * 0.5, -size * 0.8, 0])
+    } else if (dir === 'y') {
+      vertices = new Float32Array([0, size, 0, 0, -size * 0.5, size * 0.8, 0, -size * 0.5, -size * 0.8])
+    } else {
+      vertices = new Float32Array([0, 0, size, 0, -size * 0.8, -size * 0.5, 0, size * 0.8, -size * 0.5])
+    }
+    g.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+    g.setIndex([0, 1, 2])
+    g.computeVertexNormals()
+    return g
+  }, [dir])
+  const rot = dir === 'x' ? [0, 0, 0] : dir === 'y' ? [0, 0, 0] : [0, 0, 0]
   return (
-    <mesh position={pos} rotation={rot}>
-      <coneGeometry args={[coneR, coneH, 8]} />
-      <meshBasicMaterial color={color} />
+    <mesh position={end} rotation={rot}>
+      <primitive object={geom} attach="geometry" />
+      <meshBasicMaterial color={color} side={THREE.DoubleSide} />
     </mesh>
   )
 }
 
-function AxesFromBottomLeft() {
+function AxesFromBottomLeft({ npv = 50, reserves = 50, extraction = 50 }) {
   const origin = AXIS_ORIGIN
   const axisLen = AXIS_LEN
   const axes = useMemo(() => [
-    { dir: 'x', from: [origin, origin, origin], to: [origin + axisLen, origin, origin], color: '#1f2937' },
-    { dir: 'y', from: [origin, origin, origin], to: [origin, origin + axisLen, origin], color: '#374151' },
-    { dir: 'z', from: [origin, origin, origin], to: [origin, origin, origin + axisLen], color: '#4b5563' },
+    { dir: 'x', from: [origin, origin, origin], to: [origin + axisLen, origin, origin], color: '#1f2937', scale: AXIS_SCALES.x, unit: AXIS_UNITS.x },
+    { dir: 'y', from: [origin, origin, origin], to: [origin, origin + axisLen, origin], color: '#374151', scale: AXIS_SCALES.y, unit: AXIS_UNITS.y },
+    { dir: 'z', from: [origin, origin, origin], to: [origin, origin, origin + axisLen], color: '#4b5563', scale: AXIS_SCALES.z, unit: AXIS_UNITS.z },
   ], [])
   const tickValues = useMemo(() => {
     const n = Math.max(1, Math.floor(axisLen / TICK_STEP) - 1)
@@ -139,7 +154,7 @@ function AxesFromBottomLeft() {
   }, [])
   return (
     <group>
-      {axes.map(({ dir, from, to, color }) => (
+      {axes.map(({ dir, from, to, color, scale, unit }) => (
         <group key={dir}>
           <AxisLine from={from} to={to} color={color} />
           <AxisArrow end={to} dir={dir} color={color} />
@@ -155,7 +170,17 @@ function AxesFromBottomLeft() {
               tickFrom = [origin, origin - TICK_SIZE, v]
               tickTo = [origin, origin + TICK_SIZE, v]
             }
-            return <AxisLine key={v} from={tickFrom} to={tickTo} color={color} />
+            const norm = (v - origin) / axisLen
+            const value = (norm * scale).toFixed(1)
+            const pos = dir === 'x' ? [v, origin - TICK_SIZE - 0.04, origin] : dir === 'y' ? [origin - TICK_SIZE - 0.04, v, origin] : [origin, origin - TICK_SIZE - 0.04, v]
+            return (
+              <group key={v}>
+                <AxisLine from={tickFrom} to={tickTo} color={color} />
+                <Html position={pos} center className="cube-axis-tick-label">
+                  <span>{value}</span>
+                </Html>
+              </group>
+            )
           })}
         </group>
       ))}
@@ -191,14 +216,10 @@ const riskVolumeFragmentShader = `
     float v2 = -0.7 * x + 0.6 * y + 0.4 * z + s2;
     float t = v1 - v2 + shift * 1.2;
     float voidWidth = 0.05;
-    float redMul = 1.0 - sumNorm;
-    float greenMul = sumNorm;
-    float isRed = step(voidWidth, t) * redMul;
-    float isGreen = step(voidWidth, -t) * greenMul;
     float inVoid = 1.0 - step(voidWidth, abs(t));
-    vec3 col = isRed * colorRed + isGreen * colorGreen;
-    float alpha = (1.0 - inVoid) * opacity * max(redMul, greenMul) * 1.2;
-    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.85));
+    vec3 col = t > voidWidth ? colorRed : colorGreen;
+    float alpha = (1.0 - inVoid) * opacity;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.9));
   }
 `
 
@@ -240,11 +261,30 @@ function RiskZones({ npv = 50, reserves = 50, extraction = 50 }) {
   )
 }
 
-function valueToColor(t) {
+const VARIANT_COLORS = {
+  inapplicable: '#1e4976',
+  applicable: '#38bdf8',
+  legitimate: '#0d9488',
+}
+
+function getVariantType(npv, reserves, extraction, variantId) {
+  const basePos = getVariantBasePosition(variantId)
+  const [x, y, z] = basePos
+  const nx = (x + CUBE_HALF) / (2 * CUBE_HALF)
+  const ny = (y + CUBE_HALF) / (2 * CUBE_HALF)
+  const nz = (z + CUBE_HALF) / (2 * CUBE_HALF)
+  const t = (nx * (npv / 100) * 0.4 + ny * (reserves / 100) * 0.35 + nz * (extraction / 100) * 0.25) + (variantId % 19) / 190
   const T = Math.min(1, Math.max(0, t))
-  if (T <= 0.05) return '#dc2626'
-  if (T >= 0.95) return '#16a34a'
-  return '#2d5a87'
+  const sumLever = (npv + reserves + extraction) / 300
+  const threshLow = 0.2 + 0.35 * sumLever
+  const threshHigh = 0.75 - 0.15 * sumLever
+  if (T <= threshLow) return 'inapplicable'
+  if (T <= threshHigh) return 'applicable'
+  return 'legitimate'
+}
+
+function valueToColor(variantType) {
+  return VARIANT_COLORS[variantType] || VARIANT_COLORS.applicable
 }
 
 const PLANE_POINT_STATUS_COLORS = {
@@ -297,18 +337,15 @@ function getPlanePointStatus(levelIndex, pointIndex) {
   return 'ok'
 }
 
-function VariantPoint({ variantId, npv, reserves, extraction, onPointClick }) {
+function VariantPoint({ variantId, npv, reserves, extraction, onPointClick, filterVariantType }) {
   const basePos = useMemo(() => getVariantBasePosition(variantId), [variantId])
-  const x = basePos[0]
-  const y = basePos[1]
-  const z = basePos[2]
-  const nx = (x + CUBE_HALF) / (2 * CUBE_HALF)
-  const ny = (y + CUBE_HALF) / (2 * CUBE_HALF)
-  const nz = (z + CUBE_HALF) / (2 * CUBE_HALF)
-  const t = (nx * (npv / 100) * 0.4 + ny * (reserves / 100) * 0.35 + nz * (extraction / 100) * 0.25) + (variantId % 19) / 190
-  const T = Math.min(1, Math.max(0, t))
-  const color = valueToColor(T)
-
+  const variantType = useMemo(
+    () => getVariantType(npv, reserves, extraction, variantId),
+    [npv, reserves, extraction, variantId]
+  )
+  const color = valueToColor(variantType)
+  const visible = filterVariantType == null || filterVariantType === variantType
+  if (!visible) return null
   return (
     <mesh
       position={basePos}
@@ -373,14 +410,10 @@ const planeRiskFragmentShader = `
     float t2 = -x * 0.8 + z * 1.0 + 0.12 * sin((x + shift * 0.8) * 12.0);
     float t = t1 - t2 + shift * 0.8;
     float voidWidth = 0.04;
-    float redMul = 1.0 - sumNorm;
-    float greenMul = sumNorm;
-    float isRed = step(voidWidth, t) * redMul;
-    float isGreen = step(voidWidth, -t) * greenMul;
     float inVoid = 1.0 - step(voidWidth, abs(t));
-    vec3 col = isRed * colorRed + isGreen * colorGreen;
-    float alpha = (1.0 - inVoid) * opacity * max(redMul, greenMul);
-    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.85));
+    vec3 col = t > voidWidth ? colorRed : colorGreen;
+    float alpha = (1.0 - inVoid) * opacity;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.9));
   }
 `
 
@@ -557,15 +590,15 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
   )
 }
 
+const AXIS_LABEL_OFFSET = 0.12
 const AXIS_LABELS = [
-  { position: [CUBE_HALF + 0.4, 0, 0], short: 'NPV', full: 'NPV — оперативный рычаг, деньги за год (млн руб)' },
-  { position: [0, CUBE_HALF + 0.4, 0], short: 'Запасы', full: 'Запасы — стратегический рычаг, суммарная добыча нефти/КИН за 30 лет (млн т)' },
-  { position: [0, 0, CUBE_HALF + 0.4], short: 'Добыча (Q)', full: 'Добыча (Q) — оперативный рычаг добычи нефти за год (млн т)' },
+  { position: [CUBE_HALF + AXIS_LABEL_OFFSET, 0, 0], short: 'NPV' },
+  { position: [0, CUBE_HALF + AXIS_LABEL_OFFSET, 0], short: 'Запасы' },
+  { position: [0, 0, CUBE_HALF + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
-function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks }) {
+function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
-  const [axisTooltip, setAxisTooltip] = useState(null)
 
   return (
     <>
@@ -574,7 +607,7 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
       <pointLight position={[-4, -4, 4]} intensity={0.4} />
 
       {showRisks && <RiskZones npv={npv} reserves={reserves} extraction={extraction} />}
-      <AxesFromBottomLeft />
+      <AxesFromBottomLeft npv={npv} reserves={reserves} extraction={extraction} />
       <group>
         <WireframeCube />
         {points.map((id) => (
@@ -585,6 +618,7 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
             reserves={reserves}
             extraction={extraction}
             onPointClick={onPointClick}
+            filterVariantType={filterVariantType}
           />
         ))}
       </group>
@@ -614,18 +648,9 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         enableRotate
       />
 
-      {AXIS_LABELS.map(({ position, short, full }) => (
-        <Html key={short} position={position} center>
-          <div
-            className="cube-axis-label-wrap"
-            onPointerEnter={() => setAxisTooltip(full)}
-            onPointerLeave={() => setAxisTooltip(null)}
-          >
-            <span className="cube-axis-label">{short}</span>
-            {axisTooltip === full && (
-              <div className="cube-axis-tooltip" role="tooltip">{full}</div>
-            )}
-          </div>
+      {AXIS_LABELS.map(({ position, short }) => (
+        <Html key={short} position={position} center className="cube-axis-label-html">
+          <span className="cube-axis-label">{short}</span>
         </Html>
       ))}
     </>
@@ -644,6 +669,7 @@ function Hypercube3D({ onOpenBpm }) {
   const [selectedPlanePoint, setSelectedPlanePoint] = useState(null)
   const [filterPlanePoint, setFilterPlanePoint] = useState(null)
   const [filterByStatusKey, setFilterByStatusKey] = useState(null)
+  const [filterVariantType, setFilterVariantType] = useState(null)
   const [getEntityLabel, setGetEntityLabel] = useState(() => defaultGetEntityLabel)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showRisks, setShowRisks] = useState(false)
@@ -685,7 +711,7 @@ function Hypercube3D({ onOpenBpm }) {
     <div className="hypercube-container">
       <div className="hypercube-controls">
         <div className="control-group control-group-inline">
-          <label className="slider-full-label">
+          <label className="slider-full-label" title="NPV — оперативный рычаг, деньги за год (млн руб)">
             NPV (оперативный рычаг — деньги за год): {npv}% ({npvMillions} млн руб)
           </label>
           <input
@@ -694,11 +720,11 @@ function Hypercube3D({ onOpenBpm }) {
             max="100"
             value={npv}
             onChange={(e) => setNpv(Number(e.target.value))}
-            className={`slider ${npv <= 5 ? 'slider-low' : npv >= 95 ? 'slider-high' : ''}`}
+            className="slider"
           />
         </div>
         <div className="control-group control-group-inline">
-          <label className="slider-full-label">
+          <label className="slider-full-label" title="Запасы — стратегический рычаг, суммарная добыча нефти/КИН за 30 лет (млн т)">
             Запасы (стратегический рычаг — суммарная добыча нефти/КИН за 30 лет): {reserves}% ({reservesMillions} млн т)
           </label>
           <input
@@ -707,11 +733,11 @@ function Hypercube3D({ onOpenBpm }) {
             max="100"
             value={reserves}
             onChange={(e) => setReserves(Number(e.target.value))}
-            className={`slider ${reserves <= 5 ? 'slider-low' : reserves >= 95 ? 'slider-high' : ''}`}
+            className="slider"
           />
         </div>
         <div className="control-group control-group-inline">
-          <label className="slider-full-label">
+          <label className="slider-full-label" title="Добыча (Q) — оперативный рычаг добычи нефти за год (млн т)">
             Добыча (Q, млн т) — оперативный рычаг добычи нефти за год: {extraction}% ({extractionMillions} млн т)
           </label>
           <input
@@ -720,7 +746,7 @@ function Hypercube3D({ onOpenBpm }) {
             max="100"
             value={extraction}
             onChange={(e) => setExtraction(Number(e.target.value))}
-            className={`slider ${extraction <= 5 ? 'slider-low' : extraction >= 95 ? 'slider-high' : ''}`}
+            className="slider"
           />
         </div>
       </div>
@@ -730,35 +756,45 @@ function Hypercube3D({ onOpenBpm }) {
           <h3>Гиперкуб рычагов влияния (параметры в млн)</h3>
           <div className="cube-metrics">
             <div className="metric">
-              <span className="metric-label">NPV, млн руб</span>
+              <span className="metric-label" title="NPV — оперативный рычаг, деньги за год (млн руб)">NPV, млн руб</span>
               <span className="metric-value">{npvMillions}</span>
             </div>
             <div className="metric">
-              <span className="metric-label">Запасы, млн т</span>
+              <span className="metric-label" title="Запасы — стратегический рычаг, суммарная добыча нефти/КИН за 30 лет (млн т)">Запасы, млн т</span>
               <span className="metric-value">{reservesMillions}</span>
             </div>
             <div className="metric">
-              <span className="metric-label">Добыча Q, млн т</span>
+              <span className="metric-label" title="Добыча (Q) — оперативный рычаг добычи нефти за год (млн т)">Добыча Q, млн т</span>
               <span className="metric-value">{extractionMillions}</span>
             </div>
           </div>
-          <p className="cube-palette-hint">
-            Точки на плоскостях — по индикаторам состояния (клик по пункту легенды: показать только такие; повторный клик — все).
-          </p>
-          <div className="cube-palette-legend">
-            <span className="cube-legend-cold">Низкие</span>
-            <div className="cube-legend-gradient" />
-            <span className="cube-legend-hot">Высокие</span>
-          </div>
           <div className="cube-points-legend">
-            <span className="cube-plane-legend-title">Точки внутри куба (варианты)</span>
+            <span className="cube-plane-legend-title">Пространство вариантов внутри гипер-куба</span>
             <div className="cube-plane-legend-items cube-plane-legend-items-rows">
-              <span className="cube-legend-point" style={{ color: '#dc2626' }}>●</span>
-              <span className="cube-legend-point-desc">Низкие рычаги</span>
-              <span className="cube-legend-point" style={{ color: '#2d5a87' }}>●</span>
-              <span className="cube-legend-point-desc">Средние</span>
-              <span className="cube-legend-point" style={{ color: '#16a34a' }}>●</span>
-              <span className="cube-legend-point-desc">Высокие рычаги</span>
+              <button
+                type="button"
+                className={`cube-indicator-legend-item ${filterVariantType === 'inapplicable' ? 'cube-indicator-legend-item-on' : ''}`}
+                style={{ color: VARIANT_COLORS.inapplicable }}
+                onClick={() => setFilterVariantType((prev) => (prev === 'inapplicable' ? null : 'inapplicable'))}
+              >
+                ● Вариант неприменим для текущего положения рычагов
+              </button>
+              <button
+                type="button"
+                className={`cube-indicator-legend-item ${filterVariantType === 'applicable' ? 'cube-indicator-legend-item-on' : ''}`}
+                style={{ color: VARIANT_COLORS.applicable }}
+                onClick={() => setFilterVariantType((prev) => (prev === 'applicable' ? null : 'applicable'))}
+              >
+                ● Вариант применим для текущего положения рычагов
+              </button>
+              <button
+                type="button"
+                className={`cube-indicator-legend-item ${filterVariantType === 'legitimate' ? 'cube-indicator-legend-item-on' : ''}`}
+                style={{ color: VARIANT_COLORS.legitimate }}
+                onClick={() => setFilterVariantType((prev) => (prev === 'legitimate' ? null : 'legitimate'))}
+              >
+                ● Вариант легитимен для текущего положения рычагов
+              </button>
             </div>
           </div>
           <div className="cube-plane-legend">
@@ -781,6 +817,12 @@ function Hypercube3D({ onOpenBpm }) {
                 </div>
               </div>
             ))}
+          </div>
+          <p className="cube-palette-hint">Области рисков</p>
+          <div className="cube-palette-legend">
+            <span className="cube-legend-cold">Низкие</span>
+            <div className="cube-legend-gradient" />
+            <span className="cube-legend-hot">Высокие</span>
           </div>
           <label className="cube-risks-toggle">
             <input
@@ -836,6 +878,7 @@ function Hypercube3D({ onOpenBpm }) {
                 onPlanePointToggle={handlePlanePointToggle}
                 filterPlanePoint={filterPlanePoint}
                 filterByStatusKey={filterByStatusKey}
+                filterVariantType={filterVariantType}
                 onOpenBpm={onOpenBpm}
                 getEntityLabel={getEntityLabel}
                 showRisks={showRisks}
@@ -847,7 +890,7 @@ function Hypercube3D({ onOpenBpm }) {
       </div>
 
       <div className="hypercube-instructions">
-        <p>Наведите на названия осей (NPV, Запасы, Добыча) для полного описания. Точки куба — по рычагам; точки на плоскостях воронки — по статусу ЦД (см. легенду). Нажмите на точку куба — откроется воронка сквозных сценариев.</p>
+        <p>Наведите на названия рычагов (NPV, Запасы, Добыча) в блоке выше для полного описания. Точки куба — варианты сценариев; точки на плоскостях воронки — по статусу ЦД (см. легенду). Нажмите на точку куба — откроется воронка сквозных сценариев.</p>
       </div>
     </div>
   )
