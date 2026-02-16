@@ -148,7 +148,6 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   const [showFilters, setShowFilters] = useState(false)
   const [draggedStageIndex, setDraggedStageIndex] = useState(null)
   const [excelLoaded, setExcelLoaded] = useState(initialBoardId !== 'hantos')
-  const [loadProgress, setLoadProgress] = useState(0)
 
   useEffect(() => {
     const data = getInitialBoard(initialBoardId)
@@ -157,24 +156,16 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
       setTasks(data.tasks)
     }
     setExcelLoaded(initialBoardId !== 'hantos')
-    setLoadProgress(initialBoardId !== 'hantos' ? 100 : 0)
   }, [initialBoardId])
 
   useEffect(() => {
     if (initialBoardId !== 'hantos') return
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
     const delayMs = 400
-    const progressInterval = setInterval(() => {
-      setLoadProgress((p) => {
-        if (p >= 90) return p
-        return p + Math.floor(Math.random() * 8) + 4
-      })
-    }, 400)
     const t1 = setTimeout(() => {
       fetch(`${base}hantos.xlsx`)
         .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
         .then((arrayBuffer) => {
-          setLoadProgress(75)
           const doParse = () => {
             try {
               const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
@@ -187,7 +178,6 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
             }
             setUploadError(null)
             setExcelLoaded(true)
-            setLoadProgress(100)
           }
           if (typeof requestIdleCallback !== 'undefined') {
             requestIdleCallback(doParse, { timeout: 800 })
@@ -195,15 +185,9 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
             setTimeout(doParse, 50)
           }
         })
-        .catch(() => {
-          setExcelLoaded(true)
-          setLoadProgress(100)
-        })
+        .catch(() => setExcelLoaded(true))
     }, delayMs)
-    return () => {
-      clearTimeout(t1)
-      clearInterval(progressInterval)
-    }
+    return () => clearTimeout(t1)
   }, [initialBoardId])
 
   const toggleExpanded = useCallback((key) => {
@@ -407,10 +391,8 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   if (initialBoardId === 'hantos' && !excelLoaded) {
     return (
       <div className="bpm-board-wrap bpm-loading-wrap">
-        <div className="bpm-loading-text">Загрузка данных доски… {loadProgress}%</div>
-        <div className="bpm-loading-bar-wrap">
-          <div className="bpm-loading-bar" style={{ width: `${Math.min(100, loadProgress)}%` }} />
-        </div>
+        <div className="bpm-loading-spinner" />
+        <div className="bpm-loading-text">Загрузка данных доски…</div>
         {onClose && (
           <button type="button" className="bpm-btn bpm-btn-primary bpm-btn-back" onClick={onClose}>
             Назад

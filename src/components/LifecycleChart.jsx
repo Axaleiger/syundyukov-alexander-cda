@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { loadLifecycleFromExcel } from '../data/loadLifecycleExcel'
 import { getLifecycleStreamData } from '../data/lifecycleData'
 import './LifecycleChart.css'
 
@@ -15,7 +16,25 @@ const stages = [
 
 function LifecycleChart({ onStageClick }) {
   const [selectedStage, setSelectedStage] = useState(null)
-  const streamData = useMemo(() => getLifecycleStreamData(), [])
+  const [streamData, setStreamData] = useState(null)
+
+  useEffect(() => {
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
+    loadLifecycleFromExcel(base)
+      .then(setStreamData)
+      .catch(() => setStreamData(getLifecycleStreamData()))
+  }, [])
+
+  if (streamData == null || streamData.length === 0) {
+    return (
+      <div className="lifecycle-container">
+        <div className="lifecycle-loading">
+          <div className="lifecycle-spinner" />
+          <span>Загрузка графика…</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="lifecycle-container">
