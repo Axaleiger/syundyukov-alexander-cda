@@ -10,18 +10,31 @@
  */
 import * as XLSX from 'xlsx'
 
+function excelSerialToYear(serial) {
+  const utc = (serial - 25569) * 86400 * 1000
+  return new Date(utc).getUTCFullYear()
+}
+
 function toYear(val) {
   if (val == null) return ''
-  if (typeof val === 'number') return String(Math.round(val))
   if (val instanceof Date) return String(val.getFullYear())
-  const n = Number(val)
-  if (!Number.isNaN(n)) return String(Math.round(n))
+  if (typeof val === 'number') {
+    if (val > 10000) return String(excelSerialToYear(val))
+    return String(Math.round(val))
+  }
+  const s = String(val).trim().replace(',', '.')
+  const n = Number(s)
+  if (!Number.isNaN(n)) {
+    if (n > 10000) return String(excelSerialToYear(n))
+    return String(Math.round(n))
+  }
   return String(val)
 }
 
 function toNum(val) {
   if (val == null || val === '') return 0
-  const n = Number(val)
+  const s = String(val).trim().replace(',', '.')
+  const n = Number(s)
   return Number.isNaN(n) ? 0 : n
 }
 

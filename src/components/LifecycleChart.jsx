@@ -59,7 +59,8 @@ function LifecycleChart({ onStageClick }) {
               minTickGap={32}
             />
             <YAxis
-              domain={['auto', 'auto']}
+              domain={[0, 'auto']}
+              allowDataOverflow
               tick={{ fontSize: 10 }}
               label={{ value: 'Объём затрат, млрд руб.', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
             />
