@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react'
 import './App.css'
 import RussiaMap from './components/RussiaMap'
 import WindRose from './components/WindRose'
@@ -7,8 +7,9 @@ import Hypercube3D from './components/Hypercube3D'
 import LifecycleChart from './components/LifecycleChart'
 import CashFlowChart from './components/CashFlowChart'
 import CDPage from './components/CDPage'
-import BPMBoard from './components/BPMBoard'
 import RightPanel from './components/RightPanel'
+
+const BPMBoard = lazy(() => import('./components/BPMBoard'))
 import ScenariosList from './components/ScenariosList'
 import OntologyTab from './components/OntologyTab'
 import ResultsTab from './components/ResultsTab'
@@ -16,6 +17,13 @@ import AdminTab from './components/AdminTab'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
 import { SCENARIO_STAGE_FILTERS } from './data/scenariosData'
 import mapPointsData from './data/mapPoints.json'
+
+const ADMIN_SUB_TABS = [
+  { id: 'roles', label: 'Ролевая модель' },
+  { id: 'catalog', label: 'Каталог сервисов' },
+  { id: 'integration', label: 'Заявки на интеграцию' },
+  { id: 'changes', label: 'Заявки на доработку сервисов' },
+]
 
 const TABS = [
   { id: 'face', label: 'Главная страница' },
@@ -51,6 +59,7 @@ function App() {
     SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {})
   )
   const [rightPanelCardColors, setRightPanelCardColors] = useState([null, null, null])
+  const [adminSubTab, setAdminSubTab] = useState('roles')
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -109,10 +118,12 @@ function App() {
   if (showBpm) {
     return (
       <div className="app">
-        <BPMBoard
-          highlightCardName={bpmHighlight}
-          onClose={() => { setShowBpm(false); setBpmHighlight(null) }}
-        />
+        <Suspense fallback={<div className="bpm-loading">Загрузка…</div>}>
+          <BPMBoard
+            highlightCardName={bpmHighlight}
+            onClose={() => { setShowBpm(false); setBpmHighlight(null) }}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -168,6 +179,21 @@ function App() {
                 onClick={() => setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))}
               >
                 {name}
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {activeTab === 'admin' && (
+          <nav className="app-sidebar app-sidebar-secondary">
+            {ADMIN_SUB_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`app-sidebar-tab ${adminSubTab === t.id ? 'app-sidebar-tab-active' : ''}`}
+                onClick={() => setAdminSubTab(t.id)}
+              >
+                {t.label}
               </button>
             ))}
           </nav>
@@ -244,18 +270,20 @@ function App() {
 
           {activeTab === 'planning' && (
             <div className="app-content app-content-bpm">
-              <BPMBoard
-                initialBoardId={selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos'}
-                selectedAssetName={selectedAssetPoint?.name}
-                highlightCardName={bpmHighlight}
-                onClose={() => setActiveTab('face')}
-              />
+              <Suspense fallback={<div className="bpm-loading">Загрузка Планирования…</div>}>
+                <BPMBoard
+                  initialBoardId={selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos'}
+                  selectedAssetName={selectedAssetPoint?.name}
+                  highlightCardName={bpmHighlight}
+                  onClose={() => setActiveTab('face')}
+                />
+              </Suspense>
             </div>
           )}
 
           {activeTab === 'ontology' && <OntologyTab />}
           {activeTab === 'results' && <ResultsTab />}
-          {activeTab === 'admin' && <AdminTab />}
+          {activeTab === 'admin' && <AdminTab activeSub={adminSubTab} />}
         </main>
 
         {activeTab === 'face' && selectedAssetId && (

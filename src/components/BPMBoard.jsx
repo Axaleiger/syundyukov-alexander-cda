@@ -147,6 +147,7 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [draggedStageIndex, setDraggedStageIndex] = useState(null)
+  const [excelLoaded, setExcelLoaded] = useState(initialBoardId !== 'hantos')
 
   useEffect(() => {
     const data = getInitialBoard(initialBoardId)
@@ -154,37 +155,39 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
       setStages(data.stages)
       setTasks(data.tasks)
     }
+    setExcelLoaded(initialBoardId !== 'hantos')
   }, [initialBoardId])
 
   useEffect(() => {
     if (initialBoardId !== 'hantos') return
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
-    const runParse = (arrayBuffer) => {
-      const doParse = () => {
-        try {
-          const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
-          setStages(s)
-          setTasks(t)
-        } catch {
-          const { stages: s, tasks: t } = parseBoardFromExcelLenient(arrayBuffer)
-          setStages(s)
-          setTasks(t)
-        }
-        setUploadError(null)
-      }
-      if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(doParse, { timeout: 300 })
-      } else {
-        setTimeout(doParse, 10)
-      }
-    }
-    const t = setTimeout(() => {
+    const delayMs = 600
+    const t1 = setTimeout(() => {
       fetch(`${base}hantos.xlsx`)
         .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
-        .then(runParse)
-        .catch(() => {})
-    }, 0)
-    return () => clearTimeout(t)
+        .then((arrayBuffer) => {
+          const doParse = () => {
+            try {
+              const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
+              setStages(s)
+              setTasks(t)
+            } catch {
+              const { stages: s, tasks: t } = parseBoardFromExcelLenient(arrayBuffer)
+              setStages(s)
+              setTasks(t)
+            }
+            setUploadError(null)
+            setExcelLoaded(true)
+          }
+          if (typeof requestIdleCallback !== 'undefined') {
+            requestIdleCallback(doParse, { timeout: 800 })
+          } else {
+            setTimeout(doParse, 50)
+          }
+        })
+        .catch(() => setExcelLoaded(true))
+    }, delayMs)
+    return () => clearTimeout(t1)
   }, [initialBoardId])
 
   const toggleExpanded = useCallback((key) => {
@@ -384,6 +387,15 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
 
   const analytics = useMemo(() => computeAnalytics(stages, tasks), [stages, tasks])
   const oilFlowHtml = useMemo(() => generateOilFlowHtml(stages, tasks), [stages, tasks])
+
+  if (initialBoardId === 'hantos' && !excelLoaded) {
+    return (
+      <div className="bpm-board-wrap bpm-loading-wrap">
+        <div className="bpm-loading-text">Загрузка данных доски…</div>
+        {onClose && <button type="button" className="bpm-btn bpm-btn-primary" onClick={onClose}>Назад</button>}
+      </div>
+    )
+  }
 
   if (showCalculateView) {
     return (

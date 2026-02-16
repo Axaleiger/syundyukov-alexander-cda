@@ -38,15 +38,28 @@ function generateStreamData() {
       4 * Math.exp(-Math.pow((y - 2022) / 5, 2)) +
       2 * Math.sin((y - 1965) * 0.2)
     )
-    /* Классическая кривая разработки месторождения: рост — полка — спад не до конца — небольшой плавный рост */
-    const tD = (y - startYear) / (endYear - startYear)
-    const phase1 = tD < 0.15 ? tD / 0.15 : 1
-    const phase2 = tD >= 0.15 && tD < 0.35 ? 1 : tD >= 0.35 && tD < 0.65 ? 1 - (tD - 0.35) / 0.5 * 0.7 : 0.3
-    const phase3 = tD >= 0.65 ? 0.3 + 0.15 * (1 - Math.cos((tD - 0.65) / 0.35 * Math.PI)) : 0
+    /* Кривая Добычи: с 1985 резкий рост ~45° (плавно), полка, спад ~30°, затем небольшой рост ~15° */
+    const dobychaBase = (() => {
+      if (y < 1985) return 0
+      if (y <= 1998) {
+        const t = (y - 1985) / (1998 - 1985)
+        const smooth = t * t * (3 - 2 * t)
+        return 2 + 20 * smooth
+      }
+      if (y <= 2012) return 22
+      if (y <= 2028) {
+        const t = (y - 2012) / (2028 - 2012)
+        const smooth = 1 - t * t * (3 - 2 * t)
+        return 8 + 14 * smooth
+      }
+      const t = (y - 2028) / (endYear - 2028)
+      const smooth = Math.min(1, t) * (1 - Math.cos(t * Math.PI * 0.5))
+      return 8 + 6 * smooth
+    })()
     const dobycha = norm(
-      3 + 22 * (phase1 * 0.4 + phase2 * 0.5 + phase3) +
-      2 * Math.sin((y - 1985) * 0.1) +
-      1 * Math.sin((y - 2015) * 0.12)
+      dobychaBase +
+      1.5 * Math.sin((y - 1985) * 0.08) +
+      0.8 * Math.sin((y - 2010) * 0.1)
     )
     const planirovanie = norm(
       4 + 10 * Math.exp(-Math.pow((y - 1990) / 12, 2)) +
@@ -71,10 +84,9 @@ function LifecycleChart({ onStageClick }) {
 
   return (
     <div className="lifecycle-container">
-      <p className="lifecycle-cost-caption">Объём затрат, млрд руб.</p>
       <div className="lifecycle-chart lifecycle-streamgraph">
         <ResponsiveContainer width="100%" height={380}>
-          <AreaChart data={streamData} margin={{ top: 20, right: 24, left: 8, bottom: 8 }} stackOffset="wiggle">
+          <AreaChart data={streamData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }} stackOffset="wiggle">
             <defs>
               {stages.map((s) => (
                 <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -92,7 +104,11 @@ function LifecycleChart({ onStageClick }) {
               interval="preserveStartEnd"
               minTickGap={32}
             />
-            <YAxis hide domain={['auto', 'auto']} />
+            <YAxis
+              domain={['auto', 'auto']}
+              tick={{ fontSize: 10 }}
+              label={{ value: 'Объём затрат, млрд руб.', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: '#fff',

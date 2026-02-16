@@ -421,6 +421,24 @@ const planeRiskFragmentShader = `
 
 const CYLINDER_HEIGHT = 0.35
 const CYLINDER_RADIUS = 0.04
+const POINT_SPHERE_TOP = 0.01 + 0.025
+
+const ALL_STATUS_KEYS = [
+  'no_data', 'fluctuation', 'asymmetry', 'non_normal',
+  'bad_calc', 'bad_excess', 'no_executor', 'no_approver', 'no_deadline', 'critical',
+  'ok',
+]
+
+function getCylinderSegmentColors(levelIndex, pointIndex) {
+  const seed = levelIndex * 17 + pointIndex * 31
+  const count = 3 + (seed % 3)
+  const colors = []
+  for (let i = 0; i < count; i++) {
+    const idx = (seed + i * 7) % ALL_STATUS_KEYS.length
+    colors.push(PLANE_POINT_STATUS_COLORS[ALL_STATUS_KEYS[idx]] || PLANE_POINT_STATUS_COLORS.ok)
+  }
+  return colors
+}
 
 function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
   const planeY = getPlaneY(levelIndex)
@@ -459,8 +477,10 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
   })
 
   const selectedPointIdx = isSelected && selectedPlanePoint ? selectedPlanePoint.pointIndex : null
-  const selectedStatus = selectedPointIdx != null ? getPlanePointStatus(levelIndex, selectedPointIdx) : null
-  const columnColor = selectedStatus ? (PLANE_POINT_STATUS_COLORS[selectedStatus] || PLANE_POINT_STATUS_COLORS.ok) : null
+  const segmentColors = selectedPointIdx != null ? getCylinderSegmentColors(levelIndex, selectedPointIdx) : []
+  const [pointX, , pointZ] = selectedPointIdx != null ? getPlanePointPosition(levelIndex, selectedPointIdx) : [0, 0, 0]
+  const cylinderBaseY = POINT_SPHERE_TOP
+  const cylinderCenterY = cylinderBaseY + CYLINDER_HEIGHT / 2
 
   return (
     <group position={[0, planeY, 0]}>
@@ -516,13 +536,20 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
           </group>
         )
       })}
-      {selectedPointIdx != null && columnColor && (
-        <group position={getPlanePointPosition(levelIndex, selectedPointIdx)}>
-          <mesh position={[0, CYLINDER_HEIGHT / 2 + 0.02, 0]}>
-            <cylinderGeometry args={[CYLINDER_RADIUS, CYLINDER_RADIUS * 1.05, CYLINDER_HEIGHT, 12]} />
-            <meshBasicMaterial color={columnColor} />
-          </mesh>
-          <Html position={[0, CYLINDER_HEIGHT + 0.12, 0]} center>
+      {selectedPointIdx != null && segmentColors.length > 0 && (
+        <group position={[pointX, 0.01, pointZ]}>
+          {segmentColors.map((color, i) => {
+            const n = segmentColors.length
+            const segH = CYLINDER_HEIGHT / n
+            const segCenterY = cylinderBaseY + (i + 0.5) * segH
+            return (
+              <mesh key={i} position={[0, segCenterY, 0]}>
+                <cylinderGeometry args={[CYLINDER_RADIUS, CYLINDER_RADIUS * 1.02, segH, 12]} />
+                <meshBasicMaterial color={color} />
+              </mesh>
+            )
+          })}
+          <Html position={[0, cylinderBaseY + CYLINDER_HEIGHT + 0.08, 0]} center>
             <a
               href="#"
               className="cube-goto-btn"

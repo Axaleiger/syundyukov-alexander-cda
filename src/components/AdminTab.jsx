@@ -1,15 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import './AdminTab.css'
 
-const ADMIN_SUB_TABS = [
-  { id: 'roles', label: 'Ролевая модель' },
-  { id: 'catalog', label: 'Каталог сервисов' },
-  { id: 'integration', label: 'Заявки на интеграцию' },
-  { id: 'changes', label: 'Заявки на доработку сервисов' },
-]
-
-function AdminTab() {
-  const [activeSub, setActiveSub] = useState('roles')
+function AdminTab({ activeSub = 'roles' }) {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
 
   return (
@@ -18,19 +10,6 @@ function AdminTab() {
       <p className="admin-tab-desc">
         Подключение пользователей, роли (эксперт, технический специалист, архитектор), карточки ключей, сертификаты, пароли, формирование подключения по API.
       </p>
-
-      <nav className="admin-sub-nav">
-        {ADMIN_SUB_TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`admin-sub-tab ${activeSub === t.id ? 'admin-sub-tab-active' : ''}`}
-            onClick={() => setActiveSub(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
 
       <div className="admin-sub-content">
         {activeSub === 'roles' && (
