@@ -40,7 +40,7 @@ function LifecycleChart({ onStageClick }) {
     <div className="lifecycle-container">
       <div className="lifecycle-chart lifecycle-streamgraph">
         <ResponsiveContainer width="100%" height={380}>
-          <AreaChart data={streamData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }} stackOffset="wiggle">
+          <AreaChart data={streamData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }}>
             <defs>
               {stages.map((s) => (
                 <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -89,7 +89,6 @@ function LifecycleChart({ onStageClick }) {
                 type="monotone"
                 dataKey={s.key}
                 name={s.name}
-                stackId="1"
                 stroke={s.color}
                 strokeWidth={1.5}
                 fill={`url(#grad-${s.key})`}

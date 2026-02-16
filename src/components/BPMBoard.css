@@ -31,6 +31,11 @@
   to { transform: rotate(360deg); }
 }
 
+.bpm-loading-back-wrap {
+  position: relative;
+  z-index: 10;
+}
+
 .bpm-loading-wrap .bpm-btn-back {
   cursor: pointer;
   pointer-events: auto;
