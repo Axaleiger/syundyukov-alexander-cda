@@ -394,7 +394,7 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
         <div className="bpm-loading-spinner" />
         <div className="bpm-loading-text">Загрузка данных доски…</div>
         {onClose && (
-          <button type="button" className="bpm-btn bpm-btn-primary bpm-btn-back" onClick={onClose}>
+          <button type="button" className="bpm-btn bpm-btn-primary bpm-btn-back" onClick={onClose} disabled>
             Назад
           </button>
         )}

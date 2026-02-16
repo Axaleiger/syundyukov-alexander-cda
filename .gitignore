@@ -27,3 +27,7 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+
+# Excel lock files
+~$*.xlsx
+~$*.xls

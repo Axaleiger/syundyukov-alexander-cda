@@ -1,10 +1,14 @@
 /**
  * Загрузка данных графика жизненного цикла из Excel.
- * Файл: Графики разработки.xlsx — A2:A102 даты, B1:F1 подписи, B2:F102 данные.
+ * Файл: Графики разработки.xlsx
+ * A2:A102 — даты (год)
+ * B2:B102 — Геологоразведка и работа с ресурсной базой
+ * C2:C102 — Разработка
+ * D2:D102 — Планирование и обустройство
+ * E2:E102 — Бурение и ВСР
+ * F2:F102 — Добыча
  */
 import * as XLSX from 'xlsx'
-
-const STAGE_KEYS = ['geologorazvedka', 'razrabotka', 'planirovanie', 'burenie', 'dobycha']
 
 function toYear(val) {
   if (val == null) return ''
@@ -24,13 +28,13 @@ function toNum(val) {
 export function parseLifecycleExcel(arrayBuffer) {
   const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', range: 'A2:F102' })
   const out = []
-  for (let r = 1; r <= 101 && r < rows.length; r++) {
+  for (let r = 0; r < rows.length; r++) {
     const row = rows[r] || []
     const year = toYear(row[0])
     out.push({
-      year: year || String(1964 + r),
+      year: year || String(1965 + r),
       geologorazvedka: toNum(row[1]),
       razrabotka: toNum(row[2]),
       planirovanie: toNum(row[3]),

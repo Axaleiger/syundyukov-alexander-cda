@@ -36,6 +36,12 @@
   pointer-events: auto;
 }
 
+.bpm-loading-wrap .bpm-btn-back:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .bpm-board-header {
   display: flex;
   align-items: center;
