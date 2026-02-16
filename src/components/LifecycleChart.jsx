@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { getLifecycleStreamData } from '../data/lifecycleData'
 import './LifecycleChart.css'
 
 const CURRENT_YEAR = 2026
@@ -12,75 +13,9 @@ const stages = [
   { key: 'dobycha', name: 'Добыча', color: '#6bc4a0' },
 ]
 
-const END_YEAR = 2065
-
-function generateStreamData() {
-  const years = []
-  const startYear = 1965
-  const endYear = END_YEAR
-  for (let y = startYear; y <= endYear; y++) {
-    const t = (y - startYear) / (endYear - startYear)
-    const norm = (x) => Math.max(0, x)
-    const geologorazvedka = norm(
-      18 * Math.exp(-Math.pow((y - 1982) / 18, 2)) +
-      4 * Math.exp(-Math.pow((y - 2025) / 6, 2)) +
-      2 * (1 + 0.3 * Math.sin((y - 1965) * 0.25))
-    )
-    const razrabotka = norm(
-      8 + 14 * (1 - Math.pow(t - 0.35, 2) * 2) +
-      3 * Math.sin((y - 1970) * 0.15) +
-      2 * Math.sin((y - 2010) * 0.2)
-    )
-    const burenie = norm(
-      5 + 20 * Math.exp(-Math.pow((y - 1975) / 12, 2)) +
-      8 * Math.exp(-Math.pow((y - 1992) / 8, 2)) +
-      6 * Math.exp(-Math.pow((y - 2008) / 6, 2)) +
-      4 * Math.exp(-Math.pow((y - 2022) / 5, 2)) +
-      2 * Math.sin((y - 1965) * 0.2)
-    )
-    /* Кривая Добычи: с 1985 резкий рост ~45° (плавно), полка, спад ~30°, затем небольшой рост ~15° */
-    const dobychaBase = (() => {
-      if (y < 1985) return 0
-      if (y <= 1998) {
-        const t = (y - 1985) / (1998 - 1985)
-        const smooth = t * t * (3 - 2 * t)
-        return 2 + 20 * smooth
-      }
-      if (y <= 2012) return 22
-      if (y <= 2028) {
-        const t = (y - 2012) / (2028 - 2012)
-        const smooth = 1 - t * t * (3 - 2 * t)
-        return 8 + 14 * smooth
-      }
-      const t = (y - 2028) / (endYear - 2028)
-      const smooth = Math.min(1, t) * (1 - Math.cos(t * Math.PI * 0.5))
-      return 8 + 6 * smooth
-    })()
-    const dobycha = norm(
-      dobychaBase +
-      1.5 * Math.sin((y - 1985) * 0.08) +
-      0.8 * Math.sin((y - 2010) * 0.1)
-    )
-    const planirovanie = norm(
-      4 + 10 * Math.exp(-Math.pow((y - 1990) / 12, 2)) +
-      6 * Math.exp(-Math.pow((y - 2015) / 8, 2)) +
-      2 * Math.sin((y - 1980) * 0.12)
-    )
-    years.push({
-      year: String(y),
-      geologorazvedka: Math.round(geologorazvedka * 10) / 10,
-      razrabotka: Math.round(razrabotka * 10) / 10,
-      planirovanie: Math.round(planirovanie * 10) / 10,
-      burenie: Math.round(burenie * 10) / 10,
-      dobycha: Math.round(dobycha * 10) / 10,
-    })
-  }
-  return years
-}
-
 function LifecycleChart({ onStageClick }) {
   const [selectedStage, setSelectedStage] = useState(null)
-  const streamData = useMemo(() => generateStreamData(), [])
+  const streamData = useMemo(() => getLifecycleStreamData(), [])
 
   return (
     <div className="lifecycle-container">

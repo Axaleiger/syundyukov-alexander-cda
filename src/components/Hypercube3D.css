@@ -338,6 +338,21 @@
   text-decoration: underline;
 }
 
+.cube-indicator-legend-item-static {
+  cursor: default;
+  text-decoration: none;
+}
+.cube-indicator-legend-item-static:hover {
+  text-decoration: none;
+}
+.cube-plane-legend-indicators .cube-indicator-legend-item {
+  cursor: default;
+  text-decoration: none;
+}
+.cube-plane-legend-indicators .cube-indicator-legend-item:hover {
+  text-decoration: none;
+}
+
 .cube-legend-point {
   display: inline-block;
   margin-right: 0.25rem;

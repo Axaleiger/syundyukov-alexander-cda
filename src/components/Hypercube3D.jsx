@@ -420,24 +420,47 @@ const planeRiskFragmentShader = `
 `
 
 const CYLINDER_HEIGHT = 0.35
-const CYLINDER_RADIUS = 0.04
 const POINT_SPHERE_TOP = 0.01 + 0.025
 
-const ALL_STATUS_KEYS = [
-  'no_data', 'fluctuation', 'asymmetry', 'non_normal',
-  'bad_calc', 'bad_excess', 'no_executor', 'no_approver', 'no_deadline', 'critical',
-  'ok',
+const ALL_INDICATOR_ITEMS = [
+  { key: 'no_data', label: 'Нет данных', color: '#374151' },
+  { key: 'fluctuation', label: 'Флуктуации данных', color: '#6b7280' },
+  { key: 'asymmetry', label: 'Асимметрия распределения', color: '#78350f' },
+  { key: 'non_normal', label: 'Распределение ненормальное', color: '#57534e' },
+  { key: 'bad_calc', label: 'Невалидный расчёт', color: '#ea580c' },
+  { key: 'bad_excess', label: 'Невалидный коэффициент эксцесса', color: '#c2410c' },
+  { key: 'no_executor', label: 'Не назначен исполнитель', color: '#dc2626' },
+  { key: 'no_approver', label: 'Нет согласующего', color: '#ca8a04' },
+  { key: 'no_deadline', label: 'Нет срока', color: '#b45309' },
+  { key: 'critical', label: 'Критично', color: '#be185d' },
+  { key: 'ok', label: 'Норма', color: '#2563eb' },
 ]
 
-function getCylinderSegmentColors(levelIndex, pointIndex) {
+function getCylinderSegments(levelIndex, pointIndex) {
   const seed = levelIndex * 17 + pointIndex * 31
-  const count = 3 + (seed % 3)
-  const colors = []
+  const count = 2 + (seed % 5)
+  const rawShares = []
+  let sum = 0
   for (let i = 0; i < count; i++) {
-    const idx = (seed + i * 7) % ALL_STATUS_KEYS.length
-    colors.push(PLANE_POINT_STATUS_COLORS[ALL_STATUS_KEYS[idx]] || PLANE_POINT_STATUS_COLORS.ok)
+    const r = 30 + ((seed + i * 11) % 70)
+    rawShares.push(r)
+    sum += r
   }
-  return colors
+  const segments = []
+  for (let i = 0; i < count; i++) {
+    const item = ALL_INDICATOR_ITEMS[(seed + i * 7) % ALL_INDICATOR_ITEMS.length]
+    segments.push({
+      key: item.key,
+      label: item.label,
+      color: item.color,
+      share: rawShares[i] / sum,
+    })
+  }
+  return segments
+}
+
+function getPointRadius(n) {
+  return n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025
 }
 
 function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
@@ -477,10 +500,11 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
   })
 
   const selectedPointIdx = isSelected && selectedPlanePoint ? selectedPlanePoint.pointIndex : null
-  const segmentColors = selectedPointIdx != null ? getCylinderSegmentColors(levelIndex, selectedPointIdx) : []
+  const cylinderSegments = selectedPointIdx != null ? getCylinderSegments(levelIndex, selectedPointIdx) : []
   const [pointX, , pointZ] = selectedPointIdx != null ? getPlanePointPosition(levelIndex, selectedPointIdx) : [0, 0, 0]
   const cylinderBaseY = POINT_SPHERE_TOP
-  const cylinderCenterY = cylinderBaseY + CYLINDER_HEIGHT / 2
+  const pointRadius = getPointRadius(n)
+  const [hoveredSegmentIndex, setHoveredSegmentIndex] = useState(null)
 
   return (
     <group position={[0, planeY, 0]}>
@@ -523,7 +547,7 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
                 onPlanePointHover?.(null)
               }}
             >
-              <sphereGeometry args={[n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025, 6, 6]} />
+              <sphereGeometry args={[pointRadius, 6, 6]} />
               <meshBasicMaterial color={pointColor} />
             </mesh>
             {isHovered && getEntityLabel && (
@@ -536,17 +560,31 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
           </group>
         )
       })}
-      {selectedPointIdx != null && segmentColors.length > 0 && (
+      {selectedPointIdx != null && cylinderSegments.length > 0 && (
         <group position={[pointX, 0.01, pointZ]}>
-          {segmentColors.map((color, i) => {
-            const n = segmentColors.length
-            const segH = CYLINDER_HEIGHT / n
-            const segCenterY = cylinderBaseY + (i + 0.5) * segH
+          {cylinderSegments.map((seg, i) => {
+            const segH = CYLINDER_HEIGHT * seg.share
+            let segCenterY = cylinderBaseY
+            for (let j = 0; j < i; j++) segCenterY += CYLINDER_HEIGHT * cylinderSegments[j].share
+            segCenterY += segH / 2
             return (
-              <mesh key={i} position={[0, segCenterY, 0]}>
-                <cylinderGeometry args={[CYLINDER_RADIUS, CYLINDER_RADIUS * 1.02, segH, 12]} />
-                <meshBasicMaterial color={color} />
-              </mesh>
+              <group key={i}>
+                <mesh
+                  position={[0, segCenterY, 0]}
+                  onPointerOver={() => setHoveredSegmentIndex(i)}
+                  onPointerOut={() => setHoveredSegmentIndex(null)}
+                >
+                  <cylinderGeometry args={[pointRadius, pointRadius * 1.02, segH, 12]} />
+                  <meshBasicMaterial color={seg.color} />
+                </mesh>
+                {hoveredSegmentIndex === i && (
+                  <Html position={[0, segCenterY, pointRadius + 0.04]} center className="funnel-point-tooltip-wrap">
+                    <div className="funnel-entity-tooltip funnel-point-tooltip" style={{ borderColor: seg.color }}>
+                      {seg.label}
+                    </div>
+                  </Html>
+                )}
+              </group>
             )
           })}
           <Html position={[0, cylinderBaseY + CYLINDER_HEIGHT + 0.08, 0]} center>
@@ -872,22 +910,16 @@ function Hypercube3D({ onOpenBpm }) {
               </button>
             </div>
           </div>
-          <div className="cube-plane-legend">
+          <div className="cube-plane-legend cube-plane-legend-indicators">
             <span className="cube-plane-legend-title">Индикаторы состояния</span>
             {Object.entries(INDICATOR_BASKETS).map(([groupName, items]) => (
               <div key={groupName} className="cube-indicator-basket">
                 <span className="cube-indicator-basket-name">{groupName}</span>
                 <div className="cube-plane-legend-items cube-plane-legend-items-rows">
                   {items.map(({ key, label, color }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`cube-indicator-legend-item ${filterByStatusKey === key ? 'cube-indicator-legend-item-on' : ''}`}
-                      style={{ color }}
-                      onClick={() => setFilterByStatusKey((prev) => (prev === key ? null : key))}
-                    >
+                    <span key={key} className="cube-indicator-legend-item cube-indicator-legend-item-static" style={{ color }}>
                       ● {label}
-                    </button>
+                    </span>
                   ))}
                 </div>
               </div>

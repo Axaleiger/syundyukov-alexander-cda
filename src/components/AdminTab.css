@@ -86,14 +86,153 @@
 .admin-panel-catalog {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 180px);
+  width: 100%;
+  padding: 1rem;
 }
 
 .admin-catalog-img {
   max-width: 100%;
+  max-height: calc(100vh - 200px);
+  width: auto;
   height: auto;
+  object-fit: contain;
   display: block;
-  margin-top: 0.5rem;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+}
+
+.admin-panel-hint {
+  margin: 0 0 1rem 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.admin-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-cards-compact {
+  gap: 0.75rem;
+}
+
+.admin-card {
+  flex: 1;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.admin-card-icon-only {
+  min-width: 120px;
+  max-width: 180px;
+}
+
+.admin-card-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-card h4,
+.admin-card h5 {
+  margin: 0 0 0.35rem 0;
+  font-size: 1rem;
+  color: #1e3a5f;
+}
+
+.admin-card h5 { font-size: 0.95rem; }
+
+.admin-card p,
+.admin-card-desc {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.admin-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #475569;
+}
+
+.admin-btn:hover {
+  background: #f1f5f9;
+  color: #1e3a5f;
+}
+
+.admin-btn-primary {
+  background: #2d5a87;
+  color: #fff;
+  border-color: #2d5a87;
+}
+
+.admin-btn-primary:hover {
+  background: #3d6a97;
+  color: #fff;
+}
+
+.admin-form-group {
+  margin-bottom: 1rem;
+}
+
+.admin-form-group label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.admin-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.admin-input:focus {
+  outline: none;
+  border-color: #2d5a87;
+}
+
+.admin-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.admin-hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.5rem 0;
+}
+
+.admin-api-block {
+  margin-bottom: 1rem;
+}
+
+.admin-list-caption {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e3a5f;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.admin-placeholder-sm {
+  padding: 1rem;
+  font-size: 0.85rem;
 }
