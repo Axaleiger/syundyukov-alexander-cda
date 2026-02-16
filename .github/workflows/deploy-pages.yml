@@ -32,8 +32,8 @@ jobs:
 
       - name: Build
         env:
-          # Для https://axaleiger.github.io/cda/ репозиторий должен называться "cda"
-          VITE_BASE: /cda/
+          # Для https://axaleiger.github.io/syundyukov-alexander-cda/
+          VITE_BASE: /syundyukov-alexander-cda/
         run: npm run build
 
       - name: Setup Pages
