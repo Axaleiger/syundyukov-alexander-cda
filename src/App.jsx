@@ -12,6 +12,7 @@ import RightPanel from './components/RightPanel'
 import ScenariosList from './components/ScenariosList'
 import OntologyTab from './components/OntologyTab'
 import ResultsTab from './components/ResultsTab'
+import AdminTab from './components/AdminTab'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
 import { SCENARIO_STAGE_FILTERS } from './data/scenariosData'
 import mapPointsData from './data/mapPoints.json'
@@ -20,8 +21,9 @@ const TABS = [
   { id: 'face', label: 'Главная страница' },
   { id: 'scenarios', label: 'Список сценариев' },
   { id: 'planning', label: 'Планирование' },
-  { id: 'ontology', label: 'Онтология' },
+  { id: 'ontology', label: 'Конфигуратор систем' },
   { id: 'results', label: 'Результаты' },
+  { id: 'admin', label: 'Администрирование', separatorBefore: true },
 ]
 
 function getBpmPageUrl(highlight) {
@@ -143,14 +145,16 @@ function App() {
       <div className="app-body">
         <nav className="app-sidebar">
           {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`app-sidebar-tab ${activeTab === t.id ? 'app-sidebar-tab-active' : ''}`}
-              onClick={() => setActiveTab(t.id)}
-            >
-              {t.label}
-            </button>
+            <React.Fragment key={t.id}>
+              {t.separatorBefore && <hr className="app-sidebar-divider" />}
+              <button
+                type="button"
+                className={`app-sidebar-tab ${activeTab === t.id ? 'app-sidebar-tab-active' : ''}`}
+                onClick={() => setActiveTab(t.id)}
+              >
+                {t.label}
+              </button>
+            </React.Fragment>
           ))}
         </nav>
 
@@ -251,6 +255,7 @@ function App() {
 
           {activeTab === 'ontology' && <OntologyTab />}
           {activeTab === 'results' && <ResultsTab />}
+          {activeTab === 'admin' && <AdminTab />}
         </main>
 
         {activeTab === 'face' && selectedAssetId && (

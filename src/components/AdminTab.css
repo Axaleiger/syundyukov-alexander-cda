@@ -1,0 +1,99 @@
+.admin-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.admin-tab-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.admin-tab-desc {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #5a6c7d;
+  max-width: 720px;
+}
+
+.admin-sub-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-sub-tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: #5a6c7d;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.admin-sub-tab:hover {
+  background: rgba(45, 90, 135, 0.08);
+  color: #1e3a5f;
+}
+
+.admin-sub-tab-active {
+  background: rgba(45, 90, 135, 0.12);
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.admin-sub-content {
+  min-height: 360px;
+}
+
+.admin-panel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-panel h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.15rem;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
+.admin-panel p {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: #5a6c7d;
+}
+
+.admin-placeholder {
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.admin-panel-catalog {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-catalog-img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}

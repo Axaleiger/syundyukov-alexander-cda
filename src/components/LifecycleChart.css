@@ -4,6 +4,13 @@
   gap: 2rem;
 }
 
+.lifecycle-cost-caption {
+  margin: 0 0 -0.5rem 0;
+  font-size: 0.9rem;
+  color: #5a6c7d;
+  font-weight: 500;
+}
+
 .lifecycle-header {
   text-align: center;
 }

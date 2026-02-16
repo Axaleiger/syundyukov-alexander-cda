@@ -38,10 +38,15 @@ function generateStreamData() {
       4 * Math.exp(-Math.pow((y - 2022) / 5, 2)) +
       2 * Math.sin((y - 1965) * 0.2)
     )
+    /* Классическая кривая разработки месторождения: рост — полка — спад не до конца — небольшой плавный рост */
+    const tD = (y - startYear) / (endYear - startYear)
+    const phase1 = tD < 0.15 ? tD / 0.15 : 1
+    const phase2 = tD >= 0.15 && tD < 0.35 ? 1 : tD >= 0.35 && tD < 0.65 ? 1 - (tD - 0.35) / 0.5 * 0.7 : 0.3
+    const phase3 = tD >= 0.65 ? 0.3 + 0.15 * (1 - Math.cos((tD - 0.65) / 0.35 * Math.PI)) : 0
     const dobycha = norm(
-      3 + 25 * (1 - 0.5 * Math.pow(Math.max(0, t - 0.4), 1.5)) +
-      4 * Math.sin((y - 1985) * 0.12) +
-      2 * Math.sin((y - 2015) * 0.15)
+      3 + 22 * (phase1 * 0.4 + phase2 * 0.5 + phase3) +
+      2 * Math.sin((y - 1985) * 0.1) +
+      1 * Math.sin((y - 2015) * 0.12)
     )
     const planirovanie = norm(
       4 + 10 * Math.exp(-Math.pow((y - 1990) / 12, 2)) +
@@ -66,6 +71,7 @@ function LifecycleChart({ onStageClick }) {
 
   return (
     <div className="lifecycle-container">
+      <p className="lifecycle-cost-caption">Объём затрат, млрд руб.</p>
       <div className="lifecycle-chart lifecycle-streamgraph">
         <ResponsiveContainer width="100%" height={380}>
           <AreaChart data={streamData} margin={{ top: 20, right: 24, left: 8, bottom: 8 }} stackOffset="wiggle">

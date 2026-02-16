@@ -56,6 +56,12 @@
   font-weight: 600;
 }
 
+.app-sidebar-divider {
+  margin: 0.5rem 0.25rem;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
 .app-main {
   flex: 1;
   overflow: auto;

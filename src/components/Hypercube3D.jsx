@@ -287,6 +287,8 @@ function valueToColor(variantType) {
   return VARIANT_COLORS[variantType] || VARIANT_COLORS.applicable
 }
 
+const BASE_PLANE_POINT_COLOR = '#5b8dc9'
+
 const PLANE_POINT_STATUS_COLORS = {
   ok: '#2563eb',
   critical: '#be185d',
@@ -417,7 +419,10 @@ const planeRiskFragmentShader = `
   }
 `
 
-function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
+const CYLINDER_HEIGHT = 0.35
+const CYLINDER_RADIUS = 0.04
+
+function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
   const planeY = getPlaneY(levelIndex)
   const size = getPlaneSize(levelIndex)
   const n = POINTS_PER_LEVEL[levelIndex]
@@ -453,6 +458,10 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
     u.uExtraction.value = extraction / 100
   })
 
+  const selectedPointIdx = isSelected && selectedPlanePoint ? selectedPlanePoint.pointIndex : null
+  const selectedStatus = selectedPointIdx != null ? getPlanePointStatus(levelIndex, selectedPointIdx) : null
+  const columnColor = selectedStatus ? (PLANE_POINT_STATUS_COLORS[selectedStatus] || PLANE_POINT_STATUS_COLORS.ok) : null
+
   return (
     <group position={[0, planeY, 0]}>
       <mesh ref={planeMeshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -474,38 +483,73 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
         const [x, , z] = getPlanePointPosition(levelIndex, idx)
         const selected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex && selectedPlanePoint.pointIndex === idx
         const planeStatus = getPlanePointStatus(levelIndex, idx)
-        const pointColor = selected ? '#2d5a87' : (PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok)
+        const pointColor = selected ? (PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok) : BASE_PLANE_POINT_COLOR
+        const isHovered = hoveredPlanePoint && hoveredPlanePoint.levelIndex === levelIndex && hoveredPlanePoint.pointIndex === idx
         return (
-          <mesh
-            key={idx}
-            position={[x, 0.01, z]}
-            onClick={(e) => {
-              e.stopPropagation()
-              onPlanePointToggle(levelIndex, idx)
-            }}
-            onPointerOver={() => { document.body.style.cursor = 'pointer' }}
-            onPointerOut={() => { document.body.style.cursor = 'default' }}
-          >
-            <sphereGeometry args={[n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025, 6, 6]} />
-            <meshBasicMaterial color={pointColor} />
-          </mesh>
+          <group key={idx}>
+            <mesh
+              position={[x, 0.01, z]}
+              onClick={(e) => {
+                e.stopPropagation()
+                onPlanePointToggle(levelIndex, idx)
+              }}
+              onPointerOver={(e) => {
+                e.stopPropagation()
+                document.body.style.cursor = 'pointer'
+                onPlanePointHover?.({ levelIndex, pointIndex: idx })
+              }}
+              onPointerOut={() => {
+                document.body.style.cursor = 'default'
+                onPlanePointHover?.(null)
+              }}
+            >
+              <sphereGeometry args={[n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025, 6, 6]} />
+              <meshBasicMaterial color={pointColor} />
+            </mesh>
+            {isHovered && getEntityLabel && (
+              <Html position={[x, 0.08, z]} center className="funnel-point-tooltip-wrap">
+                <div className="funnel-entity-tooltip funnel-point-tooltip">
+                  {getEntityLabel(levelIndex, idx)}
+                </div>
+              </Html>
+            )}
+          </group>
         )
       })}
+      {selectedPointIdx != null && columnColor && (
+        <group position={getPlanePointPosition(levelIndex, selectedPointIdx)}>
+          <mesh position={[0, CYLINDER_HEIGHT / 2 + 0.02, 0]}>
+            <cylinderGeometry args={[CYLINDER_RADIUS, CYLINDER_RADIUS * 1.05, CYLINDER_HEIGHT, 12]} />
+            <meshBasicMaterial color={columnColor} />
+          </mesh>
+          <Html position={[0, CYLINDER_HEIGHT + 0.12, 0]} center>
+            <a
+              href="#"
+              className="cube-goto-btn"
+              onClick={(e) => {
+                e.preventDefault()
+                const label = getEntityLabel(levelIndex, selectedPointIdx) || ''
+                const baseUrl = typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : ''
+                const isCdLevel = levelIndex <= 1
+                const url = isCdLevel
+                  ? `${baseUrl}?cd=${encodeURIComponent(label)}`
+                  : `${baseUrl}?bpm=1&highlight=${encodeURIComponent(label)}`
+                window.open(url, '_blank', 'noopener,noreferrer')
+              }}
+            >
+              Перейти
+            </a>
+          </Html>
+        </group>
+      )}
       <Html position={[size / 2 + 0.45, 0.06, 0]} center>
         <span className="funnel-level-label">{levelTitle}</span>
       </Html>
-      {isSelected && selectedPlanePoint && getEntityLabel && (
-        <Html position={[0, 0.15, 0]} center>
-          <div className="funnel-entity-tooltip">
-            {getEntityLabel(levelIndex, selectedPlanePoint.pointIndex)}
-          </div>
-        </Html>
-      )}
     </group>
   )
 }
 
-function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50 }) {
+function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50 }) {
   const n0 = POINTS_PER_LEVEL[0]
   const fluxCurvesCubeToL0 = useMemo(() => {
     return Array.from({ length: Math.min(NUM_FLUX_CURVES, n0 * 7) }, (_, i) => {
@@ -574,6 +618,8 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
           color={PLANE_LEVEL_COLORS[idx]}
           onPointClick={onPlanePointClick}
           onPlanePointToggle={onPlanePointToggle}
+          onPlanePointHover={onPlanePointHover}
+          hoveredPlanePoint={hoveredPlanePoint}
           filterPlanePoint={filterPlanePoint}
           filterByStatusKey={filterByStatusKey}
           onOpenBpm={onOpenBpm}
@@ -597,7 +643,7 @@ const AXIS_LABELS = [
   { position: [0, 0, CUBE_HALF + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
-function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType }) {
+function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
 
   return (
@@ -629,6 +675,8 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         selectedPlanePoint={selectedPlanePoint}
         onPlanePointClick={onPlanePointClick}
         onPlanePointToggle={onPlanePointToggle}
+        onPlanePointHover={onPlanePointHover}
+        hoveredPlanePoint={hoveredPlanePoint}
         filterPlanePoint={filterPlanePoint}
         filterByStatusKey={filterByStatusKey}
         onOpenBpm={onOpenBpm}
@@ -675,6 +723,8 @@ function Hypercube3D({ onOpenBpm }) {
   const [showRisks, setShowRisks] = useState(false)
   const cubeCanvasRef = useRef(null)
 
+  const [hoveredPlanePoint, setHoveredPlanePoint] = useState(null)
+
   const handlePlanePointToggle = useCallback((levelIndex, pointIndex) => {
     const same = filterPlanePoint && filterPlanePoint.levelIndex === levelIndex && filterPlanePoint.pointIndex === pointIndex
     if (same) {
@@ -683,10 +733,8 @@ function Hypercube3D({ onOpenBpm }) {
     } else {
       setFilterPlanePoint({ levelIndex, pointIndex })
       setSelectedPlanePoint({ levelIndex, pointIndex })
-      const label = getEntityLabel(levelIndex, pointIndex)
-      onOpenBpm(label)
     }
-  }, [filterPlanePoint, getEntityLabel, onOpenBpm])
+  }, [filterPlanePoint])
 
   useEffect(() => {
     loadFunnelFromExcel()
@@ -876,6 +924,8 @@ function Hypercube3D({ onOpenBpm }) {
                 selectedPlanePoint={selectedPlanePoint}
                 onPlanePointClick={(levelIndex, pointIndex) => setSelectedPlanePoint({ levelIndex, pointIndex })}
                 onPlanePointToggle={handlePlanePointToggle}
+                onPlanePointHover={setHoveredPlanePoint}
+                hoveredPlanePoint={hoveredPlanePoint}
                 filterPlanePoint={filterPlanePoint}
                 filterByStatusKey={filterByStatusKey}
                 filterVariantType={filterVariantType}

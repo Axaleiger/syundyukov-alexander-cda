@@ -159,9 +159,8 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   useEffect(() => {
     if (initialBoardId !== 'hantos') return
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
-    fetch(`${base}hantos.xlsx`)
-      .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
-      .then((arrayBuffer) => {
+    const runParse = (arrayBuffer) => {
+      const doParse = () => {
         try {
           const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
           setStages(s)
@@ -172,8 +171,20 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
           setTasks(t)
         }
         setUploadError(null)
-      })
-      .catch(() => {})
+      }
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(doParse, { timeout: 300 })
+      } else {
+        setTimeout(doParse, 10)
+      }
+    }
+    const t = setTimeout(() => {
+      fetch(`${base}hantos.xlsx`)
+        .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
+        .then(runParse)
+        .catch(() => {})
+    }, 0)
+    return () => clearTimeout(t)
   }, [initialBoardId])
 
   const toggleExpanded = useCallback((key) => {

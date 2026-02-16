@@ -205,3 +205,27 @@
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
 }
+
+/* Конфигуратор систем — только изображение */
+.ontology-tab-config {
+  padding: 1rem;
+}
+.ontology-tab-config .ontology-title {
+  margin-bottom: 1rem;
+}
+.ontology-config-wrap {
+  flex: 1;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  overflow: auto;
+}
+.ontology-config-img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
