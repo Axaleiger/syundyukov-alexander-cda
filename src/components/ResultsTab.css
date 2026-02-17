@@ -112,8 +112,43 @@
   margin-top: 0.2rem;
 }
 
+.results-widget-gauges .results-gauge-wrap {
+  padding: 0.5rem 0;
+}
+.results-widget-gauges .results-gauge-wrap + .results-gauge-wrap {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+}
 .results-gauge-wrap {
   padding: 0.5rem 0;
+}
+.results-widget-pie-fixed .recharts-pie {
+  outline: none;
+}
+.results-widget-pie-fixed .recharts-legend-wrapper {
+  position: relative;
+  margin-top: 4px;
+}
+.results-widget-pie-fixed .recharts-wrapper {
+  min-height: 180px;
+}
+
+.results-spark-axis-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+}
+
+.results-spark-axis-x {
+  margin-top: 0.2rem;
+  margin-bottom: 0;
+}
+
+.results-sparkline-wrap {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0.25rem;
 }
 
 .results-gauge-bg {

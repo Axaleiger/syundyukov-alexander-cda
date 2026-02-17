@@ -46,6 +46,17 @@ function getBoardIdForAsset(assetId) {
   return 'hantos'
 }
 
+function parseTabFromHash() {
+  const hash = (typeof window !== 'undefined' ? window.location.hash : '').replace(/^#/, '') || 'face'
+  if (hash.startsWith('admin-')) {
+    const sub = hash.slice(6)
+    const valid = ADMIN_SUB_TABS.some((t) => t.id === sub)
+    return { tab: 'admin', adminSub: valid ? sub : 'roles' }
+  }
+  const valid = TABS.some((t) => t.id === hash)
+  return { tab: valid ? hash : 'face', adminSub: 'roles' }
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('face')
   const [selectedLeftStageIndex, setSelectedLeftStageIndex] = useState(null)
@@ -68,16 +79,59 @@ function App() {
     if (params.get('bpm') === '1') {
       setShowBpm(true)
       setBpmHighlight(params.get('highlight') || null)
+      return
     }
+    const { tab, adminSub } = parseTabFromHash()
+    setActiveTab(tab)
+    setAdminSubTab(adminSub)
   }, [])
 
-  const rightRoseData = useMemo(() => {
-    if (selectedLeftStageIndex != null) {
-      const stageName = PRODUCTION_STAGES[selectedLeftStageIndex].name
-      return OBJECTS_BY_STAGE[stageName] || DEFAULT_OBJECTS
+  useEffect(() => {
+    if (showBpm) return
+    const hash = activeTab === 'admin' ? `#admin-${adminSubTab}` : `#${activeTab}`
+    if (typeof window !== 'undefined' && window.location.hash !== hash) {
+      window.history.replaceState(null, '', hash)
     }
-    return DEFAULT_OBJECTS
-  }, [selectedLeftStageIndex])
+  }, [activeTab, adminSubTab, showBpm])
+
+  useEffect(() => {
+    const onHashChange = () => {
+      if (window.location.search.includes('bpm=1')) return
+      const { tab, adminSub } = parseTabFromHash()
+      setActiveTab(tab)
+      setAdminSubTab(adminSub)
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  const faceSeed = useMemo(() => {
+    if (!selectedAssetId) return 0
+    return Math.abs(selectedAssetId.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0) | 0, 0))
+  }, [selectedAssetId])
+
+  const rightRoseData = useMemo(() => {
+    let base = selectedLeftStageIndex != null
+      ? (OBJECTS_BY_STAGE[PRODUCTION_STAGES[selectedLeftStageIndex].name] || DEFAULT_OBJECTS)
+      : DEFAULT_OBJECTS
+    if (faceSeed === 0) return base
+    const r = (i, j) => ((faceSeed * (i + 1) * 7 + (j + 1) * 11) % 17) - 8
+    return base.map((item, i) => ({
+      ...item,
+      value: Math.max(50, Math.min(99, item.value + r(i, 0))),
+      coverage: Math.max(50, Math.min(99, (item.coverage || item.value) + r(i, 1))),
+    }))
+  }, [selectedLeftStageIndex, faceSeed])
+
+  const leftRoseData = useMemo(() => {
+    if (faceSeed === 0) return PRODUCTION_STAGES
+    const r = (i, j) => ((faceSeed * (i + 1) * 7 + (j + 1) * 13) % 17) - 8
+    return PRODUCTION_STAGES.map((item, i) => ({
+      ...item,
+      value: Math.max(50, Math.min(99, item.value + r(i, 0))),
+      coverage: Math.max(50, Math.min(99, (item.coverage || item.value) + r(i, 1))),
+    }))
+  }, [faceSeed])
 
   const handleLeftSegmentClick = (index) => {
     setSelectedLeftStageIndex((prev) => (prev === index ? null : index))
@@ -98,6 +152,7 @@ function App() {
   }
 
   const handleLifecycleStageClick = (stageName) => {
+    setScenarioStageFilters(SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: name === stageName }), {}))
     setScenariosStageFilter(stageName)
     setActiveTab('scenarios')
   }
@@ -131,7 +186,7 @@ function App() {
   return (
     <div className="app app-with-sidebar">
       <header className="app-header">
-        <img src={`${import.meta.env.BASE_URL}emblem.png`} alt="ЦДА" className="app-header-emblem" />
+        <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/emblem.png`} alt="ЦДА" className="app-header-emblem" />
         <div className="app-header-text">
           <h1>ЦДА</h1>
           <p>(Цифровой Двойник Актива)</p>
@@ -176,7 +231,10 @@ function App() {
                 key={name}
                 type="button"
                 className={`app-sidebar-tab ${scenarioStageFilters[name] ? 'app-sidebar-tab-active' : ''}`}
-                onClick={() => setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))}
+                onClick={() => {
+                setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))
+                setScenariosStageFilter(null)
+              }}
               >
                 {name}
               </button>
@@ -227,7 +285,7 @@ function App() {
                     <h3>ЦД производственных этапов</h3>
                     <WindRose
                       type="left"
-                      data={PRODUCTION_STAGES}
+                      data={leftRoseData}
                       centerTitle="ЦД этапов"
                       selectedIndex={selectedLeftStageIndex}
                       onSegmentClick={handleLeftSegmentClick}
@@ -257,13 +315,13 @@ function App() {
               </section>
 
               <section className="section cashflow-section">
-                <h2>Динамика Cash flow и добычи: текущая и прогнозная</h2>
-                <CashFlowChart />
+                <h2>Динамика Cash flow и добычи</h2>
+                <CashFlowChart faceSeed={faceSeed} />
               </section>
 
               <section className="section lifecycle-section">
                 <h2>Этап выбранного жизненного цикла актива</h2>
-                <LifecycleChart onStageClick={handleLifecycleStageClick} />
+                <LifecycleChart onStageClick={handleLifecycleStageClick} faceSeed={faceSeed} />
               </section>
             </div>
           )}

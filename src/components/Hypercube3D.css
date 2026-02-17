@@ -529,6 +529,29 @@
   white-space: nowrap;
 }
 
+.funnel-cylinder-tooltip {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.funnel-cylinder-tooltip-label {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.funnel-cylinder-tooltip-pct {
+  font-size: 11px;
+  color: #64748b;
+}
+
 .cube-goto-btn {
   display: inline-block;
   padding: 0.35rem 0.75rem;

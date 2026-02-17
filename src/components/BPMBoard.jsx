@@ -389,17 +389,11 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   const oilFlowHtml = useMemo(() => generateOilFlowHtml(stages, tasks), [stages, tasks])
 
   if (initialBoardId === 'hantos' && !excelLoaded) {
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
     return (
       <div className="bpm-board-wrap bpm-loading-wrap">
-        <div className="bpm-loading-spinner" />
+        <img src={`${base}gif.gif`} alt="Загрузка…" className="bpm-loading-gif" />
         <div className="bpm-loading-text">Загрузка данных доски…</div>
-        {onClose && (
-          <div className="bpm-loading-back-wrap">
-            <button type="button" className="bpm-btn bpm-btn-primary bpm-btn-back" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-              Назад
-            </button>
-          </div>
-        )}
       </div>
     )
   }

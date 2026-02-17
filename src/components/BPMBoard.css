@@ -4,18 +4,35 @@
   padding: 1.25rem;
 }
 
+.bpm-board-wrap.bpm-loading-wrap {
+  background: rgb(252, 252, 252);
+  padding: 1rem;
+}
+
 .bpm-loading-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  min-height: 50vh;
+  min-height: 100vh;
+  width: 100%;
+  background: rgb(252, 252, 252);
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .bpm-loading-text {
   font-size: 1rem;
   color: #5a6c7d;
+}
+
+.bpm-loading-gif {
+  width: 42vmin;
+  height: 42vmin;
+  max-width: 280px;
+  max-height: 280px;
+  object-fit: contain;
 }
 
 .bpm-loading-spinner {

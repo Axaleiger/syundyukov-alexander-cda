@@ -7,7 +7,10 @@
  * D2:D102 — Планирование и обустройство
  * E2:E102 — Бурение и ВСР
  * F2:F102 — Добыча
+ * Масштаб: множитель для приведения к объёмам крупного месторождения (Приобское и др.), млрд руб.
+ * Реалистичный порядок: десятки–сотни млрд за цикл, не триллионы.
  */
+const COST_SCALE_FACTOR = 2.5
 import * as XLSX from 'xlsx'
 
 function excelSerialToYear(serial) {
@@ -48,11 +51,11 @@ export function parseLifecycleExcel(arrayBuffer) {
     const year = toYear(row[0])
     out.push({
       year: year || String(1965 + r),
-      geologorazvedka: toNum(row[1]),
-      razrabotka: toNum(row[2]),
-      planirovanie: toNum(row[3]),
-      burenie: toNum(row[4]),
-      dobycha: toNum(row[5]),
+      geologorazvedka: toNum(row[1]) * COST_SCALE_FACTOR,
+      razrabotka: toNum(row[2]) * COST_SCALE_FACTOR,
+      planirovanie: toNum(row[3]) * COST_SCALE_FACTOR,
+      burenie: toNum(row[4]) * COST_SCALE_FACTOR,
+      dobycha: toNum(row[5]) * COST_SCALE_FACTOR,
     })
   }
   return out

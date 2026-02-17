@@ -52,6 +52,72 @@
   font-weight: 500;
 }
 
+.lifecycle-view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.lifecycle-toggle-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #5a6c7d;
+}
+
+.lifecycle-toggle-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.lifecycle-toggle-btn.active {
+  background: #2d5a87;
+  color: #fff;
+  border-color: #2d5a87;
+}
+
+.lifecycle-legend-underline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.lifecycle-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.lifecycle-legend-item .lifecycle-legend-label {
+  text-decoration: underline;
+}
+
+.lifecycle-legend-item:hover .lifecycle-legend-label {
+  color: #2d5a87;
+}
+
+.lifecycle-legend-item.solo .lifecycle-legend-label {
+  font-weight: 600;
+  color: #2d5a87;
+}
+
+.lifecycle-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .lifecycle-chart {
   background: #f8fafc;
   border-radius: 12px;

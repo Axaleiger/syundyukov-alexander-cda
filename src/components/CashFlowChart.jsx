@@ -3,33 +3,49 @@ import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 import './CashFlowChart.css'
 
 const CURRENT_YEAR = 2026
+const START_YEAR = 2018
 const END_YEAR = 2065
-const CHART_ELLIPSIS_YEAR = 2048
-const CHART_YEAR_TICKS = [2024, 2026, 2028, 2030, 2032, CHART_ELLIPSIS_YEAR, 2063, 2065]
+const CHART_YEAR_TICKS = [
+  2018, 2022, 2024, 2026, 2028, 2030, 2032, 2034, 2036, 2038, 2040, 2042, 2044, 2046, 2050, 2054, 2058, 2063, 2065,
+]
+const HISTORY_COLOR = '#3b82f6'
+const FORECAST_COLOR = '#22c55e'
 
 const generateData = (startYear, endYear, baseCashFlow, declineRate) => {
   const years = endYear - startYear + 1
   return Array.from({ length: years }, (_, i) => {
     const y = startYear + i
     const iFromStart = y - startYear
+    const cashFlow = baseCashFlow * Math.pow(1 - declineRate, iFromStart)
+    const production = 100 * Math.pow(1 - declineRate * 0.8, iFromStart)
     return {
       year: y,
-      cashFlow: baseCashFlow * Math.pow(1 - declineRate, iFromStart),
-      production: 100 * Math.pow(1 - declineRate * 0.8, iFromStart),
+      cashFlow,
+      production,
+      cashFlowHistory: y <= CURRENT_YEAR ? cashFlow : null,
+      cashFlowForecast: y >= CURRENT_YEAR ? cashFlow : null,
+      productionHistory: y <= CURRENT_YEAR ? production : null,
+      productionForecast: y >= CURRENT_YEAR ? production : null,
       npv: baseCashFlow * Math.pow(1 - declineRate, iFromStart) * (endYear - y) * 0.1,
       isHistory: y <= CURRENT_YEAR,
     }
   })
 }
 
-function CashFlowChart() {
+function CashFlowChart({ faceSeed = 0 }) {
   const [baseCashFlow, setBaseCashFlow] = useState(1000)
   const [declineRate, setDeclineRate] = useState(0.1)
-  const [years, setYears] = useState(Math.min(40, END_YEAR - 2024))
+  const [years, setYears] = useState(Math.min(40, END_YEAR - START_YEAR))
+
+  useEffect(() => {
+    if (faceSeed === 0) return
+    setBaseCashFlow(800 + (faceSeed % 4200))
+    setDeclineRate(0.05 + (faceSeed % 250) / 10000)
+  }, [faceSeed])
 
   const chartData = useMemo(() => {
-    const endY = Math.min(2024 + years, END_YEAR)
-    return generateData(2024, endY, baseCashFlow, declineRate)
+    const endY = Math.min(START_YEAR + years, END_YEAR)
+    return generateData(START_YEAR, endY, baseCashFlow, declineRate)
   }, [baseCashFlow, declineRate, years])
 
   // Вычисляем точку выхода за рамки профиля
@@ -85,88 +101,68 @@ function CashFlowChart() {
           <ResponsiveContainer width="100%" height={340}>
             <AreaChart data={chartData}>
               <defs>
-                <linearGradient id="colorCashFlow" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#667eea" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#667eea" stopOpacity={0}/>
+                <linearGradient id="colorCashFlowHist" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={HISTORY_COLOR} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={HISTORY_COLOR} stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorCashFlowFcast" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={FORECAST_COLOR} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={FORECAST_COLOR} stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="year" 
-                domain={[2024, 2065]}
+                type="number"
+                domain={[START_YEAR, 2065]}
                 stroke="#a0aec0"
-                tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
                 ticks={CHART_YEAR_TICKS}
-                tickFormatter={(v) => (v === CHART_ELLIPSIS_YEAR ? '…' : String(v))}
+                tick={({ x, y, payload }) => (
+                  <g transform={`translate(${x},${y})`}>
+                    <circle r={5} fill={payload.value <= CURRENT_YEAR ? HISTORY_COLOR : FORECAST_COLOR} />
+                    <text x={0} y={14} textAnchor="middle" fill="#a0aec0" fontSize={10}>{payload.value}</text>
+                  </g>
+                )}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
-              <YAxis 
-                stroke="#a0aec0"
-                tick={{ fill: '#a0aec0' }}
-                label={{ value: 'млн руб', angle: -90, position: 'insideLeft', fill: '#a0aec0' }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)', 
-                  border: '1px solid #667eea',
-                  borderRadius: '8px',
-                  color: '#e2e8f0'
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="cashFlow" 
-                stroke="#667eea" 
-                fillOpacity={1} 
-                fill="url(#colorCashFlow)"
-                name="Cash Flow"
-              />
+              <YAxis stroke="#a0aec0" tick={{ fill: '#a0aec0' }} label={{ value: 'млн руб', angle: -90, position: 'insideLeft', fill: '#a0aec0' }} />
+              <Tooltip contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: '1px solid #667eea', borderRadius: '8px', color: '#e2e8f0' }} />
+              <Area type="monotone" dataKey="cashFlowHistory" stroke={HISTORY_COLOR} fill="url(#colorCashFlowHist)" fillOpacity={1} connectNulls name="Cash Flow (история)" dot={{ fill: HISTORY_COLOR, r: 3 }} />
+              <Area type="monotone" dataKey="cashFlowForecast" stroke={FORECAST_COLOR} fill="url(#colorCashFlowFcast)" fillOpacity={1} connectNulls name="Cash Flow (прогноз)" dot={{ fill: FORECAST_COLOR, r: 3 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         <div className="chart-container">
-          <h3>Добыча: текущая и прогнозная</h3>
+          <h3>Динамика добычи</h3>
           <ResponsiveContainer width="100%" height={340}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="year" 
-                domain={[2024, 2065]}
+                type="number"
+                domain={[START_YEAR, 2065]}
                 stroke="#a0aec0"
-                tick={{ fill: '#a0aec0', angle: -90, textAnchor: 'end', fontSize: 11 }}
                 ticks={CHART_YEAR_TICKS}
-                tickFormatter={(v) => (v === CHART_ELLIPSIS_YEAR ? '…' : String(v))}
+                tick={({ x, y, payload }) => (
+                  <g transform={`translate(${x},${y})`}>
+                    <circle r={5} fill={payload.value <= CURRENT_YEAR ? HISTORY_COLOR : FORECAST_COLOR} />
+                    <text x={0} y={14} textAnchor="middle" fill="#a0aec0" fontSize={10}>{payload.value}</text>
+                  </g>
+                )}
               />
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
-              <YAxis 
-                stroke="#a0aec0"
-                tick={{ fill: '#a0aec0' }}
-                label={{ value: '% от начальной', angle: -90, position: 'insideLeft', fill: '#a0aec0' }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)', 
-                  border: '1px solid #48bb78',
-                  borderRadius: '8px',
-                  color: '#e2e8f0'
-                }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="production" 
-                stroke="#48bb78" 
-                strokeWidth={3}
-                dot={{ fill: '#48bb78', r: 4 }}
-                name=""
-              />
+              <YAxis stroke="#a0aec0" tick={{ fill: '#a0aec0' }} label={{ value: '% от начальной', angle: -90, position: 'insideLeft', fill: '#a0aec0' }} />
+              <Tooltip contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: '1px solid #48bb78', borderRadius: '8px', color: '#e2e8f0' }} />
+              <Line type="monotone" dataKey="productionHistory" stroke={HISTORY_COLOR} strokeWidth={2} connectNulls dot={{ fill: HISTORY_COLOR, r: 3 }} name="Добыча (история)" />
+              <Line type="monotone" dataKey="productionForecast" stroke={FORECAST_COLOR} strokeWidth={2} connectNulls dot={{ fill: FORECAST_COLOR, r: 3 }} name="Добыча (прогноз)" />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
       <div className="cashflow-period-legend">
-        <span className="cashflow-legend-item cashflow-legend-history">● История (до {CURRENT_YEAR})</span>
-        <span className="cashflow-legend-item cashflow-legend-forecast">● Прогнозный период (после {CURRENT_YEAR})</span>
+        <span className="cashflow-legend-item cashflow-legend-history" style={{ color: HISTORY_COLOR }}>● История (до {CURRENT_YEAR})</span>
+        <span className="cashflow-legend-item cashflow-legend-forecast" style={{ color: FORECAST_COLOR }}>● Прогнозный период (после {CURRENT_YEAR})</span>
       </div>
       <p className="cashflow-prognoz-hint">Красная линия — текущий срез {CURRENT_YEAR} г.</p>
 
@@ -188,7 +184,7 @@ function CashFlowChart() {
         <div className="summary-item">
           <span className="summary-label">Средний Cash Flow:</span>
           <span className="summary-value">
-            {(chartData.reduce((sum, d) => sum + d.cashFlow, 0) / years).toLocaleString('ru-RU')} млн руб/год
+            {(chartData.reduce((sum, d) => sum + d.cashFlow, 0) / (chartData.length || 1)).toLocaleString('ru-RU')} млн руб/год
           </span>
         </div>
         <div className="summary-item">

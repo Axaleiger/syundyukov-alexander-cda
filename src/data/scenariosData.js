@@ -19,6 +19,15 @@ const STATUSES = ['выполнен', 'в работе', 'на паузе']
 const FIELDS = ['Зимнее', 'Новогоднее', 'Аганское']
 const FIELD_TO_DO = { 'Зимнее': 'Газпромнефть-Хантос', 'Новогоднее': 'Газпромнефть-ННГ', 'Аганское': 'Газпромнефть-Мегион' }
 const AUTHORS = ['Сюндюков А.В.']
+export const SCENARIO_DIRECTIONS = [
+  'Стратегическое управление и развитие бизнеса', 'Лицензирование и приобретение прав', 'Проектирование разработки месторождений',
+  'Проектирование объектов поверхностного обустройства', 'Эксплуатация объектов нефтегазового промысла', 'Инновации и исследования',
+  'Геолого-геофизическое изучение недр', 'Геодезия и маркшейдерия', 'Капитальное строительство', 'Энергообеспечение объектов нефтегазового промысла',
+  'Газовый бизнес', 'Геоинформационный анализ и картирование', 'Эксплуатационное бурение', 'Внутрискважинные работы, текущий и капитальный ремонт скважин',
+  'Логистика и снабжение', 'Управление программами, портфелями и проектами', 'Внешнее взаимодействие и экосистема', 'Управление договорами и организацией закупочных процедур',
+  'Интегрированные процессы', 'Промышленная автоматизация и метрология', 'Управление операционной эффективностью', 'Роботизация и автономные технологии',
+  'Надежность, технологическое обслуживание и ремонты (ТОиР)', 'Гидрометеорология', 'Промышленная безопасность, охрана здоровья и окружающей среды',
+]
 
 let seed = 42
 function seededRandom() {
@@ -31,10 +40,15 @@ function seededInt(min, max) {
 function seededChoice(arr) {
   return arr[seededInt(0, arr.length - 1)]
 }
-function randomDate2026() {
-  const month = seededInt(1, 12)
-  const day = seededInt(1, 28)
-  return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.2026`
+const DATE_RANGE_START = new Date(2025, 10, 1)
+const DATE_RANGE_END = new Date(2026, 2, 1)
+
+function randomDateInRange() {
+  const start = DATE_RANGE_START.getTime()
+  const end = DATE_RANGE_END.getTime()
+  const t = start + seededRandom() * (end - start)
+  const d = new Date(t)
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
 }
 function randomTime() {
   const h = seededInt(1, 3)
@@ -46,19 +60,20 @@ export function generateScenarios() {
   const withStage = SCENARIO_NAMES_WITH_STAGE.map((item, i) => {
     const field = seededChoice(FIELDS)
     return {
-    id: `SC-${17000 + i * 111 + seededInt(0, 99)}`,
-    name: item.name,
-    stages: seededInt(5, 10),
-    do: FIELD_TO_DO[field],
-    field,
-    status: seededChoice(STATUSES),
-    approved: seededRandom() > 0.4,
-    dateCreated: randomDate2026(),
-    timeCalc: randomTime(),
-    dateUpdated: randomDate2026(),
-    author: seededChoice(AUTHORS),
-    stageType: item.stageType,
-  }
+      id: `SC-${17000 + i * 111 + seededInt(0, 99)}`,
+      name: item.name,
+      stages: seededInt(5, 10),
+      do: FIELD_TO_DO[field],
+      field,
+      status: seededChoice(STATUSES),
+      approved: seededRandom() > 0.4,
+      dateCreated: randomDateInRange(),
+      timeCalc: randomTime(),
+      dateUpdated: randomDateInRange(),
+      author: seededChoice(AUTHORS),
+      stageType: item.stageType,
+      direction: seededChoice(SCENARIO_DIRECTIONS),
+    }
   })
   const generic = SCENARIO_NAMES_GENERIC.map((name, i) => {
     const stageFilter = seededChoice(SCENARIO_STAGE_FILTERS)
@@ -71,11 +86,12 @@ export function generateScenarios() {
       field,
       status: seededChoice(STATUSES),
       approved: seededRandom() > 0.4,
-      dateCreated: randomDate2026(),
+      dateCreated: randomDateInRange(),
       timeCalc: randomTime(),
-      dateUpdated: randomDate2026(),
+      dateUpdated: randomDateInRange(),
       author: seededChoice(AUTHORS),
       stageType: stageFilter,
+      direction: seededChoice(SCENARIO_DIRECTIONS),
     }
   })
   return [...withStage, ...generic]
@@ -88,3 +104,31 @@ export const PERIOD_OPTIONS = [
   { value: '1y', label: 'Год' },
   { value: 'custom', label: 'Свой период' },
 ]
+
+const PERIOD_END = new Date(2026, 2, 1)
+
+function parseScenarioDate(ddMmYyyy) {
+  const parts = String(ddMmYyyy).split('.')
+  if (parts.length !== 3) return null
+  const day = parseInt(parts[0], 10)
+  const month = parseInt(parts[1], 10) - 1
+  const year = parseInt(parts[2], 10)
+  if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year)) return null
+  return new Date(year, month, day)
+}
+
+export function filterScenariosByPeriod(scenarios, periodValue) {
+  if (periodValue === 'custom' || !periodValue) return scenarios
+  const end = new Date(PERIOD_END)
+  let start = new Date(PERIOD_END)
+  if (periodValue === '1m') start.setMonth(start.getMonth() - 1)
+  else if (periodValue === '3m') start.setMonth(start.getMonth() - 3)
+  else if (periodValue === '6m') start.setMonth(start.getMonth() - 6)
+  else if (periodValue === '1y') start.setFullYear(start.getFullYear() - 1)
+  else return scenarios
+  return scenarios.filter((s) => {
+    const d = parseScenarioDate(s.dateCreated)
+    if (!d) return true
+    return d >= start && d <= end
+  })
+}

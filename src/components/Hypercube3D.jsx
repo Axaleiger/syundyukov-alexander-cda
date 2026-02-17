@@ -268,6 +268,7 @@ const VARIANT_COLORS = {
 }
 
 function getVariantType(npv, reserves, extraction, variantId) {
+  const sumLever = (npv + reserves + extraction) / 300
   const basePos = getVariantBasePosition(variantId)
   const [x, y, z] = basePos
   const nx = (x + CUBE_HALF) / (2 * CUBE_HALF)
@@ -275,12 +276,11 @@ function getVariantType(npv, reserves, extraction, variantId) {
   const nz = (z + CUBE_HALF) / (2 * CUBE_HALF)
   const t = (nx * (npv / 100) * 0.4 + ny * (reserves / 100) * 0.35 + nz * (extraction / 100) * 0.25) + (variantId % 19) / 190
   const T = Math.min(1, Math.max(0, t))
-  const sumLever = (npv + reserves + extraction) / 300
-  const threshLow = 0.2 + 0.35 * sumLever
-  const threshHigh = 0.75 - 0.15 * sumLever
-  if (T <= threshLow) return 'inapplicable'
-  if (T <= threshHigh) return 'applicable'
-  return 'legitimate'
+  const threshInapp = 1 - (1 - sumLever) * (1 - sumLever)
+  const threshLegit = sumLever + (1 - sumLever) * 0.45
+  if (T < threshInapp) return 'inapplicable'
+  if (T >= threshLegit) return 'legitimate'
+  return 'applicable'
 }
 
 function valueToColor(variantType) {
@@ -579,8 +579,9 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
                 </mesh>
                 {hoveredSegmentIndex === i && (
                   <Html position={[0, segCenterY, pointRadius + 0.04]} center className="funnel-point-tooltip-wrap">
-                    <div className="funnel-entity-tooltip funnel-point-tooltip" style={{ borderColor: seg.color }}>
-                      {seg.label}
+                    <div className="funnel-entity-tooltip funnel-point-tooltip funnel-cylinder-tooltip" style={{ borderColor: seg.color }}>
+                      <span className="funnel-cylinder-tooltip-label">{seg.label}</span>
+                      <span className="funnel-cylinder-tooltip-pct">{(seg.share * 100).toFixed(1)}%</span>
                     </div>
                   </Html>
                 )}
@@ -701,11 +702,12 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
   )
 }
 
-const AXIS_LABEL_OFFSET = 0.12
-const AXIS_LABELS = [
-  { position: [CUBE_HALF + AXIS_LABEL_OFFSET, 0, 0], short: 'NPV' },
-  { position: [0, CUBE_HALF + AXIS_LABEL_OFFSET, 0], short: 'Запасы' },
-  { position: [0, 0, CUBE_HALF + AXIS_LABEL_OFFSET], short: 'Добыча' },
+const AXIS_LABEL_OFFSET = 0.1
+const ARROW_TIP_OFFSET = 0.08
+const axisLabelPositions = [
+  { position: [AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET, AXIS_ORIGIN, AXIS_ORIGIN], short: 'NPV' },
+  { position: [AXIS_ORIGIN, AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET, AXIS_ORIGIN], short: 'Запасы' },
+  { position: [AXIS_ORIGIN, AXIS_ORIGIN, AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
 function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType }) {
@@ -761,7 +763,7 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         enableRotate
       />
 
-      {AXIS_LABELS.map(({ position, short }) => (
+      {axisLabelPositions.map(({ position, short }) => (
         <Html key={short} position={position} center className="cube-axis-label-html">
           <span className="cube-axis-label">{short}</span>
         </Html>
