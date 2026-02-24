@@ -91,6 +91,21 @@ function AdminTab({ activeSub = 'roles' }) {
               <input type="text" placeholder="Введите имя или роль..." value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="admin-input" />
             </div>
             <button type="button" className="admin-btn admin-btn-primary">Запросить роль через СУИД</button>
+          </div>
+        )}
+        {activeSub === 'catalog' && (
+          <div className="admin-panel admin-panel-catalog">
+            <img
+              src={`${base}Каталог сервисов.png`}
+              alt="Каталог сервисов"
+              className="admin-catalog-img"
+            />
+          </div>
+        )}
+        {activeSub === 'integration' && (
+          <div className="admin-panel admin-panel-requests">
+            <h3>Заявки на интеграцию</h3>
+            <p className="admin-panel-hint">Создание и согласование заявок на подключение систем. Укажите источник, приёмник и обоснование.</p>
             <hr className="admin-hr" />
             <h4>Учётные данные и доступ</h4>
             <p className="admin-panel-hint">API-ключи, сертификаты и пароли для доступа к системам. Хранятся в защищённом хранилище.</p>
@@ -145,21 +160,7 @@ function AdminTab({ activeSub = 'roles' }) {
               </div>
             </div>
             <button type="button" className="admin-btn admin-btn-primary">Сохранить подключение</button>
-          </div>
-        )}
-        {activeSub === 'catalog' && (
-          <div className="admin-panel admin-panel-catalog">
-            <img
-              src={`${base}Каталог сервисов.png`}
-              alt="Каталог сервисов"
-              className="admin-catalog-img"
-            />
-          </div>
-        )}
-        {activeSub === 'integration' && (
-          <div className="admin-panel admin-panel-requests">
-            <h3>Заявки на интеграцию</h3>
-            <p className="admin-panel-hint">Создание и согласование заявок на подключение систем. Укажите источник, приёмник и обоснование.</p>
+            <hr className="admin-hr" />
             <div className="admin-request-form-card">
               <div className="admin-form-row">
                 <div className="admin-form-group admin-form-half">
@@ -234,6 +235,47 @@ function AdminTab({ activeSub = 'roles' }) {
                 </div>
                 <span className="admin-request-status admin-request-status-done">Выполнена</span>
               </div>
+            </div>
+          </div>
+        )}
+        {activeSub === 'add-service' && (
+          <div className="admin-panel admin-panel-add-service">
+            <h3>Заявки на добавление своего сервиса</h3>
+            <p className="admin-panel-hint">Предложите новый сервис или модуль для включения в ЦДА. Загрузите код, укажите ссылку на репозиторий или приложите Excel-файл с описанием логики.</p>
+            <div className="admin-request-form-card">
+              <div className="admin-form-group">
+                <label>Название сервиса / модуля</label>
+                <input type="text" placeholder="Краткое наименование" className="admin-input" />
+              </div>
+              <div className="admin-form-group">
+                <label>Описание</label>
+                <textarea placeholder="Назначение, входы/выходы, с какой системой планируется интеграция" className="admin-input admin-textarea" rows={3} />
+              </div>
+              <hr className="admin-hr" />
+              <h4>Загрузка кода</h4>
+              <p className="admin-panel-hint">Загрузите код на языках: Python, C#, Java, JavaScript/TypeScript, Go, R или архив с исходниками. Либо укажите ссылку на репозиторий (Git).</p>
+              <div className="admin-dropzone" onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('admin-dropzone-over') }} onDragLeave={(e) => { e.currentTarget.classList.remove('admin-dropzone-over') }} onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('admin-dropzone-over') }}>
+                <span className="admin-dropzone-text">Перетащите файлы сюда или выберите файл</span>
+                <span className="admin-dropzone-sublabel">.py, .cs, .java, .js, .ts, .go, .r, .zip</span>
+                <input type="file" className="admin-dropzone-input" accept=".py,.cs,.java,.js,.ts,.go,.r,.zip,application/zip" multiple />
+              </div>
+              <div className="admin-form-group">
+                <label>Ссылка на репозиторий (Git)</label>
+                <input type="url" placeholder="https://github.com/org/repo" className="admin-input" />
+              </div>
+              <hr className="admin-hr" />
+              <h4>Загрузка Excel</h4>
+              <p className="admin-panel-hint">Работа через Excel популярна в ДО. Загрузите файл и опишите, как с ним работает логика, чтобы ЦДА мог интегрировать и настроить связи.</p>
+              <div className="admin-dropzone admin-dropzone-excel" onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('admin-dropzone-over') }} onDragLeave={(e) => { e.currentTarget.classList.remove('admin-dropzone-over') }} onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('admin-dropzone-over') }}>
+                <span className="admin-dropzone-excel-icon">📊</span>
+                <span className="admin-dropzone-text">Перетащите Excel-файл сюда или выберите .xlsx / .xls</span>
+                <input type="file" className="admin-dropzone-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" />
+              </div>
+              <div className="admin-form-group">
+                <label>Описание работы Excel</label>
+                <textarea placeholder="Как устроена книга, какие листы, формулы, связи с другими системами" className="admin-input admin-textarea" rows={2} />
+              </div>
+              <button type="button" className="admin-btn admin-btn-primary">Отправить заявку</button>
             </div>
           </div>
         )}

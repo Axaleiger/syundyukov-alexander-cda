@@ -99,7 +99,70 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.scenarios-capability-bar {
+  padding: 0.5rem 1rem;
+  background: rgba(45, 90, 135, 0.1);
+  color: #1e3a5f;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(45, 90, 135, 0.25);
+  margin-right: auto;
+}
+
+.scenarios-create-btn {
+  padding: 0.6rem 1.25rem;
+  background: #2d5a87;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scenarios-create-btn:hover {
+  background: #1e4a77;
+}
+
+.scenarios-direction-grid-wrap {
+  margin-bottom: 1rem;
+}
+
+.scenarios-direction-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.scenarios-direction-tile {
+  padding: 0.65rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 0.8rem;
+  color: #475569;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.25;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scenarios-direction-tile:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.scenarios-direction-tile.active {
+  background: #2d5a87;
+  color: #fff;
+  border-color: #2d5a87;
 }
 
 .scenarios-period-select {
@@ -132,22 +195,6 @@
   height: 28px;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.scenarios-create-btn {
-  padding: 0.6rem 1.25rem;
-  background: #2d5a87;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 1.5rem;
-}
-
-.scenarios-create-btn:hover {
-  background: #1e4a77;
 }
 
 .scenarios-subcategory {

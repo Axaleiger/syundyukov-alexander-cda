@@ -129,6 +129,20 @@
 .results-widget-pie-fixed .recharts-legend-wrapper {
   position: relative;
   margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.results-widget-pie-fixed .recharts-legend-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.results-widget-pie-fixed .recharts-legend-item {
+  font-size: 12px !important;
+}
+.results-widget-pie-fixed .recharts-default-legend {
+  font-size: 12px;
 }
 .results-widget-pie-fixed .recharts-wrapper {
   min-height: 180px;

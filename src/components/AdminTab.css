@@ -362,6 +362,58 @@
   margin: 1rem 0 0.5rem 0;
 }
 
+.admin-dropzone {
+  position: relative;
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 1.5rem;
+  text-align: center;
+  background: #f8fafc;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.admin-dropzone-over {
+  border-color: #2d5a87;
+  background: rgba(45, 90, 135, 0.06);
+}
+
+.admin-dropzone-text {
+  display: block;
+  font-size: 0.95rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.admin-dropzone-sublabel {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+.admin-dropzone-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.admin-dropzone-excel .admin-dropzone-excel-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.admin-panel h4 {
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1rem;
+  color: #1e3a5f;
+  font-weight: 600;
+}
+
 .admin-placeholder-sm {
   padding: 1rem;
   font-size: 0.85rem;

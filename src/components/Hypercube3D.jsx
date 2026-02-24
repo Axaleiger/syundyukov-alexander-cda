@@ -269,6 +269,8 @@ const VARIANT_COLORS = {
 
 function getVariantType(npv, reserves, extraction, variantId) {
   const sumLever = (npv + reserves + extraction) / 300
+  const tInapp = 0.01 + 0.99 * (variantId / NUM_POINTS)
+  if (sumLever >= tInapp) return 'inapplicable'
   const basePos = getVariantBasePosition(variantId)
   const [x, y, z] = basePos
   const nx = (x + CUBE_HALF) / (2 * CUBE_HALF)
@@ -276,10 +278,7 @@ function getVariantType(npv, reserves, extraction, variantId) {
   const nz = (z + CUBE_HALF) / (2 * CUBE_HALF)
   const t = (nx * (npv / 100) * 0.4 + ny * (reserves / 100) * 0.35 + nz * (extraction / 100) * 0.25) + (variantId % 19) / 190
   const T = Math.min(1, Math.max(0, t))
-  const threshInapp = 1 - (1 - sumLever) * (1 - sumLever)
-  const threshLegit = sumLever + (1 - sumLever) * 0.45
-  if (T < threshInapp) return 'inapplicable'
-  if (T >= threshLegit) return 'legitimate'
+  if (T >= sumLever) return 'legitimate'
   return 'applicable'
 }
 

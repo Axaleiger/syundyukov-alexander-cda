@@ -192,8 +192,8 @@
 .app-header {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 1rem 2.5rem 1rem 2rem;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem 0.5rem 1rem;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -201,11 +201,11 @@
 }
 
 .app-header-emblem {
-  width: 140px;
-  height: 140px;
-  min-width: 140px;
-  min-height: 140px;
-  max-width: 160px;
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  min-height: 72px;
+  max-width: 88px;
   flex-shrink: 0;
   display: block;
   object-fit: contain;
@@ -214,11 +214,11 @@
 .app-header-text {
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.05rem;
 }
 
 .app-header h1 {
-  font-size: 2.25rem;
+  font-size: 1.5rem;
   margin: 0;
   color: #1e3a5f;
   font-weight: 600;
@@ -226,10 +226,32 @@
 }
 
 .app-header p {
-  font-size: 1.25rem;
+  font-size: 0.9rem;
   margin: 0;
   color: #6e6e73;
   font-weight: 400;
+}
+
+.app-header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.app-header-user-name {
+  font-size: 0.85rem;
+  color: #5a6c7d;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.app-header-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .app-content {

@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import './CashFlowChart.css'
 
 const CURRENT_YEAR = 2026
-const START_YEAR = 2018
+const START_YEAR = 2020
 const END_YEAR = 2065
 const CHART_YEAR_TICKS = [
-  2018, 2022, 2024, 2026, 2028, 2030, 2032, 2034, 2036, 2038, 2040, 2042, 2044, 2046, 2050, 2054, 2058, 2063, 2065,
+  2020, 2022, 2024, 2026, 2028, 2030, 2032, 2034, 2036, 2038, 2040, 2042, 2044, 2046, 2050, 2054, 2058, 2063, 2065,
 ]
 const HISTORY_COLOR = '#3b82f6'
 const FORECAST_COLOR = '#22c55e'
@@ -35,7 +35,7 @@ const generateData = (startYear, endYear, baseCashFlow, declineRate) => {
 function CashFlowChart({ faceSeed = 0 }) {
   const [baseCashFlow, setBaseCashFlow] = useState(1000)
   const [declineRate, setDeclineRate] = useState(0.1)
-  const [years, setYears] = useState(Math.min(40, END_YEAR - START_YEAR))
+  const [years, setYears] = useState(Math.min(END_YEAR - START_YEAR, 45))
 
   useEffect(() => {
     if (faceSeed === 0) return
@@ -86,7 +86,7 @@ function CashFlowChart({ faceSeed = 0 }) {
           <input
             type="range"
             min="5"
-            max={END_YEAR - 2024}
+            max={END_YEAR - START_YEAR}
             step="1"
             value={years}
             onChange={(e) => setYears(Number(e.target.value))}
@@ -99,7 +99,7 @@ function CashFlowChart({ faceSeed = 0 }) {
         <div className="chart-container">
           <h3>Cash flow</h3>
           <ResponsiveContainer width="100%" height={340}>
-            <AreaChart data={chartData}>
+            <AreaChart data={chartData} isAnimationActive={false}>
               <defs>
                 <linearGradient id="colorCashFlowHist" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={HISTORY_COLOR} stopOpacity={0.8}/>
@@ -127,8 +127,8 @@ function CashFlowChart({ faceSeed = 0 }) {
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis stroke="#a0aec0" tick={{ fill: '#a0aec0' }} label={{ value: 'млн руб', angle: -90, position: 'insideLeft', fill: '#a0aec0' }} />
               <Tooltip contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: '1px solid #667eea', borderRadius: '8px', color: '#e2e8f0' }} />
-              <Area type="monotone" dataKey="cashFlowHistory" stroke={HISTORY_COLOR} fill="url(#colorCashFlowHist)" fillOpacity={1} connectNulls name="Cash Flow (история)" dot={{ fill: HISTORY_COLOR, r: 3 }} />
-              <Area type="monotone" dataKey="cashFlowForecast" stroke={FORECAST_COLOR} fill="url(#colorCashFlowFcast)" fillOpacity={1} connectNulls name="Cash Flow (прогноз)" dot={{ fill: FORECAST_COLOR, r: 3 }} />
+              <Area type="monotone" dataKey="cashFlowHistory" stroke={HISTORY_COLOR} fill="url(#colorCashFlowHist)" fillOpacity={1} connectNulls name="Cash Flow (история)" dot={{ fill: HISTORY_COLOR, r: 3 }} isAnimationActive={false} />
+              <Area type="monotone" dataKey="cashFlowForecast" stroke={FORECAST_COLOR} fill="url(#colorCashFlowFcast)" fillOpacity={1} connectNulls name="Cash Flow (прогноз)" dot={{ fill: FORECAST_COLOR, r: 3 }} isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -136,7 +136,17 @@ function CashFlowChart({ faceSeed = 0 }) {
         <div className="chart-container">
           <h3>Динамика добычи</h3>
           <ResponsiveContainer width="100%" height={340}>
-            <LineChart data={chartData}>
+            <AreaChart data={chartData} isAnimationActive={false}>
+              <defs>
+                <linearGradient id="colorProdHist" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={HISTORY_COLOR} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={HISTORY_COLOR} stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorProdFcast" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={FORECAST_COLOR} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={FORECAST_COLOR} stopOpacity={0}/>
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
               <XAxis 
                 dataKey="year" 
@@ -154,9 +164,9 @@ function CashFlowChart({ faceSeed = 0 }) {
               <ReferenceLine x={CURRENT_YEAR} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
               <YAxis stroke="#a0aec0" tick={{ fill: '#a0aec0' }} label={{ value: '% от начальной', angle: -90, position: 'insideLeft', fill: '#a0aec0' }} />
               <Tooltip contentStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', border: '1px solid #48bb78', borderRadius: '8px', color: '#e2e8f0' }} />
-              <Line type="monotone" dataKey="productionHistory" stroke={HISTORY_COLOR} strokeWidth={2} connectNulls dot={{ fill: HISTORY_COLOR, r: 3 }} name="Добыча (история)" />
-              <Line type="monotone" dataKey="productionForecast" stroke={FORECAST_COLOR} strokeWidth={2} connectNulls dot={{ fill: FORECAST_COLOR, r: 3 }} name="Добыча (прогноз)" />
-            </LineChart>
+              <Area type="monotone" dataKey="productionHistory" stroke={HISTORY_COLOR} fill="url(#colorProdHist)" fillOpacity={1} connectNulls name="Добыча (история)" dot={{ fill: HISTORY_COLOR, r: 3 }} isAnimationActive={false} />
+              <Area type="monotone" dataKey="productionForecast" stroke={FORECAST_COLOR} fill="url(#colorProdFcast)" fillOpacity={1} connectNulls name="Добыча (прогноз)" dot={{ fill: FORECAST_COLOR, r: 3 }} isAnimationActive={false} />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

@@ -60,6 +60,9 @@ function padArr(arr, len, fill = 0) {
   return [...arr, ...Array(len - arr.length).fill(fill)]
 }
 
+/** Множители по этапам для более реалистичной разницы пиков объёма инвестиций (млрд). */
+const STAGE_PEAK_SCALE = { geologorazvedka: 0.55, razrabotka: 1.15, planirovanie: 0.82, burenie: 0.95, dobycha: 1.38 }
+
 export function getLifecycleStreamData() {
   const years = []
   const rLen = END_YEAR - START_YEAR + 1
@@ -71,11 +74,11 @@ export function getLifecycleStreamData() {
     const y = START_YEAR + i
     years.push({
       year: String(y),
-      geologorazvedka: Math.round((GEOLOGORAZVEDKA[y] ?? 0) * 1000) / 1000,
-      razrabotka: Math.round(raz[i] * 1000) / 1000,
-      planirovanie: Math.round(pla[i] * 1000) / 1000,
-      burenie: Math.round(bur[i] * 1000) / 1000,
-      dobycha: Math.round(dob[i] * 1000) / 1000,
+      geologorazvedka: Math.round((GEOLOGORAZVEDKA[y] ?? 0) * STAGE_PEAK_SCALE.geologorazvedka * 1000) / 1000,
+      razrabotka: Math.round(raz[i] * STAGE_PEAK_SCALE.razrabotka * 1000) / 1000,
+      planirovanie: Math.round(pla[i] * STAGE_PEAK_SCALE.planirovanie * 1000) / 1000,
+      burenie: Math.round(bur[i] * STAGE_PEAK_SCALE.burenie * 1000) / 1000,
+      dobycha: Math.round(dob[i] * STAGE_PEAK_SCALE.dobycha * 1000) / 1000,
     })
   }
   return years

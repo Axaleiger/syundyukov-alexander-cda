@@ -8,9 +8,9 @@ const CURRENT_YEAR = 2026
 const LIFECYCLE_HISTORY_COLOR = '#3b82f6'
 const LIFECYCLE_FORECAST_COLOR = '#22c55e'
 const VIEW_MODES = [
-  { id: 'default', label: 'По умолчанию' },
-  { id: 'sum', label: 'Суммарно' },
+  { id: 'sum', label: 'По умолчанию' },
   { id: 'cumulative', label: 'Накопление' },
+  { id: 'default', label: 'Детализированно' },
 ]
 
 const stages = [
@@ -37,7 +37,7 @@ function buildCumulative(data) {
 function LifecycleChart({ onStageClick, faceSeed = 0 }) {
   const [selectedStage, setSelectedStage] = useState(null)
   const [streamData, setStreamData] = useState(null)
-  const [viewMode, setViewMode] = useState('default')
+  const [viewMode, setViewMode] = useState('sum')
   const [legendOnly, setLegendOnly] = useState(null)
 
   useEffect(() => {
@@ -115,7 +115,7 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
           ))}
         </div>
         <ResponsiveContainer width="100%" height={380}>
-          <AreaChart data={chartData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }} stackOffset={viewMode === 'sum' ? undefined : undefined}>
+          <AreaChart data={chartData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }} isAnimationActive={false} stackOffset={viewMode === 'sum' ? undefined : undefined}>
             <defs>
               {stages.map((s) => (
                 <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -171,10 +171,12 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
                 name={s.name}
                 stackId={viewMode === 'sum' && legendOnly == null ? '1' : undefined}
                 stroke={s.color}
-                strokeWidth={1.5}
+                strokeWidth={2}
                 fill={`url(#grad-${s.key})`}
+                connectNulls
                 onClick={() => handleAreaClick(s.key)}
                 style={{ cursor: onStageClick ? 'pointer' : undefined }}
+                isAnimationActive={false}
               />
             ))}
           </AreaChart>

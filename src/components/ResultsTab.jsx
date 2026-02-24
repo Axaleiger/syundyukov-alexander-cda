@@ -216,8 +216,8 @@ function ResultsTab() {
             <PieChart margin={{ top: 8, right: 4, bottom: 32, left: 4 }}>
               <Pie
                 data={data.pieData}
-                cx="45%"
-                cy="45%"
+                cx="40%"
+                cy="40%"
                 innerRadius={38}
                 outerRadius={72}
                 paddingAngle={2}
@@ -230,7 +230,15 @@ function ResultsTab() {
                 ))}
               </Pie>
               <Tooltip formatter={(value, name) => [`${value}%`, name]} />
-              <Legend layout="horizontal" align="center" verticalAlign="bottom" formatter={(value, entry) => `${value} ${entry.payload?.value ?? ''}%`} wrapperStyle={{ fontSize: 10 }} />
+              <Legend
+                layout="vertical"
+                align="right"
+                verticalAlign="middle"
+                formatter={(value, entry) => `${value} ${entry.payload?.value ?? ''}%`}
+                wrapperStyle={{ fontSize: 12 }}
+                iconType="circle"
+                iconSize={8}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>

@@ -54,7 +54,7 @@
 
 .lifecycle-view-toggle {
   display: flex;
-  gap: 0.5rem;
+  gap: 0;
   flex-wrap: wrap;
 }
 
@@ -62,10 +62,20 @@
   padding: 0.5rem 1rem;
   border: 1px solid #e2e8f0;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
   font-size: 0.9rem;
   color: #5a6c7d;
+  margin-left: -1px;
+}
+
+.lifecycle-toggle-btn:first-child {
+  border-radius: 8px 0 0 8px;
+  margin-left: 0;
+}
+
+.lifecycle-toggle-btn:last-child {
+  border-radius: 0 8px 8px 0;
 }
 
 .lifecycle-toggle-btn:hover {

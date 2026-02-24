@@ -4,7 +4,7 @@ import './ScenariosList.css'
 
 const ALL_SCENARIOS = generateScenarios()
 
-const SUBCATEGORY_TITLES = ['Сценарии разработки', 'Оптимизация добычи', 'Планирование и ремонты', 'Геология и ресурсная база']
+const SUBCATEGORY_TITLES = ['Название подкатегории', 'Название подкатегории', 'Название подкатегории', 'Название подкатегории']
 
 function scenarioDisplayName(name) {
   if (!name || typeof name !== 'string') return name
@@ -17,7 +17,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const setStageFilters = onStageFilterToggle != null ? (name) => onStageFilterToggle(name) : (name) => setInternalFilters((prev) => ({ ...prev, [name]: !prev[name] }))
   const [period, setPeriod] = useState('1m')
   const [customPeriod, setCustomPeriod] = useState('')
-  const [collapsed, setCollapsed] = useState(() => SUBCATEGORY_TITLES.reduce((acc, t, i) => ({ ...acc, [i]: false }), {}))
+  const [collapsed, setCollapsed] = useState(() => SUBCATEGORY_TITLES.reduce((acc, t, i) => ({ ...acc, [i]: i !== 0 }), {}))
   const [directionFilter, setDirectionFilter] = useState(null)
 
   const effectiveFilters = useMemo(() => {
@@ -48,6 +48,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
         <div className="scenarios-main">
       <div className="scenarios-toolbar">
         <div className="scenarios-toolbar-right">
+          <span className="scenarios-capability-bar">Бизнес способности Разведки и добычи</span>
           <select
             className="scenarios-period-select"
             value={period}
@@ -66,21 +67,18 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
               onChange={(e) => setCustomPeriod(e.target.value)}
             />
           )}
-          <div className="scenarios-user">
-            <span className="scenarios-user-name">Сюндюков А.В. · Ведущий эксперт</span>
-            <img src={`${import.meta.env.BASE_URL || '/'}sanya-bodibilder.png`} alt="" className="scenarios-user-avatar" />
-          </div>
+          <button type="button" className="scenarios-create-btn">Создать сценарий</button>
         </div>
       </div>
 
-      <button type="button" className="scenarios-create-btn">Создать сценарий</button>
-
-      <div className="scenarios-direction-tabs">
-        <span className="scenarios-direction-label">Направление:</span>
-        <button type="button" className={`scenarios-direction-reset ${directionFilter === null ? 'active' : ''}`} onClick={() => setDirectionFilter(null)}>Все</button>
-        {SCENARIO_DIRECTIONS.slice(0, 10).map((dir) => (
-          <button key={dir} type="button" className={`scenarios-direction-tab ${directionFilter === dir ? 'active' : ''}`} onClick={() => setDirectionFilter(dir)} title={dir}>{dir.length > 32 ? dir.slice(0, 31) + '…' : dir}</button>
-        ))}
+      <div className="scenarios-direction-grid-wrap">
+        <div className="scenarios-direction-grid">
+          {SCENARIO_DIRECTIONS.map((dir) => (
+            <button key={dir} type="button" className={`scenarios-direction-tile ${directionFilter === dir ? 'active' : ''}`} onClick={() => setDirectionFilter(directionFilter === dir ? null : dir)} title={dir}>
+              {dir.length > 28 ? dir.slice(0, 27) + '…' : dir}
+            </button>
+          ))}
+        </div>
       </div>
 
       {SUBCATEGORY_TITLES.map((title, idx) => (
@@ -108,7 +106,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredScenarios.map((row) => (
+                  {(idx === 0 ? filteredScenarios : []).map((row) => (
                     <tr key={row.id}>
                       <td>
                         <button type="button" className="scenarios-name-link" onClick={() => onScenarioClick?.(row)}>

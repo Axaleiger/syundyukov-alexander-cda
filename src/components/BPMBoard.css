@@ -33,6 +33,7 @@
   max-width: 280px;
   max-height: 280px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .bpm-loading-spinner {

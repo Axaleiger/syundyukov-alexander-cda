@@ -23,6 +23,7 @@ const ADMIN_SUB_TABS = [
   { id: 'catalog', label: 'Каталог сервисов' },
   { id: 'integration', label: 'Заявки на интеграцию' },
   { id: 'changes', label: 'Заявки на доработку сервисов' },
+  { id: 'add-service', label: 'Заявки на добавление своего сервиса' },
 ]
 
 const TABS = [
@@ -58,7 +59,10 @@ function parseTabFromHash() {
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState('face')
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'face'
+    return parseTabFromHash().tab
+  })
   const [selectedLeftStageIndex, setSelectedLeftStageIndex] = useState(null)
   const [selectedRightObjectIndex, setSelectedRightObjectIndex] = useState(null)
   const [cdPageNode, setCdPageNode] = useState(null)
@@ -70,7 +74,10 @@ function App() {
     SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {})
   )
   const [rightPanelCardColors, setRightPanelCardColors] = useState([null, null, null])
-  const [adminSubTab, setAdminSubTab] = useState('roles')
+  const [adminSubTab, setAdminSubTab] = useState(() => {
+    if (typeof window === 'undefined') return 'roles'
+    return parseTabFromHash().adminSub
+  })
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -81,9 +88,6 @@ function App() {
       setBpmHighlight(params.get('highlight') || null)
       return
     }
-    const { tab, adminSub } = parseTabFromHash()
-    setActiveTab(tab)
-    setAdminSubTab(adminSub)
   }, [])
 
   useEffect(() => {
@@ -139,6 +143,12 @@ function App() {
   }
 
   const handleRightSegmentClick = (index) => {
+    const name = rightRoseData[index]?.name
+    if (name === 'Пласт') {
+      setCdPageNode('ЦД пласта')
+      setSelectedRightObjectIndex(null)
+      return
+    }
     setSelectedRightObjectIndex((prev) => (prev === index ? null : index))
   }
 
@@ -190,6 +200,10 @@ function App() {
         <div className="app-header-text">
           <h1>ЦДА</h1>
           <p>(Цифровой Двойник Актива)</p>
+        </div>
+        <div className="app-header-user">
+          <span className="app-header-user-name">Сюндюков А.В. · Ведущий эксперт</span>
+          <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="app-header-user-avatar" />
         </div>
       </header>
 
