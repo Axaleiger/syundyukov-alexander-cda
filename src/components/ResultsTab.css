@@ -126,17 +126,50 @@
 .results-widget-pie-fixed .recharts-pie {
   outline: none;
 }
+.results-pie-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 200px;
+}
+.results-pie-wrap .recharts-wrapper {
+  max-height: 200px;
+}
+.results-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  width: 100%;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #475569;
+}
+.results-pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.results-pie-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .results-widget-pie-fixed .recharts-legend-wrapper {
   position: relative;
   margin-top: 4px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
 .results-widget-pie-fixed .recharts-legend-item-list {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
+  align-items: center;
 }
 .results-widget-pie-fixed .recharts-legend-item {
   font-size: 12px !important;

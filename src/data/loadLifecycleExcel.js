@@ -1,16 +1,15 @@
 /**
  * Загрузка данных графика жизненного цикла из Excel.
- * Файл: Графики разработки.xlsx
- * A2:A102 — даты (год)
- * B2:B102 — Геологоразведка и работа с ресурсной базой
- * C2:C102 — Разработка
- * D2:D102 — Планирование и обустройство
- * E2:E102 — Бурение и ВСР
- * F2:F102 — Добыча
- * Масштаб: множитель для приведения к объёмам крупного месторождения (Приобское и др.), млрд руб.
- * Реалистичный порядок: десятки–сотни млрд за цикл, не триллионы.
+ * Масштабы относительно бурения: бурение 1, обустройство 0.9, геологоразведка 0.25, добыча 0.4, разработка 0.1.
  */
 const COST_SCALE_FACTOR = 2.5
+const STAGE_MULTIPLIERS = {
+  geologorazvedka: 0.25,
+  razrabotka: 0.1,
+  planirovanie: 0.9,
+  burenie: 1,
+  dobycha: 0.4,
+}
 import * as XLSX from 'xlsx'
 
 function excelSerialToYear(serial) {
@@ -49,13 +48,16 @@ export function parseLifecycleExcel(arrayBuffer) {
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r] || []
     const year = toYear(row[0])
+    const raw = {
+      geologorazvedka: toNum(row[1]) * COST_SCALE_FACTOR * STAGE_MULTIPLIERS.geologorazvedka,
+      razrabotka: toNum(row[2]) * COST_SCALE_FACTOR * STAGE_MULTIPLIERS.razrabotka,
+      planirovanie: toNum(row[3]) * COST_SCALE_FACTOR * STAGE_MULTIPLIERS.planirovanie,
+      burenie: toNum(row[4]) * COST_SCALE_FACTOR * STAGE_MULTIPLIERS.burenie,
+      dobycha: toNum(row[5]) * COST_SCALE_FACTOR * STAGE_MULTIPLIERS.dobycha,
+    }
     out.push({
       year: year || String(1965 + r),
-      geologorazvedka: toNum(row[1]) * COST_SCALE_FACTOR,
-      razrabotka: toNum(row[2]) * COST_SCALE_FACTOR,
-      planirovanie: toNum(row[3]) * COST_SCALE_FACTOR,
-      burenie: toNum(row[4]) * COST_SCALE_FACTOR,
-      dobycha: toNum(row[5]) * COST_SCALE_FACTOR,
+      ...raw,
     })
   }
   return out

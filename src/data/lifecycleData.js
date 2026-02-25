@@ -60,8 +60,8 @@ function padArr(arr, len, fill = 0) {
   return [...arr, ...Array(len - arr.length).fill(fill)]
 }
 
-/** Множители по этапам для более реалистичной разницы пиков объёма инвестиций (млрд). */
-const STAGE_PEAK_SCALE = { geologorazvedka: 0.55, razrabotka: 1.15, planirovanie: 0.82, burenie: 0.95, dobycha: 1.38 }
+/** Множители относительно бурения: бурение 1, обустройство 0.9, геологоразведка 0.25, добыча 0.4, разработка 0.1. */
+const STAGE_PEAK_SCALE = { geologorazvedka: 0.25, razrabotka: 0.1, planirovanie: 0.9, burenie: 1, dobycha: 0.4 }
 
 export function getLifecycleStreamData() {
   const years = []

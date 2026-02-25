@@ -18,7 +18,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const [period, setPeriod] = useState('1m')
   const [customPeriod, setCustomPeriod] = useState('')
   const [collapsed, setCollapsed] = useState(() => SUBCATEGORY_TITLES.reduce((acc, t, i) => ({ ...acc, [i]: i !== 0 }), {}))
-  const [directionFilter, setDirectionFilter] = useState(null)
+  const [directionFilter, setDirectionFilter] = useState(null) // выбор подраздела без фильтрации таблицы
 
   const effectiveFilters = useMemo(() => {
     const next = { ...stageFilters }
@@ -29,16 +29,13 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   }, [stageFilters, activeStageFilter])
 
   const filteredByStage = useMemo(() => {
-    const anyActive = Object.values(effectiveFilters).some(Boolean)
-    if (!anyActive) return []
+    const anyOn = Object.keys(effectiveFilters).some((k) => effectiveFilters[k])
+    if (!anyOn) return ALL_SCENARIOS
     return ALL_SCENARIOS.filter((s) => effectiveFilters[s.stageType])
   }, [effectiveFilters])
 
   const filteredByPeriod = useMemo(() => filterScenariosByPeriod(filteredByStage, period), [filteredByStage, period])
-  const filteredScenarios = useMemo(() => {
-    if (!directionFilter) return filteredByPeriod
-    return filteredByPeriod.filter((s) => s.direction === directionFilter)
-  }, [filteredByPeriod, directionFilter])
+  const filteredScenarios = useMemo(() => filteredByPeriod, [filteredByPeriod])
 
   return (
     <div className="scenarios-list">
@@ -48,7 +45,6 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
         <div className="scenarios-main">
       <div className="scenarios-toolbar">
         <div className="scenarios-toolbar-right">
-          <span className="scenarios-capability-bar">Бизнес способности Разведки и добычи</span>
           <select
             className="scenarios-period-select"
             value={period}
@@ -72,10 +68,11 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
       </div>
 
       <div className="scenarios-direction-grid-wrap">
+        <div className="scenarios-capability-bar">Бизнес способности Разведки и добычи</div>
         <div className="scenarios-direction-grid">
           {SCENARIO_DIRECTIONS.map((dir) => (
             <button key={dir} type="button" className={`scenarios-direction-tile ${directionFilter === dir ? 'active' : ''}`} onClick={() => setDirectionFilter(directionFilter === dir ? null : dir)} title={dir}>
-              {dir.length > 28 ? dir.slice(0, 27) + '…' : dir}
+              {dir}
             </button>
           ))}
         </div>

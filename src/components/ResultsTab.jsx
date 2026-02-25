@@ -212,35 +212,36 @@ function ResultsTab() {
         </div>
         <div className="results-widget results-widget-pie results-widget-pie-fixed">
           <h3>Структура показателей</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart margin={{ top: 8, right: 4, bottom: 32, left: 4 }}>
-              <Pie
-                data={data.pieData}
-                cx="40%"
-                cy="40%"
-                innerRadius={38}
-                outerRadius={72}
-                paddingAngle={2}
-                dataKey="value"
-                nameKey="name"
-                label={false}
-              >
-                {data.pieData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value, name) => [`${value}%`, name]} />
-              <Legend
-                layout="vertical"
-                align="right"
-                verticalAlign="middle"
-                formatter={(value, entry) => `${value} ${entry.payload?.value ?? ''}%`}
-                wrapperStyle={{ fontSize: 12 }}
-                iconType="circle"
-                iconSize={8}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="results-pie-wrap">
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart margin={{ top: 8, right: 16, bottom: 4, left: 16 }}>
+                <Pie
+                  data={data.pieData}
+                  cx="50%"
+                  cy="42%"
+                  innerRadius={32}
+                  outerRadius={58}
+                  paddingAngle={2}
+                  dataKey="value"
+                  nameKey="name"
+                  label={false}
+                >
+                  {data.pieData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name) => [`${value}%`, name]} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="results-pie-legend">
+              {data.pieData.map((entry, i) => (
+                <div key={i} className="results-pie-legend-item">
+                  <span className="results-pie-legend-dot" style={{ background: entry.color }} />
+                  <span>{entry.name} {entry.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="results-widget results-widget-gauge results-widget-gauges">
           <h3>Выполнение плана</h3>

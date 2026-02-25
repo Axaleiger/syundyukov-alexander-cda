@@ -37,6 +37,21 @@ const IconLock = () => (
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </svg>
 )
+const IconCode = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="admin-svg-icon">
+    <polyline points="16 18 22 12 16 6" />
+    <polyline points="8 6 2 12 8 18" />
+  </svg>
+)
+const IconTable = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="admin-svg-icon">
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="3" y1="15" x2="21" y2="15" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    <line x1="15" y1="3" x2="15" y2="21" />
+  </svg>
+)
 
 function generateApiKey() {
   const bytes = new Uint8Array(48)
@@ -255,6 +270,7 @@ function AdminTab({ activeSub = 'roles' }) {
               <h4>Загрузка кода</h4>
               <p className="admin-panel-hint">Загрузите код на языках: Python, C#, Java, JavaScript/TypeScript, Go, R или архив с исходниками. Либо укажите ссылку на репозиторий (Git).</p>
               <div className="admin-dropzone" onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('admin-dropzone-over') }} onDragLeave={(e) => { e.currentTarget.classList.remove('admin-dropzone-over') }} onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('admin-dropzone-over') }}>
+                <span className="admin-dropzone-icon admin-dropzone-icon-code"><IconCode /></span>
                 <span className="admin-dropzone-text">Перетащите файлы сюда или выберите файл</span>
                 <span className="admin-dropzone-sublabel">.py, .cs, .java, .js, .ts, .go, .r, .zip</span>
                 <input type="file" className="admin-dropzone-input" accept=".py,.cs,.java,.js,.ts,.go,.r,.zip,application/zip" multiple />
@@ -267,7 +283,7 @@ function AdminTab({ activeSub = 'roles' }) {
               <h4>Загрузка Excel</h4>
               <p className="admin-panel-hint">Работа через Excel популярна в ДО. Загрузите файл и опишите, как с ним работает логика, чтобы ЦДА мог интегрировать и настроить связи.</p>
               <div className="admin-dropzone admin-dropzone-excel" onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('admin-dropzone-over') }} onDragLeave={(e) => { e.currentTarget.classList.remove('admin-dropzone-over') }} onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('admin-dropzone-over') }}>
-                <span className="admin-dropzone-excel-icon">📊</span>
+                <span className="admin-dropzone-icon admin-dropzone-icon-excel"><IconTable /></span>
                 <span className="admin-dropzone-text">Перетащите Excel-файл сюда или выберите .xlsx / .xls</span>
                 <input type="file" className="admin-dropzone-input" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" />
               </div>

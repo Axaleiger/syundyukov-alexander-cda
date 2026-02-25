@@ -12,6 +12,7 @@ import RightPanel from './components/RightPanel'
 const BPMBoard = lazy(() => import('./components/BPMBoard'))
 import ScenariosList from './components/ScenariosList'
 import OntologyTab from './components/OntologyTab'
+import ConfiguratorDocPage from './components/ConfiguratorDocPage'
 import ResultsTab from './components/ResultsTab'
 import AdminTab from './components/AdminTab'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
@@ -78,6 +79,7 @@ function App() {
     if (typeof window === 'undefined') return 'roles'
     return parseTabFromHash().adminSub
   })
+  const [showConfiguratorDoc, setShowConfiguratorDoc] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -144,7 +146,7 @@ function App() {
 
   const handleRightSegmentClick = (index) => {
     const name = rightRoseData[index]?.name
-    if (name === 'Пласт') {
+    if (name === 'Пласт' || (name && name.startsWith('Пласт'))) {
       setCdPageNode('ЦД пласта')
       setSelectedRightObjectIndex(null)
       return
@@ -176,6 +178,14 @@ function App() {
     return (
       <div className="app">
         <CDPage nodeName={cdPageNode} onBack={() => { setCdPageNode(null); if (window.history.length > 1) window.history.back(); else window.close(); }} />
+      </div>
+    )
+  }
+
+  if (showConfiguratorDoc) {
+    return (
+      <div className="app">
+        <ConfiguratorDocPage onClose={() => setShowConfiguratorDoc(false)} />
       </div>
     )
   }
@@ -353,7 +363,7 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'ontology' && <OntologyTab />}
+          {activeTab === 'ontology' && <OntologyTab onOpenDoc={() => setShowConfiguratorDoc(true)} />}
           {activeTab === 'results' && <ResultsTab />}
           {activeTab === 'admin' && <AdminTab activeSub={adminSubTab} />}
         </main>

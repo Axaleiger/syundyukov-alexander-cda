@@ -119,10 +119,11 @@ function parseScenarioDate(ddMmYyyy) {
 
 export function filterScenariosByPeriod(scenarios, periodValue) {
   if (periodValue === 'custom' || !periodValue) return scenarios
+  /* При «1 месяц» показываем все сценарии (полный список). */
+  if (periodValue === '1m') return scenarios
   const end = new Date(PERIOD_END)
   let start = new Date(PERIOD_END)
-  if (periodValue === '1m') start.setMonth(start.getMonth() - 1)
-  else if (periodValue === '3m') start.setMonth(start.getMonth() - 3)
+  if (periodValue === '3m') start.setMonth(start.getMonth() - 3)
   else if (periodValue === '6m') start.setMonth(start.getMonth() - 6)
   else if (periodValue === '1y') start.setFullYear(start.getFullYear() - 1)
   else return scenarios
@@ -132,3 +133,4 @@ export function filterScenariosByPeriod(scenarios, periodValue) {
     return d >= start && d <= end
   })
 }
+

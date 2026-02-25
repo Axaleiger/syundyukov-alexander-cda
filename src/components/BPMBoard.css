@@ -13,13 +13,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 1rem;
   min-height: 100vh;
   width: 100%;
   background: rgb(252, 252, 252);
   padding: 1rem;
   box-sizing: border-box;
+  /* Верх гифки на одном уровне с надписью «Планирование» в левой панели */
+  padding-top: 152px;
 }
 
 .bpm-loading-text {

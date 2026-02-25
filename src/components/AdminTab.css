@@ -378,6 +378,20 @@
   background: rgba(45, 90, 135, 0.06);
 }
 
+.admin-dropzone-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.5rem;
+  color: #64748b;
+}
+.admin-dropzone-icon svg {
+  width: 32px;
+  height: 32px;
+}
+.admin-dropzone-icon-code { color: #3b82f6; }
+.admin-dropzone-icon-excel { color: #22c55e; }
+
 .admin-dropzone-text {
   display: block;
   font-size: 0.95rem;
@@ -401,9 +415,7 @@
   cursor: pointer;
 }
 
-.admin-dropzone-excel .admin-dropzone-excel-icon {
-  font-size: 2rem;
-  display: block;
+.admin-dropzone-excel .admin-dropzone-icon {
   margin-bottom: 0.5rem;
 }
 

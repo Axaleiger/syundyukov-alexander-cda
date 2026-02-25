@@ -4,7 +4,7 @@ import './CDPage.css'
 
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 const DEFAULT_EMBLEM = BASE + '/emblem.png'
-const isCdPlasta = (name) => /пласта|Пласта/i.test(name || '')
+const isCdPlasta = (name) => /пласта|Пласта|^Пласт$/i.test(name || '')
 
 function CDPage({ nodeName, onBack }) {
   const info = getCdPageInfo(nodeName)

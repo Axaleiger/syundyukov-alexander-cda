@@ -19,13 +19,41 @@ const IconSchema = () => (
     <line x1="6.5" y1="12" y2="17.5" x2="6.5" />
   </svg>
 )
+const IconDoc = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </svg>
+)
 
 const DEFAULT_FLOW_CODE = `flowchart LR
-  A[Триггер] --> B[Обработка]
-  B --> C[Выход]
+  subgraph Вход
+    A[Триггер события]
+    B[Проверка данных]
+  end
+  subgraph Обработка
+    C[Валидация]
+    D[Расчёт показателей]
+    E[Агрегация]
+  end
+  subgraph Выход
+    F[Отчёт]
+    G[Уведомление]
+  end
+  A --> B
+  B --> C
+  C --> D
+  D --> E
+  E --> F
+  E --> G
+  F --> H((Конец))
+  G --> H
 `
 
-function OntologyTab() {
+function OntologyTab({ onOpenDoc }) {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
   const [mode, setMode] = useState('code')
   const [flowCode, setFlowCode] = useState(DEFAULT_FLOW_CODE)
@@ -46,6 +74,16 @@ function OntologyTab() {
       <div className="ontology-config-wrap">
         {mode === 'code' && (
           <div className="ontology-code-panel">
+            <div className="ontology-code-toolbar">
+              <button
+                type="button"
+                className="ontology-doc-btn"
+                onClick={() => onOpenDoc?.()}
+              >
+                <IconDoc />
+                Документация
+              </button>
+            </div>
             <textarea
               className="ontology-code-textarea"
               value={flowCode}
@@ -53,7 +91,6 @@ function OntologyTab() {
               placeholder="flowchart LR&#10;  A --> B --> C"
               spellCheck={false}
             />
-            <p className="ontology-code-hint">Синтаксис в стиле Mermaid. При переключении на «Схема» отображается визуализация.</p>
           </div>
         )}
         {mode === 'schema' && (

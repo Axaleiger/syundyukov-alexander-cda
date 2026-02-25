@@ -593,9 +593,10 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
               className="cube-goto-btn"
               onClick={(e) => {
                 e.preventDefault()
-                const label = getEntityLabel(levelIndex, selectedPointIdx) || ''
+                let label = getEntityLabel(levelIndex, selectedPointIdx) || ''
                 const baseUrl = typeof window !== 'undefined' ? (window.location.origin + window.location.pathname) : ''
                 const isCdLevel = levelIndex <= 1
+                if (isCdLevel && label === 'Пласт') label = 'ЦД пласта'
                 const url = isCdLevel
                   ? `${baseUrl}?cd=${encodeURIComponent(label)}`
                   : `${baseUrl}?bpm=1&highlight=${encodeURIComponent(label)}`

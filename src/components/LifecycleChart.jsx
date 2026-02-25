@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Customized } from 'recharts'
 import { loadLifecycleFromExcel } from '../data/loadLifecycleExcel'
 import { getLifecycleStreamData } from '../data/lifecycleData'
 import './LifecycleChart.css'
@@ -34,6 +34,68 @@ function buildCumulative(data) {
   })
 }
 
+/** Цветные линии между точками на оси X (цвет = цвет конечной точки). Рисуются через Customized поверх графика. */
+const LIFECYCLE_YEAR_TICKS = ['1965', '1975', '1985', '1995', '2005', '2015', '2020', '2026', '2030', '2040', '2050', '2065']
+
+function LifecycleSegmentLines(props) {
+  const { xAxisMap, yAxisMap } = props
+  const xAxis = xAxisMap && Object.values(xAxisMap)[0]
+  const yAxis = yAxisMap && Object.values(yAxisMap)[0]
+  if (!xAxis || !yAxis) return null
+  const xScale = xAxis.scale
+  const yScale = yAxis.scale
+  const y0 = yScale(0)
+  if (typeof y0 !== 'number') return null
+  const bandwidth = xScale.bandwidth ? xScale.bandwidth() : 0
+  const lines = []
+  for (let i = 0; i < LIFECYCLE_YEAR_TICKS.length - 1; i++) {
+    const x1 = LIFECYCLE_YEAR_TICKS[i]
+    const x2 = LIFECYCLE_YEAR_TICKS[i + 1]
+    const y2Num = parseInt(x2, 10)
+    const endColor = !Number.isNaN(y2Num) && y2Num <= CURRENT_YEAR ? LIFECYCLE_HISTORY_COLOR : LIFECYCLE_FORECAST_COLOR
+    let px1 = xScale(x1)
+    let px2 = xScale(x2)
+    if (typeof bandwidth === 'number' && bandwidth > 0) {
+      px1 = typeof px1 === 'number' ? px1 + bandwidth / 2 : px1
+      px2 = typeof px2 === 'number' ? px2 + bandwidth / 2 : px2
+    }
+    if (typeof px1 !== 'number' || typeof px2 !== 'number') continue
+    lines.push({ key: `${x1}-${x2}`, x1: px1, x2: px2, y: y0, color: endColor })
+  }
+  const points = LIFECYCLE_YEAR_TICKS.map((yearStr) => {
+    let px = xScale(yearStr)
+    if (typeof bandwidth === 'number' && bandwidth > 0 && typeof px === 'number') px = px + bandwidth / 2
+    if (typeof px !== 'number') return null
+    const yNum = parseInt(yearStr, 10)
+    const color = !Number.isNaN(yNum) && yNum <= CURRENT_YEAR ? LIFECYCLE_HISTORY_COLOR : LIFECYCLE_FORECAST_COLOR
+    return { key: yearStr, x: px, y: y0, color }
+  }).filter(Boolean)
+  return (
+    <g className="recharts-reference-line">
+      {lines.map(({ key, x1, x2, y, color }) => (
+        <line key={key} x1={x1} y1={y} x2={x2} y2={y} stroke={color} strokeWidth={3} strokeLinecap="round" />
+      ))}
+      {points.map(({ key, x, y: py, color }) => (
+        <g key={key}>
+          <circle cx={x} cy={py} r={5} fill={color} />
+          <circle cx={x} cy={py} r={2} fill="#fff" />
+        </g>
+      ))}
+    </g>
+  )
+}
+
+/** Лёгкое сглаживание кривой (3 точки) — более реалистичная форма без смены порядка величин. */
+function smoothSeries(arr, key, n = 2) {
+  const out = [...arr]
+  for (let i = n; i < out.length - n; i++) {
+    let sum = 0
+    for (let j = -n; j <= n; j++) sum += out[i + j][key] ?? 0
+    out[i] = { ...out[i], [key]: Math.round((sum / (2 * n + 1)) * 1000) / 1000 }
+  }
+  return out
+}
+
 function LifecycleChart({ onStageClick, faceSeed = 0 }) {
   const [selectedStage, setSelectedStage] = useState(null)
   const [streamData, setStreamData] = useState(null)
@@ -57,7 +119,11 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
       return out
     }
     let data = streamData.map(scale)
-    if (viewMode === 'cumulative') data = buildCumulative(data)
+    if (viewMode === 'cumulative') {
+      data = buildCumulative(data)
+    } else {
+      keys.forEach((key) => { data = smoothSeries(data, key) })
+    }
     return data
   }, [streamData, viewMode, faceSeed])
 
@@ -131,17 +197,11 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
               tickLine={false}
               interval="preserveStartEnd"
               minTickGap={32}
-              tick={({ x, y, payload }) => {
-                const yNum = parseInt(String(payload.value), 10)
-                const isHist = !Number.isNaN(yNum) && yNum <= CURRENT_YEAR
-                const fill = isHist ? LIFECYCLE_HISTORY_COLOR : LIFECYCLE_FORECAST_COLOR
-                return (
+              tick={({ x, y, payload }) => (
                   <g transform={`translate(${x},${y})`}>
-                    <circle r={4} fill={fill} />
                     <text x={0} y={14} textAnchor="middle" fill="#5a6c7d" fontSize={10}>{payload.value}</text>
                   </g>
-                )
-              }}
+                )}
             />
             <YAxis
               domain={[0, 'auto']}
@@ -179,12 +239,13 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
                 isAnimationActive={false}
               />
             ))}
+            <Customized component={LifecycleSegmentLines} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
       <div className="lifecycle-period-legend">
-        <span className="lifecycle-legend-history">● История (до {CURRENT_YEAR})</span>
-        <span className="lifecycle-legend-forecast">● Прогнозный период (после {CURRENT_YEAR})</span>
+        <span className="lifecycle-legend-history" style={{ color: LIFECYCLE_HISTORY_COLOR }}>● История (до {CURRENT_YEAR})</span>
+        <span className="lifecycle-legend-forecast" style={{ color: LIFECYCLE_FORECAST_COLOR }}>● Прогнозный период (после {CURRENT_YEAR})</span>
       </div>
       <p className="lifecycle-redline-hint">Красная линия — текущий срез {CURRENT_YEAR} г.</p>
 
