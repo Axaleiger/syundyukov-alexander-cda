@@ -232,11 +232,65 @@
   font-weight: 400;
 }
 
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.app-header-ai-toggle {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #5a6c7d;
+  background: rgba(0, 120, 210, 0.08);
+  border: 1px solid rgba(0, 120, 210, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.app-header-ai-toggle:hover {
+  background: rgba(0, 120, 210, 0.12);
+  color: #002d4d;
+}
+
+.app-header-ai-toggle-on {
+  background: rgba(0, 120, 210, 0.18);
+  color: #0078D2;
+  border-color: #0078D2;
+}
+
+.app-header-ai-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-header-ai-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 120, 210, 0.4);
+  border-top-color: #0078D2;
+  border-radius: 50%;
+  animation: app-ai-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.app-header-ai-toggle-on .app-header-ai-spinner {
+  border-top-color: #00d4aa;
+  box-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
+}
+
+@keyframes app-ai-spin {
+  to { transform: rotate(360deg); }
+}
+
 .app-header-user {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-left: auto;
   flex-shrink: 0;
 }
 
@@ -261,6 +315,66 @@
   gap: 2.5rem;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.app-content-bpm {
+  padding: 0.5rem;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+}
+
+.app-content-service {
+  padding: 2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.service-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.service-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: rgba(0, 57, 92, 0.8);
+  color: #0078D2;
+  cursor: pointer;
+}
+
+.service-page-back:hover {
+  text-decoration: underline;
+}
+
+/* Галочка влево: только левая и правая грань, без заливки */
+.service-page-back-arrow {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 9 2 L 4 6 L 9 10'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 12px 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 9 2 L 4 6 L 9 10'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 12px 12px;
+}
+
+.service-page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #002033;
+  margin: 0;
 }
 
 .section {

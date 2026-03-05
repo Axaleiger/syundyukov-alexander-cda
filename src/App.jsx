@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react'
 import './App.css'
 import RussiaMap from './components/RussiaMap'
 import WindRose from './components/WindRose'
@@ -10,8 +10,10 @@ import CDPage from './components/CDPage'
 import RightPanel from './components/RightPanel'
 
 const BPMBoard = lazy(() => import('./components/BPMBoard'))
+import AIAssistantWidget from './components/AIAssistantWidget'
 import ScenariosList from './components/ScenariosList'
-import OntologyTab from './components/OntologyTab'
+import OntologyTab, { DEFAULT_FLOW_CODE } from './components/OntologyTab'
+import { bpmToMermaid } from './lib/bpmToMermaid'
 import ConfiguratorDocPage from './components/ConfiguratorDocPage'
 import ResultsTab from './components/ResultsTab'
 import AdminTab from './components/AdminTab'
@@ -50,19 +52,27 @@ function getBoardIdForAsset(assetId) {
 
 function parseTabFromHash() {
   const hash = (typeof window !== 'undefined' ? window.location.hash : '').replace(/^#/, '') || 'face'
+  const serviceMatch = hash.match(/^\/?service\/(.+)$/)
+  if (serviceMatch) return { tab: 'planning', adminSub: 'roles', servicePageName: decodeURIComponent(serviceMatch[1]) }
   if (hash.startsWith('admin-')) {
     const sub = hash.slice(6)
     const valid = ADMIN_SUB_TABS.some((t) => t.id === sub)
-    return { tab: 'admin', adminSub: valid ? sub : 'roles' }
+    return { tab: 'admin', adminSub: valid ? sub : 'roles', servicePageName: null }
   }
   const valid = TABS.some((t) => t.id === hash)
-  return { tab: valid ? hash : 'face', adminSub: 'roles' }
+  return { tab: valid ? hash : 'face', adminSub: 'roles', servicePageName: null }
 }
 
 function App() {
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'face'
     return parseTabFromHash().tab
+  })
+  const [servicePageName, setServicePageName] = useState(() => {
+    if (typeof window === 'undefined') return null
+    const h = window.location.hash.replace(/^#/, '')
+    const m = h.match(/^\/?service\/(.+)$/)
+    return m ? decodeURIComponent(m[1]) : null
   })
   const [selectedLeftStageIndex, setSelectedLeftStageIndex] = useState(null)
   const [selectedRightObjectIndex, setSelectedRightObjectIndex] = useState(null)
@@ -80,6 +90,12 @@ function App() {
     return parseTabFromHash().adminSub
   })
   const [showConfiguratorDoc, setShowConfiguratorDoc] = useState(false)
+  const [flowCode, setFlowCode] = useState(DEFAULT_FLOW_CODE)
+  const [selectedScenarioName, setSelectedScenarioName] = useState('Управление добычей с учетом ближайшего бурения')
+  const [aiMode, setAiMode] = useState(false)
+  const handleBoardChange = useCallback((stages, tasks) => {
+    setFlowCode(bpmToMermaid(stages, tasks))
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -94,8 +110,9 @@ function App() {
 
   useEffect(() => {
     if (showBpm) return
+    if (typeof window !== 'undefined' && /^\/?service\//.test(window.location.hash.replace(/^#/, ''))) return
     const hash = activeTab === 'admin' ? `#admin-${adminSubTab}` : `#${activeTab}`
-    if (typeof window !== 'undefined' && window.location.hash !== hash) {
+    if (window.location.hash !== hash) {
       window.history.replaceState(null, '', hash)
     }
   }, [activeTab, adminSubTab, showBpm])
@@ -103,9 +120,10 @@ function App() {
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.search.includes('bpm=1')) return
-      const { tab, adminSub } = parseTabFromHash()
+      const { tab, adminSub, servicePageName: svc } = parseTabFromHash()
       setActiveTab(tab)
       setAdminSubTab(adminSub)
+      setServicePageName(svc ?? null)
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
@@ -197,8 +215,11 @@ function App() {
           <BPMBoard
             highlightCardName={bpmHighlight}
             onClose={() => { setShowBpm(false); setBpmHighlight(null) }}
+            aiMode={aiMode}
+            setAiMode={setAiMode}
           />
         </Suspense>
+        <AIAssistantWidget visible={aiMode} />
       </div>
     )
   }
@@ -211,9 +232,20 @@ function App() {
           <h1>ЦДА</h1>
           <p>(Цифровой Двойник Актива)</p>
         </div>
-        <div className="app-header-user">
-          <span className="app-header-user-name">Сюндюков А.В. · Ведущий эксперт</span>
-          <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="app-header-user-avatar" />
+        <div className="app-header-actions">
+          <button
+            type="button"
+            className={`app-header-ai-toggle ${aiMode ? 'app-header-ai-toggle-on' : ''}`}
+            onClick={() => setAiMode(!aiMode)}
+            title={aiMode ? 'Выключить ИИ-режим' : 'Включить ИИ-режим'}
+          >
+            {aiMode && <span className="app-header-ai-spinner" aria-hidden />}
+            <span className="app-header-ai-toggle-text">ИИ-режим</span>
+          </button>
+          <div className="app-header-user">
+            <span className="app-header-user-name">Сюндюков А.В. · Ведущий эксперт</span>
+            <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="app-header-user-avatar" />
+          </div>
         </div>
       </header>
 
@@ -288,10 +320,12 @@ function App() {
               stageFilters={scenarioStageFilters}
               onStageFilterToggle={(name) => setScenarioStageFilters((prev) => ({ ...prev, [name]: !prev[name] }))}
               onScenarioClick={(row) => {
-              if (row?.name && row.name.includes('Управление добычей с учетом ближайшего бурения')) {
-                setActiveTab('planning')
-              }
-            }}
+                if (row?.name) {
+                  const displayName = row.name.replace(/\s*\(раздел\s*"[^"]*"\)\s*$/i, '').trim() || row.name
+                  setSelectedScenarioName(displayName)
+                  setActiveTab('planning')
+                }
+              }}
             />
           )}
 
@@ -350,20 +384,42 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'planning' && (
+          {activeTab === 'planning' && servicePageName && (
+            <div className="app-content app-content-service">
+              <div className="service-page">
+                <button type="button" className="service-page-back" onClick={() => { setServicePageName(null); window.location.hash = 'planning'; }}><span className="service-page-back-arrow" aria-hidden /> Назад</button>
+                <h1 className="service-page-title">{servicePageName}</h1>
+              </div>
+            </div>
+          )}
+          {activeTab === 'planning' && !servicePageName && (
             <div className="app-content app-content-bpm">
               <Suspense fallback={<div className="bpm-loading">Загрузка Планирования…</div>}>
                 <BPMBoard
-                  initialBoardId={selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos'}
+                  scenarioName={selectedScenarioName}
+                  initialBoardId={
+                    selectedScenarioName && selectedScenarioName.includes('Управление добычей с учетом ближайшего бурения')
+                      ? 'do-burenie'
+                      : (selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos')
+                  }
                   selectedAssetName={selectedAssetPoint?.name}
                   highlightCardName={bpmHighlight}
-                  onClose={() => setActiveTab('face')}
+                  onClose={() => setActiveTab('scenarios')}
+                  onBoardChange={handleBoardChange}
+                  aiMode={aiMode}
+                  setAiMode={setAiMode}
                 />
               </Suspense>
             </div>
           )}
 
-          {activeTab === 'ontology' && <OntologyTab onOpenDoc={() => setShowConfiguratorDoc(true)} />}
+          {activeTab === 'ontology' && (
+              <OntologyTab
+                onOpenDoc={() => setShowConfiguratorDoc(true)}
+                flowCode={flowCode}
+                onFlowCodeChange={setFlowCode}
+              />
+            )}
           {activeTab === 'results' && <ResultsTab />}
           {activeTab === 'admin' && <AdminTab activeSub={adminSubTab} />}
         </main>
@@ -374,6 +430,7 @@ function App() {
           </aside>
         )}
       </div>
+      <AIAssistantWidget visible={aiMode} />
     </div>
   )
 }

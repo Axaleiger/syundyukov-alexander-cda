@@ -1,18 +1,173 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
-import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, cardMatchesHighlight, getInitialBoard } from '../data/bpmData'
-import { parseBoardFromExcel, parseBoardFromExcelLenient, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
+import * as XLSX from 'xlsx'
+import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, SYSTEMS_LIST, cardMatchesHighlight, getInitialBoard } from '../data/bpmData'
+import { parseBoardFromExcel, parseBoardFromExcelLenient, parseConnectionsFromExcel, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
+import CalculateGraph from './CalculateGraph'
+import BPMRightPanelSystems from './BPMRightPanelSystems'
+import BPMRightPanelExecutor from './BPMRightPanelExecutor'
 import './BPMBoard.css'
 
+const SCHEDULE_EVERY_OPTIONS = ['каждые 1 день', 'каждые 2 дня', 'каждые 3 дня', 'каждые 5 дней', 'каждую неделю', 'каждые 2 недели']
+
+function getInitials(name) {
+  if (!name || !String(name).trim()) return '?'
+  const parts = String(name).trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase().slice(0, 2)
+  return String(name).slice(0, 2).toUpperCase()
+}
+
+function formatDeadlineShort(deadline) {
+  if (!deadline) return '—'
+  const d = deadline instanceof Date ? deadline : new Date(deadline)
+  if (isNaN(d.getTime())) return '—'
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  d.setHours(0, 0, 0, 0)
+  const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24))
+  if (diff === 0) return 'Сегодня'
+  if (diff === 1) return '1 день'
+  if (diff >= 2 && diff <= 4) return `${diff} дня`
+  if (diff >= 5 && diff <= 20) return `${diff} дней`
+  return d.toLocaleDateString('ru-RU')
+}
+
+function formatPeriod(deadline) {
+  if (!deadline) return '—'
+  const d = deadline instanceof Date ? deadline : new Date(deadline)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('ru-RU')
+}
+
+function avatarColor(name) {
+  if (!name || !String(name).trim()) return '#94a3b8'
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h) + name.charCodeAt(i) | 0
+  const hue = Math.abs(h % 360)
+  return `hsl(${hue}, 55%, 45%)`
+}
+
+function hashStr(s) {
+  let h = 0
+  for (let i = 0; i < (s || '').length; i++) h = ((h << 5) - h) + (s || '').charCodeAt(i) | 0
+  return Math.abs(h)
+}
+
+/** Только рандомное количество записей «Название данных», без придуманных названий */
+function generateInputFiles(taskId) {
+  const n = (hashStr(taskId) % 4) + 1
+  const out = []
+  for (let i = 0; i < n; i++) {
+    const statuses = ['ok', 'ok', 'missing', 'warning']
+    const status = statuses[hashStr(taskId + String(i)) % 4]
+    out.push({ name: 'Название данных', date: new Date().toLocaleDateString('ru-RU'), status })
+  }
+  return out
+}
+
+function generateResultFiles(taskId) {
+  const n = (hashStr(taskId + 'r') % 3) + 1
+  const names = ['Результат расчета', 'Отчёт', 'График']
+  return Array.from({ length: n }, (_, i) => ({ name: names[i % names.length] + (n > 1 ? ` ${i + 1}` : '') }))
+}
+
+/** Результаты расчета — конкретные показатели по типу карточки/сервиса (как в ТЗ) */
+function getResultLinesForCard(taskName, taskId) {
+  const name = (taskName || '').trim().toLowerCase()
+  if (name.includes('подбор гтм') && name.includes('добывающем фонде')) {
+    return [
+      'Прогнозный профиль добычи нефти, тыс. т',
+      'Прогнозный профиль добычи воды, тыс. т',
+      'Прогнозный профиль добычи газа, млн. м3',
+      'Прогнозное Рзаб, атм',
+    ]
+  }
+  if (name.includes('прогноз') && (name.includes('добыч') || name.includes('нефт'))) {
+    return [
+      'Прогнозный профиль добычи нефти, тыс. т',
+      'Прогнозный профиль добычи воды, тыс. т',
+      'Накопленная добыча нефти, тыс. т',
+      'Обводнённость, %',
+    ]
+  }
+  if (name.includes('скважин') || name.includes('фонд')) {
+    return [
+      'Список скважин по категориям',
+      'Дебит нефти по скважинам, т/сут',
+      'Дебит жидкости по скважинам, м³/сут',
+      'Обводнённость по скважинам, %',
+    ]
+  }
+  if (name.includes('модел') || name.includes('гидродинам')) {
+    return [
+      'Карта насыщенности',
+      'Карта давления, атм',
+      'Прогноз дебитов по скважинам',
+      'История совпадения по добыче, %',
+    ]
+  }
+  if (name.includes('гтм') || name.includes('обработк')) {
+    return [
+      'Рекомендуемые методы ГТМ по скважинам',
+      'Ожидаемый прирост добычи нефти, т',
+      'Экономический эффект, тыс. руб',
+    ]
+  }
+  if (name.includes('породы') || name.includes('коллектор')) {
+    return [
+      'Проницаемость по пластам, мД',
+      'Пористость по пластам, д.ед.',
+      'Насыщенность нефтью, д.ед.',
+    ]
+  }
+  if (name.includes('буре') || name.includes('бурение')) {
+    return [
+      'Траектория скважины, м',
+      'Интервалы перфорации, м',
+      'Календарный план бурения',
+    ]
+  }
+  if (name.includes('реинжениринг') || name.includes('процесс')) {
+    return [
+      'Карта бизнес-процессов',
+      'Список регламентов',
+      'Матрица ответственности',
+    ]
+  }
+  const byHash = [
+    ['Дебит нефти, т/сут', 'Дебит жидкости, м³/сут', 'Обводнённость, %', 'Забойное давление, атм'],
+    ['Накопленная добыча нефти, тыс. т', 'Накопленная добыча воды, тыс. м³', 'Текущий КИН', 'Остаточные извлекаемые запасы, тыс. т'],
+    ['Прогноз добычи на 5 лет, тыс. т', 'Среднегодовой темп падения, %', 'Экономические показатели'],
+  ]
+  const list = byHash[hashStr(taskId) % byHash.length]
+  return list.slice(0, (hashStr(taskId + 'x') % 2) + 3)
+}
+
+function getTaskInputFiles(task) {
+  if (task.inputFiles && Array.isArray(task.inputFiles) && task.inputFiles.length > 0) return task.inputFiles
+  return generateInputFiles(task.id)
+}
+
+function getTaskResultFiles(task) {
+  if (task.resultFiles && Array.isArray(task.resultFiles) && task.resultFiles.length > 0) return task.resultFiles
+  return getResultLinesForCard(task.name, task.id).map((name) => ({ name }))
+}
+
 function toTask(card) {
+  const d = new Date()
   return {
     id: card.id,
     name: card.name,
-    executor: PERSONNEL[0],
-    approver: PERSONNEL[0],
-    deadline: new Date(),
+    executor: '',
+    approver: '',
+    deadline: d,
     status: 'в работе',
     date: new Date().toLocaleDateString('ru-RU'),
     entries: [{ system: '', input: '', output: '' }],
+    scheduleEvery: 'каждые 2 дня',
+    periodStart: d,
+    periodEnd: d,
+    inputFiles: generateInputFiles(card.id),
+    resultFiles: generateResultFiles(card.id),
   }
 }
 
@@ -30,6 +185,33 @@ function downloadBlob(blob, filename) {
   a.download = filename
   a.click()
   URL.revokeObjectURL(a.href)
+}
+
+function downloadInputListExcel(inputFiles) {
+  const rows = (inputFiles || []).map((f) => ({ 'Название данных': f.name || 'Название данных', 'Статус': f.status || '—', 'Дата': f.date || '—' }))
+  const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Название данных': '', 'Статус': '', 'Дата': '' }])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Данные')
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Список_данных.xlsx')
+}
+
+function downloadEmptyExcel(fileName) {
+  const base = (fileName || 'Название данных').replace(/\.xlsx$/i, '')
+  const ws = XLSX.utils.aoa_to_sheet([[]])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Лист1')
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${base}.xlsx`)
+}
+
+function downloadResultListExcel(resultLines) {
+  const rows = (resultLines || []).map((name) => ({ 'Результаты расчета': name }))
+  const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Результаты расчета': '' }])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Результаты')
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'Результаты_расчета.xlsx')
 }
 
 function generateOilFlowHtml(stages, tasks) {
@@ -123,31 +305,69 @@ function computeAnalytics(stages, tasks) {
       avgByType[t] = (typeNodes.reduce((s, n) => s + (degree[n] || 0), 0) / typeNodes.length).toFixed(1)
     }
   })
+  const n = g.nodes.length
+  const density = n < 2 ? 0 : (2 * g.edges.length / (n * (n - 1))).toFixed(4)
+  const degreeHistogram = {}
+  g.nodes.forEach((node) => {
+    const d = degree[node] || 0
+    degreeHistogram[d] = (degreeHistogram[d] || 0) + 1
+  })
+  const degreeBuckets = []
+  const maxDeg = Math.max(...Object.keys(degreeHistogram).map(Number), 0)
+  for (let i = 0; i <= Math.min(maxDeg, 15); i++) {
+    degreeBuckets.push({ degree: i, count: degreeHistogram[i] || 0 })
+  }
   return {
     nodeCount: g.nodes.length,
     edgeCount: g.edges.length,
+    density,
     byType,
     avgByType,
     topNodes,
+    degreeBuckets,
   }
 }
 
-function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardName, onClose }) {
+function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp }) {
   const boardData = useMemo(() => getInitialBoard(initialBoardId) || { stages: BPM_STAGES, tasks: initialTasks() }, [initialBoardId])
   const [stages, setStages] = useState(() => boardData.stages)
   const [tasks, setTasks] = useState(() => boardData.tasks)
   const [viewMode, setViewMode] = useState('Подробный вид')
-  const [expanded, setExpanded] = useState({})
+  const [expanded, setExpanded] = useState({}) // key: task.id — сохраняется при перетаскивании между этапами
+  const [expandedSections, setExpandedSections] = useState({}) // key: task.id, value: { systems, input, results }
   const [editingTask, setEditingTask] = useState(null)
   const [editingStage, setEditingStage] = useState(null)
   const [stageNameEdit, setStageNameEdit] = useState('')
+  const [editingCardName, setEditingCardName] = useState(null) // { stageName, taskIdx }
+  const [cardNameEdit, setCardNameEdit] = useState('')
   const [dragged, setDragged] = useState(null)
   const [uploadError, setUploadError] = useState(null)
   const [showCalculateView, setShowCalculateView] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('')
+  const [executorFilter, setExecutorFilter] = useState('')
+  const [approverFilter, setApproverFilter] = useState('')
+  const [periodStartFilter, setPeriodStartFilter] = useState('')
+  const [periodEndFilter, setPeriodEndFilter] = useState('')
   const [draggedStageIndex, setDraggedStageIndex] = useState(null)
-  const [excelLoaded, setExcelLoaded] = useState(initialBoardId !== 'hantos')
+  const [excelLoaded, setExcelLoaded] = useState(initialBoardId !== 'hantos' && initialBoardId !== 'do-burenie')
+  const [rightPanel, setRightPanel] = useState(null) // { type: 'systems'|'executor', stageName, taskIdx, role? }
+  const [connections, setConnections] = useState([]) // [{ fromStage, fromId, toStage, toId }]
+  const [connectionsMode, setConnectionsMode] = useState(false)
+  const [connectionFrom, setConnectionFrom] = useState(null) // { stageName, taskId }
+  const [aiModeLocal, setAiModeLocal] = useState(false)
+  const aiMode = setAiModeProp != null ? aiModeProp : aiModeLocal
+  const setAiMode = setAiModeProp || setAiModeLocal
+  const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [connectionLines, setConnectionLines] = useState([])
+  const [syntheticResultTaskIds, setSyntheticResultTaskIds] = useState(() => new Set())
+  const boardRef = React.useRef(null)
+
+  const addSyntheticResult = useCallback((taskId) => {
+    setSyntheticResultTaskIds((prev) => new Set([...prev, taskId]))
+  }, [])
 
   useEffect(() => {
     const data = getInitialBoard(initialBoardId)
@@ -155,15 +375,39 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
       setStages(data.stages)
       setTasks(data.tasks)
     }
-    setExcelLoaded(initialBoardId !== 'hantos')
+    if (initialBoardId !== 'hantos' && initialBoardId !== 'do-burenie') setExcelLoaded(true)
   }, [initialBoardId])
 
   useEffect(() => {
-    if (initialBoardId !== 'hantos') return
+    if (typeof onBoardChange === 'function') {
+      onBoardChange(stages, tasks)
+    }
+  }, [stages, tasks, onBoardChange])
+
+  useEffect(() => {
+    if (!stages.includes('Реализация')) return
+    const list = tasks['Реализация'] || []
+    if (list.some((t) => (t.name || '').trim() === 'Реинжениринг')) return
+    const newTask = {
+      id: `R${15000 + Math.floor(Math.random() * 999)}`,
+      name: 'Реинжениринг',
+      executor: PERSONNEL[0],
+      approver: PERSONNEL[0],
+      deadline: new Date(),
+      status: 'в работе',
+      date: new Date().toLocaleDateString('ru-RU'),
+      entries: [{ system: '', input: '', output: '' }],
+    }
+    setTasks((t) => ({ ...t, 'Реализация': [...list, newTask] }))
+  }, [stages])
+
+  useEffect(() => {
+    const fileName = initialBoardId === 'do-burenie' ? 'Управление добычей с учетом ближайшего бурения.xlsx' : initialBoardId === 'hantos' ? 'hantos.xlsx' : null
+    if (!fileName) return
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
     const delayMs = 400
     const t1 = setTimeout(() => {
-      fetch(`${base}hantos.xlsx`)
+      fetch(`${base}${encodeURIComponent(fileName)}`)
         .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
         .then((arrayBuffer) => {
           const doParse = () => {
@@ -176,6 +420,7 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
               setStages(s)
               setTasks(t)
             }
+            setConnections(parseConnectionsFromExcel(arrayBuffer))
             setUploadError(null)
             setExcelLoaded(true)
           }
@@ -193,6 +438,20 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   const toggleExpanded = useCallback((key) => {
     setExpanded((e) => ({ ...e, [key]: !e[key] }))
   }, [])
+
+  const toggleSection = useCallback((taskId, section) => {
+    setExpandedSections((prev) => {
+      const cur = prev[taskId] || { systems: true, input: true, results: true }
+      const next = { ...cur, [section]: !cur[section] }
+      return { ...prev, [taskId]: next }
+    })
+  }, [])
+
+  const getSectionOpen = useCallback((taskId, section) => {
+    const cur = expandedSections[taskId]
+    if (!cur) return true
+    return cur[section] !== false
+  }, [expandedSections])
 
   const handleFileUpload = useCallback((e) => {
     const file = e.target.files?.[0]
@@ -213,9 +472,9 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
   }, [])
 
   const handleDownloadBoard = useCallback(() => {
-    const buf = generateBoardExcel(stages, tasks)
+    const buf = generateBoardExcel(stages, tasks, connections)
     downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'tasks_board.xlsx')
-  }, [stages, tasks])
+  }, [stages, tasks, connections])
 
   const handleDownloadTemplate = useCallback(() => {
     const buf = generateTemplateExcel()
@@ -242,6 +501,31 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
     setEditingStage(0)
     setStageNameEdit(name)
   }, [])
+
+  const handleDropAt = useCallback((targetStage, insertBeforeIndex) => {
+    if (!dragged) return
+    const { stageName: fromStage, taskIdx } = dragged
+    const list = tasks[fromStage] || []
+    const task = list[taskIdx]
+    if (!task) { setDragged(null); return }
+    setTasks((t) => {
+      const next = { ...t }
+      if (fromStage === targetStage) {
+        const newList = [...(next[fromStage] || [])]
+        newList.splice(taskIdx, 1)
+        const insertAt = taskIdx < insertBeforeIndex ? insertBeforeIndex - 1 : insertBeforeIndex
+        newList.splice(Math.max(0, Math.min(insertAt, newList.length)), 0, task)
+        next[fromStage] = newList
+      } else {
+        next[fromStage] = list.filter((_, i) => i !== taskIdx)
+        const targetList = [...(next[targetStage] || [])]
+        targetList.splice(Math.min(insertBeforeIndex, targetList.length), 0, task)
+        next[targetStage] = targetList
+      }
+      return next
+    })
+    setDragged(null)
+  }, [dragged, tasks])
 
   const saveStageEdit = useCallback(() => {
     if (editingStage == null) return
@@ -318,19 +602,24 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
 
   const addTask = useCallback((stageName) => {
     const id = `M${15000 + Math.floor(Math.random() * 85000)}`
+    const d = new Date()
     const task = {
       id,
       name: 'Новая задача',
-      executor: PERSONNEL[0],
-      approver: PERSONNEL[0],
-      deadline: new Date(),
+      executor: '',
+      approver: '',
+      deadline: d,
       status: 'в работе',
       date: new Date().toLocaleDateString('ru-RU'),
       entries: [{ system: '', input: '', output: '' }],
+      scheduleEvery: 'каждые 2 дня',
+      periodStart: d,
+      periodEnd: d,
+      inputFiles: generateInputFiles(id),
+      resultFiles: generateResultFiles(id),
     }
-    setTasks((t) => ({ ...t, [stageName]: [...(t[stageName] || []), task] }))
-    setEditingTask({ stageName, taskIdx: (tasks[stageName] || []).length })
-  }, [tasks])
+    setTasks((t) => ({ ...t, [stageName]: [task, ...(t[stageName] || [])] }))
+  }, [])
 
   const saveTaskEdit = useCallback((stageName, taskIdx, form) => {
     setTasks((t) => {
@@ -355,40 +644,123 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
     e.dataTransfer.setData('text/plain', JSON.stringify({ stageName, taskIdx }))
   }, [])
 
-  const handleDrop = useCallback((e, targetStage) => {
-    e.preventDefault()
-    if (!dragged) return
-    const { stageName: fromStage, taskIdx } = dragged
-    const list = tasks[fromStage] || []
-    const task = list[taskIdx]
-    if (!task || fromStage === targetStage) {
-      setDragged(null)
-      return
-    }
-    setTasks((t) => {
-      const next = { ...t }
-      next[fromStage] = list.filter((_, i) => i !== taskIdx)
-      next[targetStage] = [...(next[targetStage] || []), task]
-      return next
-    })
-    setDragged(null)
-  }, [dragged, tasks])
 
   const iterations = useMemo(() => {
     if (stages.length < 2) return []
-    const stageWidth = 220
-    const its = []
     const n = stages.length
-    if (n >= 2) its.push({ label: '2 итерация', left: 20, width: Math.max(260, 2 * stageWidth - 100), color: '#4ECDC4', top: 20 })
-    if (n >= 3) its.push({ label: '3 итерация', left: 20 + stageWidth, width: Math.max(300, 3 * stageWidth - 100), color: '#FFD166', top: 80 })
-    if (n >= 2) its.push({ label: '2 итерация', left: Math.max(0, (n - 2) * stageWidth - 40), width: Math.max(260, 2 * stageWidth - 100), color: '#FF6B6B', top: 140 })
-    return its
+    return [
+      { iconEye: 'eye', iconAction: 'dash', color: '#E85D04', label: '2 итерации', startStage: 0, endStage: n, leftPct: '0%', widthPct: '100%' },
+      { iconEye: 'eye-slash', iconAction: 'refresh', color: '#0D6EFD', label: '3 итерации', startStage: 1, endStage: Math.min(4, n), leftPct: `${(1 / n) * 100}%`, widthPct: `${(Math.min(3, n - 1) / n) * 100}%` },
+      { iconEye: 'eye-slash', iconAction: 'dots', color: '#198754', label: '2 итерации', startStage: 0, endStage: n, leftPct: '0%', widthPct: '100%' },
+    ]
   }, [stages.length])
 
   const analytics = useMemo(() => computeAnalytics(stages, tasks), [stages, tasks])
   const oilFlowHtml = useMemo(() => generateOilFlowHtml(stages, tasks), [stages, tasks])
 
-  if (initialBoardId === 'hantos' && !excelLoaded) {
+  const matchesSearch = useCallback((task, q) => {
+    if (!q || !String(q).trim()) return true
+    const lower = String(q).toLowerCase().trim()
+    const str = (t) => (t != null ? String(t).toLowerCase() : '')
+    if (str(task.name).includes(lower)) return true
+    if (str(task.id).includes(lower)) return true
+    if (str(task.executor).includes(lower)) return true
+    if (str(task.approver).includes(lower)) return true
+    if (str(task.status).includes(lower)) return true
+    if ((task.entries || []).some((e) => str(e.system).includes(lower))) return true
+    return false
+  }, [])
+
+  const updateConnectionLines = useCallback(() => {
+    if (!boardRef.current || !connections.length) {
+      setConnectionLines((prev) => (prev.length ? [] : prev))
+      return
+    }
+    const el = boardRef.current
+    const boardRect = el.getBoundingClientRect()
+    const cards = el.querySelectorAll('.bpm-card[data-connection-stage][data-connection-id]')
+    const posMap = new Map()
+    cards.forEach((card) => {
+      const stage = card.getAttribute('data-connection-stage')
+      const id = card.getAttribute('data-connection-id')
+      if (!stage || !id) return
+      const r = card.getBoundingClientRect()
+      posMap.set(`${stage}\t${id}`, { x: r.left - boardRect.left + r.width / 2, y: r.top - boardRect.top + r.height / 2 })
+    })
+    const lines = connections
+      .map((c) => {
+        const from = posMap.get(`${c.fromStage}\t${c.fromId}`)
+        const to = posMap.get(`${c.toStage}\t${c.toId}`)
+        if (!from || !to) return null
+        return { x1: from.x, y1: from.y, x2: to.x, y2: to.y }
+      })
+      .filter(Boolean)
+    setConnectionLines(lines)
+  }, [connections])
+
+  useEffect(() => {
+    if (!connectionsMode) {
+      setConnectionLines([])
+      return
+    }
+    updateConnectionLines()
+    const el = boardRef.current
+    if (!el) return
+    const onScrollOrResize = () => updateConnectionLines()
+    el.addEventListener('scroll', onScrollOrResize)
+    const ro = new ResizeObserver(onScrollOrResize)
+    ro.observe(el)
+    return () => { el.removeEventListener('scroll', onScrollOrResize); ro.disconnect() }
+  }, [connectionsMode, connections, updateConnectionLines])
+
+  useEffect(() => {
+    if (!dragged) return
+    let raf = null
+    const onDragOver = (e) => {
+      if (!e.clientY) return
+      const threshold = 100
+      if (e.clientY > window.innerHeight - threshold) {
+        raf = requestAnimationFrame(() => {
+          const scrollEl = document.querySelector('.app-main') || document.scrollingElement
+          if (scrollEl) scrollEl.scrollTop = Math.min(scrollEl.scrollHeight, scrollEl.scrollTop + 20)
+        })
+      }
+    }
+    document.addEventListener('dragover', onDragOver)
+    return () => { document.removeEventListener('dragover', onDragOver); if (raf) cancelAnimationFrame(raf) }
+  }, [dragged])
+
+  const filteredTasksByStage = useMemo(() => {
+    const out = {}
+    const q = (searchQuery || '').trim().toLowerCase()
+    const statusNorm = (statusFilter || '').trim().toLowerCase()
+    const execNorm = (executorFilter || '').trim()
+    const apprNorm = (approverFilter || '').trim()
+    const periodStart = periodStartFilter ? new Date(periodStartFilter) : null
+    const periodEnd = periodEndFilter ? new Date(periodEndFilter) : null
+    stages.forEach((stageName) => {
+      let list = tasks[stageName] || []
+      if (statusNorm) list = list.filter((t) => (t.status || '').toLowerCase() === statusNorm)
+      if (execNorm) list = list.filter((t) => (t.executor || '').trim() === execNorm)
+      if (apprNorm) list = list.filter((t) => (t.approver || '').trim() === apprNorm)
+      if (periodStart || periodEnd) {
+        list = list.filter((t) => {
+          const start = t.periodStart instanceof Date ? t.periodStart : (t.periodStart ? new Date(t.periodStart) : null)
+          const end = t.periodEnd instanceof Date ? t.periodEnd : (t.periodEnd ? new Date(t.periodEnd) : null)
+          const d = start || end || (t.deadline ? new Date(t.deadline) : null)
+          if (!d) return false
+          if (periodStart && d < periodStart) return false
+          if (periodEnd && d > periodEnd) return false
+          return true
+        })
+      }
+      if (q) list = list.filter((t) => matchesSearch(t, searchQuery))
+      out[stageName] = list
+    })
+    return out
+  }, [stages, tasks, searchQuery, statusFilter, executorFilter, approverFilter, periodStartFilter, periodEndFilter, matchesSearch])
+
+  if ((initialBoardId === 'hantos' || initialBoardId === 'do-burenie') && !excelLoaded) {
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
     return (
       <div className="bpm-board-wrap bpm-loading-wrap">
@@ -400,55 +772,37 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
 
   if (showCalculateView) {
     return (
-      <div className="bpm-board-wrap bpm-calculate-wrap">
-        <div className="bpm-board-header">
-          <h2>Рассчитать — граф и аналитика</h2>
-          <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(false)}>Назад к доске</button>
-        </div>
-        <div className="bpm-calculate-layout">
-          <div className="bpm-calculate-graph">
-            <iframe title="OilFlow граф" srcDoc={oilFlowHtml} />
-          </div>
-          <div className="bpm-calculate-analytics">
-            <h3>Аналитика графа</h3>
-            <div className="bpm-analytics-row"><span>Узлов:</span> <strong>{analytics.nodeCount}</strong></div>
-            <div className="bpm-analytics-row"><span>Рёбер:</span> <strong>{analytics.edgeCount}</strong></div>
-            <h4>Узлы по типам</h4>
-            <div className="bpm-analytics-row">Этап: <strong>{analytics.byType.Этап}</strong></div>
-            <div className="bpm-analytics-row">Карточка: <strong>{analytics.byType.Карточка}</strong></div>
-            <div className="bpm-analytics-row">Система: <strong>{analytics.byType.Система}</strong></div>
-            <h4>Среднее связей по типу</h4>
-            <div className="bpm-analytics-row">Этап: <strong>{analytics.avgByType.Этап}</strong></div>
-            <div className="bpm-analytics-row">Карточка: <strong>{analytics.avgByType.Карточка}</strong></div>
-            <div className="bpm-analytics-row">Система: <strong>{analytics.avgByType.Система}</strong></div>
-            <h4>Топ узлов по степени</h4>
-            <ul className="bpm-analytics-top">
-              {analytics.topNodes.map(({ label, degree }, i) => (
-                <li key={i}><span className="bpm-analytics-label">{label.length > 40 ? label.slice(0, 37) + '...' : label}</span> <strong>{degree}</strong></li>
-              ))}
-            </ul>
-          </div>
-        </div>
+      <div className="bpm-board-wrap">
+        <CalculateGraph stages={stages} tasks={tasks} analytics={analytics} onBack={() => setShowCalculateView(false)} />
       </div>
     )
   }
 
   return (
     <div className="bpm-board-wrap">
-      <div className="bpm-board-header">
-        <h2>Планирование{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
-        <div className="bpm-header-actions">
-          <label className="bpm-upload-btn">
-            Загрузить из Excel
-            <input type="file" accept=".xlsx" onChange={handleFileUpload} hidden />
-          </label>
-          <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
-          <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
-          <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
-        </div>
-      </div>
       {uploadError && <div className="bpm-error">{uploadError}</div>}
-      <div className="bpm-toolbar">
+      <div className="bpm-board-top-fixed">
+        <div className="bpm-board-header">
+          <div className="bpm-header-left">
+            {onClose && (
+              <button type="button" className="bpm-btn-icon bpm-btn-back" onClick={onClose} title="Назад">
+                <span className="bpm-icon-arrow-left" />
+              </button>
+            )}
+            <h2>{scenarioName}{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
+          </div>
+          <div className="bpm-header-actions">
+            <label className="bpm-upload-btn">
+              Загрузить из Excel
+              <input type="file" accept=".xlsx" onChange={handleFileUpload} hidden />
+            </label>
+            <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
+            <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
+            <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
+          </div>
+        </div>
+        <div className="bpm-board-header-divider" />
+        <div className="bpm-toolbar">
         <input
           type="text"
           className="bpm-search"
@@ -456,27 +810,119 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <button type="button" className="bpm-btn" onClick={() => setShowFilters(!showFilters)}>
-          {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
+        <button type="button" className="bpm-btn bpm-btn-filters" onClick={() => setShowFilters(!showFilters)}>
+          <span className="bpm-icon-filter" /><span>{showFilters ? 'Скрыть фильтры' : 'Фильтры'}</span>
         </button>
-        <label className="bpm-radio">
-          <input type="radio" name="view" checked={viewMode === 'Упрощенный вид'} onChange={() => setViewMode('Упрощенный вид')} />
-          Упрощенный вид
-        </label>
-        <label className="bpm-radio">
-          <input type="radio" name="view" checked={viewMode === 'Подробный вид'} onChange={() => setViewMode('Подробный вид')} />
-          Подробный вид
-        </label>
-        <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)}>Рассчитать</button>
-        <button type="button" className="bpm-btn bpm-btn-primary" onClick={addStage}>+ Добавить этап</button>
+        {showFilters && (
+          <div className="bpm-filters-panel">
+            <label className="bpm-filter-label">
+              Статус:
+              <select className="bpm-select bpm-select-inline" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">Все</option>
+                {['в работе', 'завершен', 'ошибка', 'пауза'].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+            <label className="bpm-filter-label">
+              Исполнитель:
+              <select className="bpm-select bpm-select-inline" value={executorFilter} onChange={(e) => setExecutorFilter(e.target.value)}>
+                <option value="">Все</option>
+                {PERSONNEL.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+            <label className="bpm-filter-label">
+              Согласующий:
+              <select className="bpm-select bpm-select-inline" value={approverFilter} onChange={(e) => setApproverFilter(e.target.value)}>
+                <option value="">Все</option>
+                {PERSONNEL.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </label>
+            <label className="bpm-filter-label">
+              Период с:
+              <input type="date" className="bpm-input-date" value={periodStartFilter} onChange={(e) => setPeriodStartFilter(e.target.value)} />
+            </label>
+            <label className="bpm-filter-label">
+              по:
+              <input type="date" className="bpm-input-date" value={periodEndFilter} onChange={(e) => setPeriodEndFilter(e.target.value)} />
+            </label>
+          </div>
+        )}
+        <div className="bpm-view-toggle" role="group" aria-label="Вид">
+          <span className={`bpm-toggle-label ${viewMode === 'Упрощенный вид' ? 'active' : ''}`} onClick={() => setViewMode('Упрощенный вид')}>Упрощенный</span>
+          <span className="bpm-toggle-switch" onClick={() => setViewMode((m) => m === 'Упрощенный вид' ? 'Подробный вид' : 'Упрощенный вид')} role="switch" aria-checked={viewMode === 'Подробный вид'}>
+            <span className="bpm-toggle-switch-thumb" />
+          </span>
+          <span className={`bpm-toggle-label ${viewMode === 'Подробный вид' ? 'active' : ''}`} onClick={() => setViewMode('Подробный вид')}>Подробный</span>
+        </div>
+        <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)} style={{ marginLeft: 'auto' }}>Рассчитать</button>
       </div>
-      <div className="bpm-board" onDragOver={(e) => e.preventDefault()}>
+      </div>
+      <div className="bpm-board-scroll-area">
+        <div className="bpm-board-container">
+          <div className="bpm-top-panel bpm-top-panel-in-scroll" style={{ '--stages': stages.length }}>
+            <div className="bpm-top-panel-row">
+              <span className="bpm-top-panel-title">Взаимосвязи этапов</span>
+              {aiMode && (
+                <button type="button" className="bpm-btn bpm-btn-ghost bpm-ai-autosvyazi-inline" onClick={() => setAiModalOpen(true)}>ИИ-автовзаимосвязи</button>
+              )}
+              <button type="button" className="bpm-top-panel-create-link" onClick={() => setConnectionsMode(true)}>+ Создать связь</button>
+              <button type="button" className="bpm-btn bpm-btn-ghost bpm-top-panel-chevron" onClick={() => setConnectionsMode(!connectionsMode)} aria-label={connectionsMode ? 'Свернуть' : 'Развернуть'}>
+                <span className={`bpm-card-collapse-arrow ${connectionsMode ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+              </button>
+            </div>
+            {connectionsMode && iterations.length > 0 && (
+              <div className="bpm-top-panel-iterations">
+                <div className="bpm-top-panel-iterations-grid">
+                  {iterations.map((it, i) => (
+                    <div key={i} className="bpm-top-panel-iteration-row">
+                      <button type="button" className="bpm-iter-icon-btn" title={it.iconEye === 'eye' ? 'Показать' : 'Скрыто'} aria-label={it.iconEye === 'eye' ? 'Показать' : 'Скрыто'}>
+                        <span className={`bpm-iter-icon bpm-iter-icon-${it.iconEye}`} aria-hidden />
+                      </button>
+                      <button type="button" className="bpm-iter-icon-btn" title="Настройки" aria-label="Настройки">
+                        <span className="bpm-iter-icon bpm-iter-icon-gear" aria-hidden />
+                      </button>
+                      <span className={`bpm-iter-icon bpm-iter-icon-${it.iconAction}`} title="" aria-hidden />
+                      <div className="bpm-top-panel-iteration-bar-wrap">
+                        <div className="bpm-top-panel-iteration" style={{ left: it.leftPct, width: it.widthPct, background: it.color }} title={it.label}>
+                          <span className="bpm-top-panel-iteration-label">{it.label}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="bpm-top-panel-stage-dividers" style={{ '--stages': stages.length }}>
+                  {stages.slice(0, -1).map((_, i) => (
+                    <div key={i} className="bpm-top-panel-stage-divider" style={{ left: `${((i + 1) / stages.length) * 100}%` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="bpm-board-row">
+          <button type="button" className="bpm-add-stage-vertical" onClick={addStage} title="Добавить этап">
+            + Добавить этап
+          </button>
+      <div className="bpm-board" ref={boardRef} onDragOver={(e) => e.preventDefault()}>
+        {connectionsMode && connectionLines.length > 0 && (
+          <div className="bpm-connections-overlay" aria-hidden>
+            <svg className="bpm-connections-svg" width="100%" height="100%">
+              {connectionLines.map((line, i) => (
+                <line key={i} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#F7BDBF" strokeWidth="2" strokeDasharray="4 2" />
+              ))}
+            </svg>
+          </div>
+        )}
         {stages.map((stageName, stageIdx) => (
           <div
             key={stageName}
             className={`bpm-stage-column ${draggedStageIndex === stageIdx ? 'bpm-stage-column-dragging' : ''}`}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-            onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleDrop(e, stageName); }}
+            onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleDropAt(stageName, (tasks[stageName] || []).length); }}
           >
             <div
               className="bpm-stage-header"
@@ -485,75 +931,340 @@ function BPMBoard({ initialBoardId = 'hantos', selectedAssetName, highlightCardN
               onDragEnd={() => setDraggedStageIndex(null)}
             >
               {editingStage === stageIdx ? (
-                <>
-                  <input value={stageNameEdit} onChange={(e) => setStageNameEdit(e.target.value)} className="bpm-input" />
-                  <button type="button" className="bpm-btn-sm" onClick={saveStageEdit}>OK</button>
-                </>
+                <input value={stageNameEdit} onChange={(e) => setStageNameEdit(e.target.value)} className="bpm-input" onKeyDown={(e) => { if (e.key === 'Enter') saveStageEdit(); }} onBlur={saveStageEdit} autoFocus />
               ) : (
                 <>
-                  <span className="bpm-stage-title">{stageName}</span>
+                  <span className="bpm-stage-title bpm-stage-title-clickable" onClick={() => { setEditingStage(stageIdx); setStageNameEdit(stageName) }} title="Нажмите для редактирования">{stageName}</span>
                   <div className="bpm-stage-btns">
-                    <button type="button" className="bpm-btn-icon" onClick={() => { setEditingStage(stageIdx); setStageNameEdit(stageName) }} title="Редактировать">Ред.</button>
-                    <button type="button" className="bpm-btn-icon" onClick={() => deleteStage(stageIdx)} title="Удалить">Удал.</button>
+                    <button type="button" className="bpm-card-delete bpm-stage-delete" onClick={(ev) => { ev.stopPropagation(); deleteStage(stageIdx); }} title="Удалить этап" aria-label="Удалить этап">🗑</button>
                   </div>
                 </>
               )}
             </div>
+            <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(stageName)}>+ Добавить задачу</button>
             <div className="bpm-stage-cards">
-              {(tasks[stageName] || []).map((task, taskIdx) => {
+              <div className="bpm-drop-zone" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, 0); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+              {(filteredTasksByStage[stageName] || []).map((task) => {
+                const taskIdx = (tasks[stageName] || []).findIndex((t) => t.id === task.id)
+                if (taskIdx < 0) return null
                 const isHighlight = cardMatchesHighlight(task.name, highlightCardName)
                 const key = `${stageIdx}-${taskIdx}`
-                const isExp = viewMode === 'Подробный вид' || expanded[key]
+                const cardKey = `${stageName}-${task.id}`
+                const isExp = viewMode === 'Упрощенный вид' ? true : (expanded[task.id] !== false)
                 const isEdit = editingTask?.stageName === stageName && editingTask?.taskIdx === taskIdx
+                const isEditingName = editingCardName?.stageName === stageName && editingCardName?.taskIdx === taskIdx
+                const isShortView = viewMode === 'Упрощенный вид'
+                const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
                 return (
-                  <div
-                    key={task.id}
-                    className={`bpm-card ${isHighlight ? 'bpm-card-highlight' : ''}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, stageName, taskIdx)}
-                  >
-                    <div className="bpm-card-head" onClick={() => toggleExpanded(key)}>
-                      <span className="bpm-card-id">{task.id}</span>
-                      <span className="bpm-card-name">{task.name}</span>
-                    </div>
-                    {isExp && (
-                      <div className="bpm-card-body">
-                        {isEdit ? (
-                          <TaskEditForm
-                            task={task}
-                            onSave={(form) => saveTaskEdit(stageName, taskIdx, form)}
-                            onCancel={() => setEditingTask(null)}
-                            onDelete={() => deleteTask(stageName, taskIdx)}
-                          />
-                        ) : (
-                          <>
-                            <p><strong>Статус:</strong> <span style={{ color: task.status === 'завершен' ? 'green' : task.status === 'ошибка' ? 'red' : '#2d5a87' }}>{task.status}</span></p>
-                            <p><strong>Срок:</strong> {task.deadline instanceof Date ? task.deadline.toLocaleDateString('ru-RU') : task.deadline}</p>
-                            <p><strong>Исполнитель:</strong> {task.executor}</p>
-                            <p><strong>Согласующий:</strong> {task.approver}</p>
-                            {(task.entries || []).filter((e) => e.system).length > 0 && (
-                              <p><strong>Системы:</strong> {(task.entries || []).filter((e) => e.system).map((e) => e.system).join(', ')}</p>
-                            )}
-                            <button type="button" className="bpm-btn-sm" onClick={() => setEditingTask({ stageName, taskIdx })}>Редактировать</button>
-                            <button type="button" className="bpm-btn-sm bpm-btn-danger" onClick={() => deleteTask(stageName, taskIdx)}>Удалить</button>
-                          </>
-                        )}
+                  <React.Fragment key={cardKey}>
+                    <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                    <div
+                      className={`bpm-card ${isHighlight ? 'bpm-card-highlight' : ''} ${(task.name || '').trim() === 'Реинжениринг' ? 'bpm-card-reinjing' : ''} ${connectionFrom && connectionFrom.stageName === stageName && connectionFrom.taskId === task.id ? 'bpm-card-connection-from' : ''}`}
+                      data-connection-stage={stageName}
+                      data-connection-id={task.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, stageName, taskIdx)}
+                      onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, taskIdx); }}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}
+                      onClick={connectionsMode ? (ev) => { ev.stopPropagation(); if (connectionFrom) { if (connectionFrom.stageName !== stageName || connectionFrom.taskId !== task.id) { setConnections((c) => [...c, { fromStage: connectionFrom.stageName, fromId: connectionFrom.taskId, toStage: stageName, toId: task.id }]); } setConnectionFrom(null); } else { setConnectionFrom({ stageName, taskId: task.id }); } } : undefined}
+                    >
+                      <div className="bpm-card-top-row">
+                        <span className="bpm-card-id">№{task.id}</span>
+                        <span className={'bpm-card-badge bpm-card-badge-' + ({ 'в работе': 'in-work', 'завершен': 'success', 'ошибка': 'error', 'пауза': 'pause' }[task.status] || 'in-work')}>
+                          {(task.status || 'в работе').toUpperCase()}
+                        </span>
+                        <button type="button" className="bpm-card-delete" onClick={(ev) => { ev.stopPropagation(); deleteTask(stageName, taskIdx); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
                       </div>
-                    )}
-                  </div>
+                      {isEditingName ? (
+                        <input
+                          className="bpm-card-name-input"
+                          value={cardNameEdit}
+                          onChange={(e) => setCardNameEdit(e.target.value)}
+                          onBlur={() => { if (editingCardName) saveTaskEdit(editingCardName.stageName, editingCardName.taskIdx, { name: cardNameEdit.trim() || task.name }); setEditingCardName(null); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { saveTaskEdit(stageName, taskIdx, { name: cardNameEdit.trim() || task.name }); setEditingCardName(null); e.target.blur(); } }}
+                          onClick={(ev) => ev.stopPropagation()}
+                          autoFocus
+                        />
+                      ) : (
+                        <div className="bpm-card-name" onClick={(ev) => { if (!isShortView) { ev.stopPropagation(); setEditingCardName({ stageName, taskIdx }); setCardNameEdit(task.name || 'Новая задача'); } else toggleExpanded(task.id); }} title={!isShortView ? 'Нажмите для редактирования названия' : ''}>{task.name || 'Без названия'}</div>
+                      )}
+                      {!isShortView && (
+                        <>
+                          <div className="bpm-card-meta">
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Исполнитель:</span>
+                              {(task.executor || '').trim() ? (
+                                <>
+                                  {/сюндюков/i.test(task.executor || '') ? (
+                                    <img src={`${base}sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={task.executor} />
+                                  ) : (
+                                    <span className="bpm-card-avatar bpm-card-avatar-executor" style={{ background: avatarColor(task.executor) }} title={task.executor}>{getInitials(task.executor).slice(0, 1)}</span>
+                                  )}
+                                  <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName, taskIdx, role: 'executor' })}>{task.executor}</span>
+                                </>
+                              ) : (
+                                <span className="bpm-card-meta-value bpm-card-meta-placeholder" onClick={() => setRightPanel({ type: 'executor', stageName, taskIdx, role: 'executor' })}>Выберите…</span>
+                              )}
+                            </div>
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Согласующий:</span>
+                              {(task.approver || '').trim() ? (
+                                <>
+                                  {/сюндюков/i.test(task.approver || '') ? (
+                                    <img src={`${base}sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={task.approver} />
+                                  ) : (
+                                    <span className="bpm-card-avatar bpm-card-avatar-approver" style={{ background: avatarColor(task.approver) }} title={task.approver}>{getInitials(task.approver).slice(0, 1)}</span>
+                                  )}
+                                  <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName, taskIdx, role: 'approver' })}>{task.approver}</span>
+                                </>
+                              ) : (
+                                <span className="bpm-card-meta-value bpm-card-meta-placeholder" onClick={() => setRightPanel({ type: 'executor', stageName, taskIdx, role: 'approver' })}>Выберите…</span>
+                              )}
+                            </div>
+                            <div className="bpm-card-meta-row bpm-card-schedule-row">
+                              <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
+                              <select className="bpm-select-inline bpm-select-tiny" value={task.scheduleEvery || 'каждые 2 дня'} onChange={(e) => saveTaskEdit(stageName, taskIdx, { scheduleEvery: e.target.value })} onClick={(ev) => ev.stopPropagation()}>
+                                {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                              </select>
+                            </div>
+                            <div className="bpm-card-meta-row bpm-card-period-row">
+                              <span className="bpm-card-meta-label">Период выполнения:</span>
+                              <div className="bpm-card-period-inputs">
+                                <input type="date" className="bpm-input-date" value={task.periodStart ? (task.periodStart instanceof Date ? task.periodStart.toISOString().slice(0, 10) : task.periodStart) : (task.deadline instanceof Date ? task.deadline.toISOString().slice(0, 10) : '')} onChange={(e) => saveTaskEdit(stageName, taskIdx, { periodStart: e.target.value ? new Date(e.target.value) : task.deadline })} onClick={(ev) => ev.stopPropagation()} />
+                                <span className="bpm-card-period-sep">—</span>
+                                <input type="date" className="bpm-input-date" value={task.periodEnd ? (task.periodEnd instanceof Date ? task.periodEnd.toISOString().slice(0, 10) : task.periodEnd) : (task.deadline instanceof Date ? task.deadline.toISOString().slice(0, 10) : '')} onChange={(e) => saveTaskEdit(stageName, taskIdx, { periodEnd: e.target.value ? new Date(e.target.value) : task.deadline })} onClick={(ev) => ev.stopPropagation()} />
+                              </div>
+                            </div>
+                          </div>
+                          {isExp && (
+                            <div className="bpm-card-body">
+                              <div className="bpm-card-section-block">
+                                <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'systems')}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">{(task.name || '').trim() === 'Реинжениринг' ? 'Взаимосвязанный бизнес-процесс' : 'Используемые системы'}</span>
+                                  {(task.name || '').trim() !== 'Реинжениринг' && (
+                                    <button type="button" className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(ev) => { ev.stopPropagation(); setRightPanel({ type: 'systems', stageName, taskIdx }); }} title="Добавить систему">+</button>
+                                  )}
+                                </button>
+                                {getSectionOpen(task.id, 'systems') && (
+                                  <>
+                                    {(task.name || '').trim() === 'Реинжениринг' ? (
+                                      <span className="bpm-card-data-empty">—</span>
+                                    ) : (
+                                      <>
+                                        <ul className="bpm-card-systems-list">
+                                          {(task.entries || []).filter((e) => e.system).map((e, i) => (
+                                            <li key={i} className="bpm-card-system-item">
+                                              <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(e.system)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link"><span className="bpm-card-system-link-text">{e.system}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              <div className="bpm-card-divider" />
+                              <div className="bpm-card-section-block">
+                                <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'input')}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Входные данные</span>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadInputListExcel(getTaskInputFiles(task)); }} aria-label="Скачать список данных"><span className="bpm-icon-file-filled" aria-hidden /></button>
+                                </button>
+                                {getSectionOpen(task.id, 'input') && (
+                                  <>
+                                    <div className="bpm-card-file-pills">
+                                      {getTaskInputFiles(task).map((f, i) => {
+                                        const status = f.status || ['ok', 'missing', 'warning'][hashStr(task.id + String(i)) % 3]
+                                        const dateStr = f.date || new Date().toLocaleDateString('ru-RU')
+                                        return (
+                                        <div key={i} className="bpm-file-pill bpm-file-pill-minimal">
+                                          <button type="button" className={`bpm-icon-file-sm bpm-icon-file-${status}`} title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadEmptyExcel(f.name || 'Название данных'); }} aria-label="Скачать" />
+                                          <span className="bpm-file-pill-name" title="Скачать">{f.name || 'Название данных'}</span>
+                                          <span className="bpm-file-pill-date">{dateStr}</span>
+                                        </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                              <div className="bpm-card-divider" />
+                              <div className="bpm-card-section-block">
+                                <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'results')}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Результаты расчета</span>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadResultListExcel(getTaskResultFiles(task).map((r) => r.name)); }} aria-label="Скачать результаты"><span className="bpm-icon-file-filled" aria-hidden /></button>
+                                </button>
+                                {getSectionOpen(task.id, 'results') && (
+                                  <>
+                                    {aiMode && (
+                                      <button type="button" className="bpm-ai-dona-btn" onClick={(ev) => { ev.stopPropagation(); addSyntheticResult(task.id); }}>ИИ-донасыщение результатов расчета синтетикой</button>
+                                    )}
+                                    <div className="bpm-card-results-list">
+                                      {[...getTaskResultFiles(task), ...(syntheticResultTaskIds.has(task.id) ? [{ name: 'Синтетический результат расчета' }] : [])].map((f, i) => (
+                                        <div key={i} className="bpm-result-line">{f.name || 'Результат расчета'}</div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {isShortView && (
+                        <div className="bpm-card-body">
+                          <div className="bpm-card-data-list">
+                            {(task.entries || []).filter((e) => e.system).length > 0 ? (
+                              <ul className="bpm-card-data-items">
+                                {(task.entries || []).filter((e) => e.system).map((e, i) => (
+                                  <li key={i} className="bpm-card-data-item">
+                                    <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(e.system)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link" onClick={(ev) => ev.stopPropagation()}><span className="bpm-card-system-link-text">{e.system}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="bpm-card-data-empty">Нет данных</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </React.Fragment>
                 )
               })}
+              {aiMode && stageIdx === 0 && (
+                <div className="bpm-card bpm-card-ai-suggestion" aria-hidden>
+                  <span className="bpm-card-ai-suggestion-badge">ИИ-АВТОПРЕДЛОЖЕНИЕ КАРТОЧКИ</span>
+                </div>
+              )}
+              <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, (tasks[stageName] || []).length); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
             </div>
-            <button type="button" className="bpm-add-task" onClick={() => addTask(stageName)}>+ Добавить задачу</button>
           </div>
         ))}
+        {aiMode && (
+          <div className="bpm-stage-column bpm-stage-ai-suggestion" aria-hidden>
+            <div className="bpm-stage-header bpm-stage-header-ai">
+              <span className="bpm-stage-title">ИИ-АВТОПРЕДЛОЖЕНИЕ ЭТАПА</span>
+            </div>
+            <div className="bpm-stage-cards">
+              <div className="bpm-card bpm-card-ai-suggestion bpm-card-ai-suggestion-stage">
+                <span className="bpm-card-ai-suggestion-badge">ИИ-АВТОПРЕДЛОЖЕНИЕ ЭТАПА</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-      {iterations.length > 0 && (
-        <div className="bpm-iterations">
-          <h4>Итерации</h4>
-          {iterations.map((it, i) => (
-            <div key={i} className="bpm-iteration-bar" style={{ left: it.left, width: it.width, top: it.top, background: it.color }}>{it.label}</div>
-          ))}
+          </div>
+        </div>
+      </div>
+      {rightPanel && (
+        <>
+          <div className="bpm-right-panel-overlay" onClick={() => setRightPanel(null)} />
+          <div className="bpm-right-panel-wrap">
+            {rightPanel.type === 'systems' && (
+              <BPMRightPanelSystems
+                aiMode={aiMode}
+                onClose={() => setRightPanel(null)}
+                taskName={(tasks[rightPanel.stageName]?.[rightPanel.taskIdx]?.name) || ''}
+                taskId={(tasks[rightPanel.stageName]?.[rightPanel.taskIdx]?.id) || ''}
+                existingSystems={(tasks[rightPanel.stageName]?.[rightPanel.taskIdx]?.entries || []).map((e) => e.system).filter(Boolean)}
+                onSelectSystem={(system) => {
+                  setTasks((t) => {
+                    const list = [...(t[rightPanel.stageName] || [])]
+                    const task = list[rightPanel.taskIdx]
+                    if (!task) return t
+                    const entries = [...(task.entries || []), { system, input: '', output: '' }]
+                    list[rightPanel.taskIdx] = { ...task, entries }
+                    return { ...t, [rightPanel.stageName]: list }
+                  })
+                }}
+                onSelectSystems={(systems) => {
+                  setTasks((t) => {
+                    const list = [...(t[rightPanel.stageName] || [])]
+                    const task = list[rightPanel.taskIdx]
+                    if (!task) return t
+                    const entries = [...(task.entries || []), ...(systems || []).map((s) => ({ system: s, input: '', output: '' }))]
+                    list[rightPanel.taskIdx] = { ...task, entries }
+                    return { ...t, [rightPanel.stageName]: list }
+                  })
+                }}
+                onDeselectSystem={(system) => {
+                  setTasks((t) => {
+                    const list = [...(t[rightPanel.stageName] || [])]
+                    const task = list[rightPanel.taskIdx]
+                    if (!task) return t
+                    const entries = (task.entries || []).filter((e) => e.system !== system)
+                    list[rightPanel.taskIdx] = { ...task, entries }
+                    return { ...t, [rightPanel.stageName]: list }
+                  })
+                }}
+              />
+            )}
+            {rightPanel.type === 'executor' && (
+              <BPMRightPanelExecutor
+                aiMode={aiMode}
+                onClose={() => setRightPanel(null)}
+                roleLabel={rightPanel.role === 'approver' ? 'Согласующий' : 'Исполнитель'}
+                currentValue={rightPanel.role === 'executor' ? (tasks[rightPanel.stageName]?.[rightPanel.taskIdx]?.executor) : (tasks[rightPanel.stageName]?.[rightPanel.taskIdx]?.approver)}
+                onSelect={(name) => {
+                  setTasks((t) => {
+                    const list = [...(t[rightPanel.stageName] || [])]
+                    const task = list[rightPanel.taskIdx]
+                    if (!task) return t
+                    if (rightPanel.role === 'executor') list[rightPanel.taskIdx] = { ...task, executor: name }
+                    else list[rightPanel.taskIdx] = { ...task, approver: name }
+                    return { ...t, [rightPanel.stageName]: list }
+                  })
+                  setEditingTask(null)
+                }}
+              />
+            )}
+          </div>
+        </>
+      )}
+      {connectionFrom && (
+        <div className="bpm-connection-hint">Выберите целевую карточку для связи</div>
+      )}
+      {aiModalOpen && (
+        <div className="bpm-modal-overlay" onClick={() => setAiModalOpen(false)}>
+          <div className="bpm-modal bpm-modal-autosvyazi" onClick={(e) => e.stopPropagation()}>
+            <h3 className="bpm-modal-title">НАСТРОЙКА ИИ-АВТОВЗАИМОСВЯЗИ</h3>
+            <div className="bpm-modal-section">
+              <label className="bpm-modal-label">Учитывать регламенты ПАО Газпромнефть:</label>
+              <ul className="bpm-modal-regulations-list">
+                <li className="bpm-modal-regulation-item">
+                  <input type="checkbox" id="reg-1" defaultChecked className="bpm-modal-regulation-cb" />
+                  <a href="https://ir.gazprom-neft.ru/disclosure/internal-regulations/#polozheniya" target="_blank" rel="noopener noreferrer" className="bpm-modal-regulation-link">Внутренние документы и политики</a>
+                </li>
+                <li className="bpm-modal-regulation-item">
+                  <input type="checkbox" id="reg-2" defaultChecked className="bpm-modal-regulation-cb" />
+                  <a href="https://rspp.ru/upload/uf/83f/gpn_codex_2019.pdf" target="_blank" rel="noopener noreferrer" className="bpm-modal-regulation-link">Корпоративный кодекс</a>
+                </li>
+                <li className="bpm-modal-regulation-item">
+                  <input type="checkbox" id="reg-3" defaultChecked className="bpm-modal-regulation-cb" />
+                  <a href="https://gazpromneft-sm.ru/uploads/editor/3f/42/Politika_proizvodstvennoj_bezopasnosti.pdf" target="_blank" rel="noopener noreferrer" className="bpm-modal-regulation-link">Политика производственной безопасности</a>
+                </li>
+                <li className="bpm-modal-regulation-item">
+                  <input type="checkbox" id="reg-4" defaultChecked className="bpm-modal-regulation-cb" />
+                  <a href="https://zakupki.gazprom-neft.ru/upload/instructions/%D0%A0%D0%B5%D0%B3%D0%BB%D0%B0%D0%BC%D0%B5%D0%BD%D1%82%20%D0%B4%D0%BB%D1%8F%20%D0%A3%D1%87%D0%B0%D1%81%D1%82%D0%BD%D0%B8%D0%BA%D0%BE%D0%B2.pdf" target="_blank" rel="noopener noreferrer" className="bpm-modal-regulation-link">Регламент участия в конкурентном отборе</a>
+                </li>
+              </ul>
+              <label className="bpm-modal-add-reg-label">
+                <input type="file" accept=".pdf,.doc,.docx" className="bpm-modal-file-input" onChange={(e) => e.target.value = ''} />
+                <span className="bpm-modal-add-reg-btn">+ Добавить свой регламент</span>
+              </label>
+            </div>
+            <div className="bpm-modal-section">
+              <label className="bpm-modal-label">Промпт (по желанию)</label>
+              <textarea className="bpm-modal-prompt" placeholder="Введите свой промпт" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} rows={3} />
+            </div>
+            <div className="bpm-modal-actions">
+              <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => { setAiModalOpen(false); setAiPrompt(''); }}>Запустить</button>
+              <button type="button" className="bpm-btn" onClick={() => { setAiModalOpen(false); setAiPrompt(''); }}>Отменить</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
