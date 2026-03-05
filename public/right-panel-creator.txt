@@ -1,0 +1,5899 @@
+/* Frame 4325 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 16px;
+gap: 24px;
+isolation: isolate;
+
+position: absolute;
+width: 380px;
+height: 1024px;
+right: 0px;
+bottom: 0px;
+
+background: #FFFFFF;
+/* shadow/modal */
+box-shadow: 0px 8px 8px rgba(0, 32, 51, 0.04), 0px 12px 28px rgba(0, 32, 51, 0.12);
+
+
+/* Frame 4329 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 12px;
+
+width: 348px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+z-index: 0;
+
+
+/* Frame 4325 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 35px;
+
+width: 348px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Выбор исполнителя */
+
+width: 289px;
+height: 24px;
+
+/* Regular/Headline_1 */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 16px;
+line-height: 150%;
+/* identical to box height, or 24px */
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 1;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+width: 24px;
+height: 24px;
+
+/* control-clear/bg */
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconClose */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.7px;
+height: 7.71px;
+left: calc(50% - 7.7px/2 + 0px);
+top: calc(50% - 7.71px/2 - 0px);
+
+/* control-clear/typo */
+background: rgba(0, 57, 92, 0.8);
+
+
+/* Modules/Input */
+
+box-sizing: border-box;
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 0px 0px 8px;
+
+width: 348px;
+height: 32px;
+
+/* control-default/bg */
+background: #FFFFFF;
+/* control-default/bg-border */
+border: 1px solid rgba(0, 66, 105, 0.28);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+z-index: 1;
+
+
+/* Parts/LeftSide */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 8px 0px 0px;
+
+width: 24px;
+height: 32px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* IconSearchStroked */
+
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 14px;
+height: 14px;
+left: calc(50% - 14px/2 + 0px);
+top: calc(50% - 14px/2 + 0px);
+
+/* control-default/typo-placeholder */
+background: rgba(0, 32, 51, 0.35);
+
+
+/* Parts/Placeholder */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 8px 0px 0px;
+
+width: 316px;
+height: 32px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 1;
+
+
+/* Text */
+
+width: 151px;
+height: 21px;
+
+/* S */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 150%;
+/* identical to box height, or 21px */
+display: flex;
+align-items: center;
+
+/* control-default/typo-placeholder */
+color: rgba(0, 32, 51, 0.35);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/RightSide */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+padding: 0px 8px;
+
+display: none;
+width: 35px;
+height: 32px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Frame 4328 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 12px;
+
+width: 348px;
+height: 888px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+align-self: stretch;
+flex-grow: 1;
+z-index: 2;
+
+
+/* Frame 4338 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+
+width: 348px;
+height: 459px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 163px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* Frame 4334 */
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: calc(50% - 32px/2);
+top: calc(50% - 32px/2);
+
+background: #FFFFFF;
+border-radius: 100px;
+
+
+/* Снимок экрана 2025-10-01 в 22.20.02 1 */
+
+position: absolute;
+width: 38px;
+height: 38px;
+left: calc(50% - 38px/2 + 1px);
+top: calc(50% - 38px/2 + 1px);
+
+background: url(Снимок экрана 2025-10-01 в 22.20.02.png);
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 119px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 119px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowUp */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Frame 4337 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 12px 8px;
+gap: 35px;
+
+width: 348px;
+height: 419px;
+
+background: #FFFFFF;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4339 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 12px;
+
+width: 332px;
+height: 395px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Switch
+
+Default_Colors. Нужен, чтобы переключать режимы — мгновенно, сразу после того, как пользователь меняет положение переключателя.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+gap: 8px;
+
+width: 332px;
+height: 17px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Wrapper */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+width: 28px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Switch */
+
+width: 28px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Rectangle 4 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+/* control-primary/bg */
+background: #0078D2;
+border-radius: 100px;
+
+
+/* Ellipse 4 */
+
+position: absolute;
+left: 50%;
+right: 7.14%;
+top: 12.5%;
+bottom: 12.5%;
+
+/* control-primary/typo */
+background: #FFFFFF;
+
+
+/* label */
+
+width: 296px;
+height: 17px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 140%;
+/* identical to box height, or 17px */
+display: flex;
+align-items: center;
+
+/* control-default/typo */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 1;
+
+
+/* Frame 4335 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 3px;
+
+width: 332px;
+height: 38px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 21px;
+
+/* S */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 150%;
+/* identical to box height, or 21px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4336 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 3px;
+
+width: 332px;
+height: 38px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 21px;
+
+/* S */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 150%;
+/* identical to box height, or 21px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4337 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 3px;
+
+width: 332px;
+height: 38px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 21px;
+
+/* S */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 150%;
+/* identical to box height, or 21px */
+display: flex;
+align-items: center;
+
+/* typo/alert */
+color: #EB3333;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4338 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 3px;
+
+width: 332px;
+height: 38px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 4;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 21px;
+
+/* S */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 150%;
+/* identical to box height, or 21px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4339 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 3px;
+
+width: 332px;
+height: 38px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 5;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 21px;
+
+/* S */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 150%;
+/* identical to box height, or 21px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4340 */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 332px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 6;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* info */
+
+width: 332px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* BadgeGroup */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 244px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Badge
+
+Default_Colors. Бейджик используют, чтобы показать статус процесса, который происходит с какой-то сущностью.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 4px;
+gap: 4px;
+isolation: isolate;
+
+width: 78px;
+height: 16px;
+
+/* bg/system
+
+Для фона системных сообщений, состояний, уведомлений и прочего
+*/
+background: #DEE4E8;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* IconAllDone */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+z-index: 0;
+
+
+/* label */
+
+width: 70px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 8px;
+line-height: 16px;
+/* identical to box height, or 200% */
+text-transform: uppercase;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+z-index: 1;
+
+
+/* IconAlert */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+z-index: 2;
+
+
+/* outsideBorder */
+
+position: absolute;
+display: none;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+/* bg/default
+
+Основной цвет фона
+*/
+border: 1px solid #FFFFFF;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+z-index: 3;
+
+
+/* Badge
+
+Default_Colors. Бейджик используют, чтобы показать статус процесса, который происходит с какой-то сущностью.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 4px;
+gap: 4px;
+isolation: isolate;
+
+width: 79px;
+height: 16px;
+
+/* bg/system
+
+Для фона системных сообщений, состояний, уведомлений и прочего
+*/
+background: #DEE4E8;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconAllDone */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+z-index: 0;
+
+
+/* label */
+
+width: 71px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 8px;
+line-height: 16px;
+/* identical to box height, or 200% */
+text-transform: uppercase;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+z-index: 1;
+
+
+/* IconAlert */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+z-index: 2;
+
+
+/* outsideBorder */
+
+position: absolute;
+display: none;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+/* bg/default
+
+Основной цвет фона
+*/
+border: 1px solid #FFFFFF;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+z-index: 3;
+
+
+/* Badge
+
+Default_Colors. Бейджик используют, чтобы показать статус процесса, который происходит с какой-то сущностью.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 4px;
+gap: 4px;
+isolation: isolate;
+
+width: 79px;
+height: 16px;
+
+/* bg/system
+
+Для фона системных сообщений, состояний, уведомлений и прочего
+*/
+background: #DEE4E8;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* IconAllDone */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+z-index: 0;
+
+
+/* label */
+
+width: 71px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 8px;
+line-height: 16px;
+/* identical to box height, or 200% */
+text-transform: uppercase;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+z-index: 1;
+
+
+/* IconAlert */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+z-index: 2;
+
+
+/* outsideBorder */
+
+position: absolute;
+display: none;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+/* bg/default
+
+Основной цвет фона
+*/
+border: 1px solid #FFFFFF;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+z-index: 3;
+
+
+/* Badge
+
+Default_Colors. Бейджик используют, чтобы показать статус процесса, который происходит с какой-то сущностью.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 4px;
+gap: 4px;
+
+display: none;
+width: 85px;
+height: 16px;
+
+/* bg/system
+
+Для фона системных сообщений, состояний, уведомлений и прочего
+*/
+background: #DEE4E8;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Badge
+
+Default_Colors. Бейджик используют, чтобы показать статус процесса, который происходит с какой-то сущностью.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 4px;
+gap: 4px;
+
+display: none;
+width: 86px;
+height: 16px;
+
+/* bg/alert
+
+Компоненты с ошибкой
+*/
+background: #FE4343;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* Badge
+
+Default_Colors. Бейджик используют, чтобы показать статус процесса, который происходит с какой-то сущностью.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 4px;
+gap: 4px;
+
+display: none;
+width: 18px;
+height: 16px;
+
+/* bg/system
+
+Для фона системных сообщений, состояний, уведомлений и прочего
+*/
+background: #DEE4E8;
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 5;
+flex-grow: 0;
+
+
+/* TextArea */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 332px;
+height: 70px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 7;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Parts/Label */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 332px;
+height: 18px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Text */
+
+width: 81px;
+height: 18px;
+
+/* XS */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 150%;
+/* identical to box height, or 18px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* required */
+
+display: none;
+width: 7px;
+height: 18px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 12px;
+line-height: 150%;
+/* identical to box height, or 18px */
+display: flex;
+align-items: center;
+
+/* typo/alert */
+color: #EB3333;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconQuestion */
+
+display: none;
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Modules/Append */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+isolation: isolate;
+
+width: 332px;
+height: 48px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 1;
+
+
+/* Modules/Input */
+
+box-sizing: border-box;
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px 0px 0px 6px;
+
+width: 332px;
+height: 48px;
+
+/* control-default/bg */
+background: #FFFFFF;
+/* control-default/bg-border */
+border: 1px solid rgba(0, 66, 105, 0.28);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 1;
+z-index: 0;
+
+
+/* Parts/LeftSide */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px 0px 0px;
+
+display: none;
+width: 18px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/Placeholder */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 6px 0px 0px;
+
+width: 326px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 1;
+
+
+/* Text */
+
+width: 320px;
+height: 18px;
+
+/* XS */
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 150%;
+/* identical to box height, or 18px */
+
+/* control-default/typo-placeholder */
+color: rgba(0, 32, 51, 0.35);
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 1;
+
+
+/* Parts/RightSide */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+display: none;
+width: 28px;
+height: 24px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* IconResize */
+
+position: absolute;
+display: none;
+width: 12px;
+height: 12px;
+right: 2px;
+bottom: 2px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+z-index: 1;
+
+
+/* Modules/CaptionWithCounter */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+
+display: none;
+width: 375px;
+height: 36px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Parts/TagRow */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 6px;
+
+width: 348px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 1;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 151px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #F9A825;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 107px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 107px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User
+
+Default_Colors. Показывает информацию о человеке: аватарку, имя, должность, статус.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+display: none;
+width: 197px;
+height: 40px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 139px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #7448DD;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 25%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 95px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 95px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 138px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #6FB80A;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 25%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 94px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 94px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 4;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 145px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #F56B00;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 101px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 101px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 5;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 145px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #00BCD4;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 101px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 101px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 6;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 148px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #911FA2;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 104px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 104px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 7;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 153px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #C62828;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 31.25%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 109px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 109px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 8;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 139px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #008F7C;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 95px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 95px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 9;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 145px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #C2185B;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 101px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 101px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 10;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 146px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #3E3ACB;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 102px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 102px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 11;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 139px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #1ABC1A;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 95px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 95px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 12;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 136px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #2196F3;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 92px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 92px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 13;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 159px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #00A352;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 25%;
+right: 21.88%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 115px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 115px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 14;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 144px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #E92064;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 31.25%;
+right: 28.12%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 100px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 100px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 15;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 130px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #0088A3;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 25%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 86px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 86px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+width: 348px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 16;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 4333 */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+margin: 0 auto;
+width: 148px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Parts/UserAvatar */
+
+width: 40px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Avatar
+
+Default_Colors. Графическое изображение пользователя, фотография или рисунок.
+*/
+
+position: absolute;
+width: 32px;
+height: 32px;
+left: 4px;
+top: 4px;
+
+border-radius: 16px;
+
+
+/* Rectangle 9 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #9010D1;
+
+
+/* Rectangle 10 */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+opacity: 0.24;
+
+
+/* МД */
+
+position: absolute;
+left: 28.12%;
+right: 25%;
+top: 3.12%;
+bottom: 0%;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 10px;
+line-height: 31px;
+/* identical to box height, or 310% */
+display: flex;
+align-items: center;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* status */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* text */
+
+/* Auto layout */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 104px;
+height: 34px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* name */
+
+width: 104px;
+height: 16px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 100%;
+/* identical to box height, or 16px */
+display: flex;
+align-items: center;
+
+/* typo/primary */
+color: #002033;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* info */
+
+width: 67px;
+height: 14px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 110%;
+/* identical to box height, or 13px */
+display: flex;
+align-items: center;
+
+/* typo/secondary */
+color: rgba(0, 32, 51, 0.6);
+
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Button */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 6px;
+
+margin: 0 auto;
+width: 24px;
+height: 24px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 4px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* IconArrowDown */
+
+width: 12px;
+height: 12px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+width: 7.95px;
+height: 4.68px;
+left: calc(50% - 7.95px/2 + 0.01px);
+top: calc(50% - 4.68px/2 + 0px);
+
+/* control-ghost/typo */
+background: rgba(0, 57, 92, 0.8);
+transform: rotate(-180deg);
+
+
+/* IconSelect */
+
+margin: 0 auto;
+display: none;
+width: 16px;
+height: 16px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Parts/TagRow */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+gap: 6px;
+
+width: 348px;
+height: 40px;
+
+
+/* Inside auto layout */
+flex: none;
+order: 17;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* User */
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+display: none;
+width: 197px;
+height: 40px;
+
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 0;
+flex-grow: 1;
+
+
+/* User
+
+Default_Colors. Показывает информацию о человеке: аватарку, имя, должность, статус.
+*/
+
+/* Auto layout */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px 16px 0px 0px;
+gap: 8px;
+
+display: none;
+width: 197px;
+height: 40px;
+
+/* control-ghost/bg */
+background: rgba(0, 66, 105, 0.07);
+border-radius: 99px;
+
+/* Inside auto layout */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Scrollbar
+
+Default_Colors. Полоса прокрутки.
+*/
+
+position: absolute;
+width: 803px;
+height: 4px;
+right: -439px;
+top: calc(50% - 4px/2 + 498px);
+
+transform: matrix(0, 1, 1, 0, 0, 0);
+
+/* Inside auto layout */
+flex: none;
+order: 3;
+flex-grow: 0;
+z-index: 3;
+
+
+/* Scrollbar-thumb */
+
+position: absolute;
+left: 0%;
+right: 57.95%;
+top: 0%;
+bottom: 0%;
+
+/* control-scroll/thumb */
+background: rgba(0, 66, 105, 0.24);
+transform: matrix(0, 1, 1, 0, 0, 0);

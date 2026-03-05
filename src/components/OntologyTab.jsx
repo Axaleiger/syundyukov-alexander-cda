@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import MermaidSchema from './MermaidSchema'
 import './OntologyTab.css'
 
 const IconCode = () => (
@@ -29,7 +30,7 @@ const IconDoc = () => (
   </svg>
 )
 
-const DEFAULT_FLOW_CODE = `flowchart LR
+export const DEFAULT_FLOW_CODE = `flowchart LR
   subgraph Вход
     A[Триггер события]
     B[Проверка данных]
@@ -53,14 +54,18 @@ const DEFAULT_FLOW_CODE = `flowchart LR
   G --> H
 `
 
-function OntologyTab({ onOpenDoc }) {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
+function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange }) {
   const [mode, setMode] = useState('code')
-  const [flowCode, setFlowCode] = useState(DEFAULT_FLOW_CODE)
+  const localCode = flowCode !== undefined ? flowCode : undefined
+  const setCode = onFlowCodeChange || (() => {})
+  const [internalCode, setInternalCode] = useState(DEFAULT_FLOW_CODE)
+  const flowCodeValue = localCode !== undefined ? localCode : internalCode
+  const setFlowCodeValue = localCode !== undefined ? setCode : setInternalCode
 
   return (
     <div className="ontology-tab ontology-tab-config">
       <h2 className="ontology-title">Конфигуратор систем</h2>
+      <p className="ontology-subtitle">Код и схема синхронны с вкладкой «Планирование». Реализовано на базе концепции workflow-редактора (n8n).</p>
       <div className="ontology-view-toggle">
         <button type="button" className={`ontology-toggle-btn ${mode === 'code' ? 'active' : ''}`} onClick={() => setMode('code')}>
           <span className="ontology-toggle-icon"><IconCode /></span>
@@ -86,8 +91,8 @@ function OntologyTab({ onOpenDoc }) {
             </div>
             <textarea
               className="ontology-code-textarea"
-              value={flowCode}
-              onChange={(e) => setFlowCode(e.target.value)}
+              value={flowCodeValue}
+              onChange={(e) => setFlowCodeValue(e.target.value)}
               placeholder="flowchart LR&#10;  A --> B --> C"
               spellCheck={false}
             />
@@ -95,11 +100,7 @@ function OntologyTab({ onOpenDoc }) {
         )}
         {mode === 'schema' && (
           <div className="ontology-schema-panel">
-            <img
-              src={`${base}n8n-mvp.png`}
-              alt="Схема (n8n)"
-              className="ontology-config-img"
-            />
+            <MermaidSchema code={flowCodeValue} className="ontology-mermaid-schema" />
           </div>
         )}
       </div>

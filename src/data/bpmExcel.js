@@ -149,7 +149,7 @@ export function parseBoardFromExcelLenient(arrayBuffer) {
   return { stages, tasks }
 }
 
-export function generateBoardExcel(stages, tasks) {
+export function generateBoardExcel(stages, tasks, connections = []) {
   const rows = []
   for (const stage of stages) {
     for (const task of tasks[stage] || []) {
@@ -187,9 +187,51 @@ export function generateBoardExcel(stages, tasks) {
     }
   }
   const ws = XLSX.utils.json_to_sheet(rows)
+  if (connections && connections.length > 0) {
+    const titleR = rows.length + 1
+    const headerR = rows.length + 2
+    XLSX.utils.sheet_add_aoa(ws, [['Связи']], { origin: { r: titleR, c: 0 } })
+    XLSX.utils.sheet_add_aoa(ws, [['Этап от', 'Карточка от', 'Этап к', 'Карточка к']], { origin: { r: headerR, c: 0 } })
+    connections.forEach((c, i) => {
+      XLSX.utils.sheet_add_aoa(ws, [[c.fromStage || '', c.fromId || '', c.toStage || '', c.toId || '']], { origin: { r: headerR + 1 + i, c: 0 } })
+    })
+  }
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Доска')
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+}
+
+export function parseConnectionsFromExcel(arrayBuffer) {
+  try {
+    const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' })
+    let ws = wb.Sheets['Связи']
+    let sheetName = 'Связи'
+    if (!ws) {
+      ws = wb.Sheets['Доска'] || wb.Sheets[wb.SheetNames[0]]
+      if (!ws) return []
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1 })
+      const connRowIdx = aoa.findIndex((row) => row && String(row[0]).trim() === 'Связи')
+      if (connRowIdx < 0) return []
+      const headerRow = aoa[connRowIdx + 1]
+      if (!headerRow || headerRow[0] !== 'Этап от') return []
+      const connRows = aoa.slice(connRowIdx + 2).filter((row) => row && (row[0] || row[1] || row[2] || row[3]))
+      return connRows.map((row) => ({
+        fromStage: row[0] != null ? String(row[0]).trim() : '',
+        fromId: row[1] != null ? String(row[1]).trim() : '',
+        toStage: row[2] != null ? String(row[2]).trim() : '',
+        toId: row[3] != null ? String(row[3]).trim() : '',
+      })).filter((c) => c.fromStage && c.fromId && c.toStage && c.toId)
+    }
+    const rows = XLSX.utils.sheet_to_json(ws)
+    return rows.map((row) => ({
+      fromStage: row['Этап от'] != null ? String(row['Этап от']).trim() : '',
+      fromId: row['Карточка от'] != null ? String(row['Карточка от']).trim() : '',
+      toStage: row['Этап к'] != null ? String(row['Этап к']).trim() : '',
+      toId: row['Карточка к'] != null ? String(row['Карточка к']).trim() : '',
+    })).filter((c) => c.fromStage && c.fromId && c.toStage && c.toId)
+  } catch {
+    return []
+  }
 }
 
 export function generateTemplateExcel() {

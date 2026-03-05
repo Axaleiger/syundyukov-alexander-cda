@@ -50,7 +50,7 @@ function ConfiguratorDocPage({ onClose }) {
             <li><code>A --&gt; B</code> — стрелка от A к B</li>
             <li><code>A --- B</code> — линия без стрелки</li>
             <li><code>A -- текст --&gt; B</code> или <code>A --&gt;|текст| B</code> — подпись на связи</li>
-            <li><code>A -.-> B</code> — пунктирная стрелка</li>
+            <li><code>{'A -.-> B'}</code> — пунктирная стрелка</li>
             <li><code>A ===&gt; B</code> — толстая стрелка</li>
           </ul>
           <p>Можно объединять в одну строку: <code>A --&gt; B --&gt; C</code>.</p>
