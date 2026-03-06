@@ -88,8 +88,12 @@
   height: 40px;
   min-height: 40px;
   background: var(--bpm-bg-secondary);
-  border-radius: 0;
+  border-radius: var(--bpm-radius) var(--bpm-radius) 0 0;
   flex-shrink: 0;
+}
+
+.bpm-board-header-in-scroll {
+  width: 100%;
 }
 
 .bpm-header-left {
@@ -183,7 +187,8 @@
 }
 
 /* Toolbar — в стиле секции: padding, gap 8px */
-.bpm-toolbar {
+.bpm-toolbar,
+.bpm-toolbar-row {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -193,6 +198,10 @@
   background: var(--bpm-bg-secondary);
   border-radius: 0;
   flex-shrink: 0;
+}
+
+.bpm-toolbar-row {
+  width: 100%;
 }
 
 /* Figma Frame 4351: тумблер Упрощенный/Подробный — flex row, gap 12px, height 17px */
@@ -417,6 +426,11 @@
   margin: 0;
 }
 
+.bpm-divider-flush-top {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 /* Скролл только у доски */
 .bpm-board-scroll-area {
   flex: 1;
@@ -440,7 +454,7 @@
   align-items: stretch;
   flex: 1;
   min-width: min-content;
-  gap: 12px;
+  gap: 4px;
 }
 
 .bpm-top-panel-in-scroll {
@@ -456,7 +470,7 @@
   border-top: none;
   border-radius: 0 0 var(--bpm-radius) var(--bpm-radius);
   padding: 8px 16px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   flex-shrink: 0;
 }
 
@@ -513,7 +527,7 @@
   z-index: 1;
   opacity: 1;
   color: var(--bpm-typo-primary);
-  font-weight: 500;
+  font-weight: 700;
   font-size: 12px;
   line-height: 140%;
 }
@@ -695,6 +709,7 @@
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  margin-left: 4px;
 }
 
 .bpm-add-stage-vertical:hover {
@@ -744,6 +759,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   padding: 12px;
+  padding-left: 4px;
   background: var(--bpm-bg-default);
   border-radius: var(--bpm-radius);
 }
@@ -772,7 +788,8 @@
   gap: 8px;
   cursor: grab;
   flex-shrink: 0;
-  min-height: 44px;
+  min-height: 52px;
+  height: 52px;
   border-bottom: 1px solid rgba(0, 65, 102, 0.2);
   padding-bottom: 6px;
   margin-bottom: 0;
@@ -797,6 +814,7 @@
   margin: 0;
   flex: 1;
   min-width: 0;
+  word-break: break-word;
 }
 
 .bpm-stage-title-clickable {
@@ -960,8 +978,8 @@
 }
 
 .bpm-card-badge-in-work {
-  background: rgba(11, 165, 255, 0.1);
-  color: #009BF5;
+  background: rgba(0, 61, 92, 0.2);
+  color: #003d5c;
 }
 
 .bpm-card-badge-success {
@@ -1130,6 +1148,14 @@
   margin-top: 4px;
   margin-bottom: 4px;
   flex-shrink: 0;
+}
+
+.bpm-stage-cards {
+  margin-top: 0;
+}
+
+.bpm-stage-cards > .bpm-drop-zone:first-child {
+  margin-bottom: 0;
 }
 
 /* Разделитель — bg/border */
@@ -2106,9 +2132,14 @@
   padding: 12px 14px;
   min-height: 48px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: stretch;
   flex-shrink: 0;
+  gap: 6px;
+}
+
+.bpm-card-ai-suggestion-badge-wrap {
+  margin-top: 4px;
 }
 
 .bpm-card-ai-suggestion-badge {
@@ -2125,9 +2156,13 @@
   min-width: 200px;
 }
 
+.bpm-stage-header-ai {
+  cursor: default;
+}
+
 .bpm-stage-header-ai .bpm-stage-title {
-  font-size: 11px;
-  color: rgba(0, 32, 51, 0.6);
+  font-size: 12px;
+  color: rgba(0, 32, 51, 0.8);
 }
 
 .bpm-card-ai-suggestion-stage {

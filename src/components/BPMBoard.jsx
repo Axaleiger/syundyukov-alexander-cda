@@ -362,12 +362,22 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [aiPrompt, setAiPrompt] = useState('')
   const [connectionLines, setConnectionLines] = useState([])
-  const [syntheticResultTaskIds, setSyntheticResultTaskIds] = useState(() => new Set())
+  const [syntheticCountByTaskId, setSyntheticCountByTaskId] = useState({})
   const boardRef = React.useRef(null)
 
+  const aiCardPersonnel = useMemo(() => ({
+    executor: PERSONNEL[Math.abs(hashStr('ai-card-exec') % PERSONNEL.length)],
+    approver: PERSONNEL[Math.abs(hashStr('ai-card-appr') % PERSONNEL.length)],
+  }), [])
+
   const addSyntheticResult = useCallback((taskId) => {
-    setSyntheticResultTaskIds((prev) => new Set([...prev, taskId]))
+    setSyntheticCountByTaskId((prev) => ({ ...prev, [taskId]: (prev[taskId] || 0) + 1 }))
   }, [])
+
+  const getSyntheticLabels = useCallback((taskId) => {
+    const n = syntheticCountByTaskId[taskId] || 0
+    return Array.from({ length: n }, (_, i) => `Синтетика ${i + 1}`)
+  }, [syntheticCountByTaskId])
 
   useEffect(() => {
     const data = getInitialBoard(initialBoardId)
@@ -441,7 +451,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
 
   const toggleSection = useCallback((taskId, section) => {
     setExpandedSections((prev) => {
-      const cur = prev[taskId] || { systems: true, input: true, results: true }
+      const cur = prev[taskId] || { systems: false, input: false, results: false }
       const next = { ...cur, [section]: !cur[section] }
       return { ...prev, [taskId]: next }
     })
@@ -449,8 +459,8 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
 
   const getSectionOpen = useCallback((taskId, section) => {
     const cur = expandedSections[taskId]
-    if (!cur) return true
-    return cur[section] !== false
+    if (!cur) return false
+    return cur[section] === true
   }, [expandedSections])
 
   const handleFileUpload = useCallback((e) => {
@@ -781,89 +791,88 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   return (
     <div className="bpm-board-wrap">
       {uploadError && <div className="bpm-error">{uploadError}</div>}
-      <div className="bpm-board-top-fixed">
-        <div className="bpm-board-header">
-          <div className="bpm-header-left">
-            {onClose && (
-              <button type="button" className="bpm-btn-icon bpm-btn-back" onClick={onClose} title="Назад">
-                <span className="bpm-icon-arrow-left" />
-              </button>
-            )}
-            <h2>{scenarioName}{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
-          </div>
-          <div className="bpm-header-actions">
-            <label className="bpm-upload-btn">
-              Загрузить из Excel
-              <input type="file" accept=".xlsx" onChange={handleFileUpload} hidden />
-            </label>
-            <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
-            <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
-            <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
-          </div>
-        </div>
-        <div className="bpm-board-header-divider" />
-        <div className="bpm-toolbar">
-        <input
-          type="text"
-          className="bpm-search"
-          placeholder="Поиск по доске..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <button type="button" className="bpm-btn bpm-btn-filters" onClick={() => setShowFilters(!showFilters)}>
-          <span className="bpm-icon-filter" /><span>{showFilters ? 'Скрыть фильтры' : 'Фильтры'}</span>
-        </button>
-        {showFilters && (
-          <div className="bpm-filters-panel">
-            <label className="bpm-filter-label">
-              Статус:
-              <select className="bpm-select bpm-select-inline" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">Все</option>
-                {['в работе', 'завершен', 'ошибка', 'пауза'].map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </label>
-            <label className="bpm-filter-label">
-              Исполнитель:
-              <select className="bpm-select bpm-select-inline" value={executorFilter} onChange={(e) => setExecutorFilter(e.target.value)}>
-                <option value="">Все</option>
-                {PERSONNEL.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </label>
-            <label className="bpm-filter-label">
-              Согласующий:
-              <select className="bpm-select bpm-select-inline" value={approverFilter} onChange={(e) => setApproverFilter(e.target.value)}>
-                <option value="">Все</option>
-                {PERSONNEL.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </label>
-            <label className="bpm-filter-label">
-              Период с:
-              <input type="date" className="bpm-input-date" value={periodStartFilter} onChange={(e) => setPeriodStartFilter(e.target.value)} />
-            </label>
-            <label className="bpm-filter-label">
-              по:
-              <input type="date" className="bpm-input-date" value={periodEndFilter} onChange={(e) => setPeriodEndFilter(e.target.value)} />
-            </label>
-          </div>
-        )}
-        <div className="bpm-view-toggle" role="group" aria-label="Вид">
-          <span className={`bpm-toggle-label ${viewMode === 'Упрощенный вид' ? 'active' : ''}`} onClick={() => setViewMode('Упрощенный вид')}>Упрощенный</span>
-          <span className="bpm-toggle-switch" onClick={() => setViewMode((m) => m === 'Упрощенный вид' ? 'Подробный вид' : 'Упрощенный вид')} role="switch" aria-checked={viewMode === 'Подробный вид'}>
-            <span className="bpm-toggle-switch-thumb" />
-          </span>
-          <span className={`bpm-toggle-label ${viewMode === 'Подробный вид' ? 'active' : ''}`} onClick={() => setViewMode('Подробный вид')}>Подробный</span>
-        </div>
-        <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)} style={{ marginLeft: 'auto' }}>Рассчитать</button>
-      </div>
-      </div>
       <div className="bpm-board-scroll-area">
         <div className="bpm-board-container">
+          <div className="bpm-board-header bpm-board-header-in-scroll">
+            <div className="bpm-header-left">
+              {onClose && (
+                <button type="button" className="bpm-btn-icon bpm-btn-back" onClick={onClose} title="Назад">
+                  <span className="bpm-icon-arrow-left" />
+                </button>
+              )}
+              <h2>{scenarioName}{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
+            </div>
+            <div className="bpm-header-actions">
+              <label className="bpm-upload-btn">
+                Загрузить из Excel
+                <input type="file" accept=".xlsx" onChange={handleFileUpload} hidden />
+              </label>
+              <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
+              <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
+              <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)}>Рассчитать</button>
+              <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
+            </div>
+          </div>
+          <div className="bpm-board-header-divider" />
+          <div className="bpm-toolbar-row">
+            <input
+              type="text"
+              className="bpm-search"
+              placeholder="Поиск по доске..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button type="button" className="bpm-btn bpm-btn-filters" onClick={() => setShowFilters(!showFilters)}>
+              <span className="bpm-icon-filter" /><span>{showFilters ? 'Скрыть фильтры' : 'Фильтры'}</span>
+            </button>
+            {showFilters && (
+              <div className="bpm-filters-panel">
+                <label className="bpm-filter-label">
+                  Статус:
+                  <select className="bpm-select bpm-select-inline" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <option value="">Все</option>
+                    {['в работе', 'завершен', 'ошибка', 'пауза'].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="bpm-filter-label">
+                  Исполнитель:
+                  <select className="bpm-select bpm-select-inline" value={executorFilter} onChange={(e) => setExecutorFilter(e.target.value)}>
+                    <option value="">Все</option>
+                    {PERSONNEL.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="bpm-filter-label">
+                  Согласующий:
+                  <select className="bpm-select bpm-select-inline" value={approverFilter} onChange={(e) => setApproverFilter(e.target.value)}>
+                    <option value="">Все</option>
+                    {PERSONNEL.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="bpm-filter-label">
+                  Период с:
+                  <input type="date" className="bpm-input-date" value={periodStartFilter} onChange={(e) => setPeriodStartFilter(e.target.value)} />
+                </label>
+                <label className="bpm-filter-label">
+                  по:
+                  <input type="date" className="bpm-input-date" value={periodEndFilter} onChange={(e) => setPeriodEndFilter(e.target.value)} />
+                </label>
+              </div>
+            )}
+            <div className="bpm-view-toggle" role="group" aria-label="Вид">
+              <span className={`bpm-toggle-label ${viewMode === 'Упрощенный вид' ? 'active' : ''}`} onClick={() => setViewMode('Упрощенный вид')}>Упрощенный</span>
+              <span className="bpm-toggle-switch" onClick={() => setViewMode((m) => m === 'Упрощенный вид' ? 'Подробный вид' : 'Упрощенный вид')} role="switch" aria-checked={viewMode === 'Подробный вид'}>
+                <span className="bpm-toggle-switch-thumb" />
+              </span>
+              <span className={`bpm-toggle-label ${viewMode === 'Подробный вид' ? 'active' : ''}`} onClick={() => setViewMode('Подробный вид')}>Подробный</span>
+            </div>
+          </div>
+          <div className="bpm-board-header-divider bpm-divider-flush-top" />
           <div className="bpm-top-panel bpm-top-panel-in-scroll" style={{ '--stages': stages.length }}>
             <div className="bpm-top-panel-row">
               <span className="bpm-top-panel-title">Взаимосвязи этапов</span>
@@ -918,8 +927,8 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
           </div>
         )}
         {stages.map((stageName, stageIdx) => (
+          <React.Fragment key={stageName}>
           <div
-            key={stageName}
             className={`bpm-stage-column ${draggedStageIndex === stageIdx ? 'bpm-stage-column-dragging' : ''}`}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
             onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleDropAt(stageName, (tasks[stageName] || []).length); }}
@@ -944,6 +953,62 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
             <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(stageName)}>+ Добавить задачу</button>
             <div className="bpm-stage-cards">
               <div className="bpm-drop-zone" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, 0); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+              {aiMode && stageIdx === 0 && (
+                <div className="bpm-card bpm-card-ai-suggestion" aria-hidden>
+                  <div className="bpm-card-top-row">
+                    <span className="bpm-card-id">ИИ</span>
+                    <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
+                    <button type="button" className="bpm-card-delete" title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
+                  </div>
+                  <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
+                  <div className="bpm-card-meta">
+                    <div className="bpm-card-meta-row">
+                      <span className="bpm-card-meta-label">Исполнитель:</span>
+                      <span className="bpm-card-meta-value">{aiCardPersonnel.executor}</span>
+                    </div>
+                    <div className="bpm-card-meta-row">
+                      <span className="bpm-card-meta-label">Согласующий:</span>
+                      <span className="bpm-card-meta-value">{aiCardPersonnel.approver}</span>
+                    </div>
+                    <div className="bpm-card-meta-row bpm-card-schedule-row">
+                      <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
+                      <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
+                        {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                    <div className="bpm-card-meta-row bpm-card-period-row">
+                      <span className="bpm-card-meta-label">Период выполнения:</span>
+                      <div className="bpm-card-period-inputs">
+                        <input type="date" className="bpm-input-date" onClick={(e) => e.stopPropagation()} />
+                        <span className="bpm-card-period-sep">—</span>
+                        <input type="date" className="bpm-input-date" onClick={(e) => e.stopPropagation()} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bpm-card-body">
+                    <div className="bpm-card-section-block">
+                      <button type="button" className="bpm-card-section-header">
+                        <span className="bpm-card-collapse-arrow bpm-card-section-chevron bpm-card-collapse-arrow-down" />
+                        <span className="bpm-card-section-title">Используемые системы</span>
+                      </button>
+                    </div>
+                    <div className="bpm-card-divider" />
+                    <div className="bpm-card-section-block">
+                      <button type="button" className="bpm-card-section-header">
+                        <span className="bpm-card-collapse-arrow bpm-card-section-chevron bpm-card-collapse-arrow-down" />
+                        <span className="bpm-card-section-title">Входные данные</span>
+                      </button>
+                    </div>
+                    <div className="bpm-card-divider" />
+                    <div className="bpm-card-section-block">
+                      <button type="button" className="bpm-card-section-header">
+                        <span className="bpm-card-collapse-arrow bpm-card-section-chevron bpm-card-collapse-arrow-down" />
+                        <span className="bpm-card-section-title">Результаты расчета</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {(filteredTasksByStage[stageName] || []).map((task) => {
                 const taskIdx = (tasks[stageName] || []).findIndex((t) => t.id === task.id)
                 if (taskIdx < 0) return null
@@ -1094,7 +1159,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                                 <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'results')}>
                                   <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                                   <span className="bpm-card-section-title">Результаты расчета</span>
-                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadResultListExcel(getTaskResultFiles(task).map((r) => r.name)); }} aria-label="Скачать результаты"><span className="bpm-icon-file-filled" aria-hidden /></button>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadResultListExcel([...getTaskResultFiles(task).map((r) => r.name), ...getSyntheticLabels(task.id)]); }} aria-label="Скачать результаты"><span className="bpm-icon-file-filled" aria-hidden /></button>
                                 </button>
                                 {getSectionOpen(task.id, 'results') && (
                                   <>
@@ -1102,7 +1167,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                                       <button type="button" className="bpm-ai-dona-btn" onClick={(ev) => { ev.stopPropagation(); addSyntheticResult(task.id); }}>ИИ-донасыщение результатов расчета синтетикой</button>
                                     )}
                                     <div className="bpm-card-results-list">
-                                      {[...getTaskResultFiles(task), ...(syntheticResultTaskIds.has(task.id) ? [{ name: 'Синтетический результат расчета' }] : [])].map((f, i) => (
+                                      {[...getTaskResultFiles(task), ...getSyntheticLabels(task.id).map((name) => ({ name }))].map((f, i) => (
                                         <div key={i} className="bpm-result-line">{f.name || 'Результат расчета'}</div>
                                       ))}
                                     </div>
@@ -1134,27 +1199,79 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                   </React.Fragment>
                 )
               })}
-              {aiMode && stageIdx === 0 && (
-                <div className="bpm-card bpm-card-ai-suggestion" aria-hidden>
-                  <span className="bpm-card-ai-suggestion-badge">ИИ-АВТОПРЕДЛОЖЕНИЕ КАРТОЧКИ</span>
-                </div>
-              )}
               <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, (tasks[stageName] || []).length); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
             </div>
           </div>
-        ))}
-        {aiMode && (
-          <div className="bpm-stage-column bpm-stage-ai-suggestion" aria-hidden>
-            <div className="bpm-stage-header bpm-stage-header-ai">
-              <span className="bpm-stage-title">ИИ-АВТОПРЕДЛОЖЕНИЕ ЭТАПА</span>
-            </div>
-            <div className="bpm-stage-cards">
-              <div className="bpm-card bpm-card-ai-suggestion bpm-card-ai-suggestion-stage">
-                <span className="bpm-card-ai-suggestion-badge">ИИ-АВТОПРЕДЛОЖЕНИЕ ЭТАПА</span>
+          {stageIdx === 0 && aiMode && (
+            <div className="bpm-stage-column bpm-stage-ai-suggestion" aria-hidden>
+              <div className="bpm-stage-header bpm-stage-header-ai">
+                <span className="bpm-stage-title">ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП</span>
+                <div className="bpm-stage-btns">
+                  <button type="button" className="bpm-card-delete bpm-stage-delete" title="Удалить этап" aria-label="Удалить этап">🗑</button>
+                </div>
+              </div>
+              <div className="bpm-stage-cards">
+                {[1, 2, 3].map((n) => (
+                  <div key={`ai-stage-card-${n}`} className="bpm-card bpm-card-ai-suggestion" aria-hidden>
+                    <div className="bpm-card-top-row">
+                      <span className="bpm-card-id">ИИ</span>
+                      <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
+                      <button type="button" className="bpm-card-delete" title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
+                    </div>
+                    <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
+                    <div className="bpm-card-meta">
+                      <div className="bpm-card-meta-row">
+                        <span className="bpm-card-meta-label">Исполнитель:</span>
+                        <span className="bpm-card-meta-value">{aiCardPersonnel.executor}</span>
+                      </div>
+                      <div className="bpm-card-meta-row">
+                        <span className="bpm-card-meta-label">Согласующий:</span>
+                        <span className="bpm-card-meta-value">{aiCardPersonnel.approver}</span>
+                      </div>
+                      <div className="bpm-card-meta-row bpm-card-schedule-row">
+                        <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
+                        <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
+                          {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </div>
+                      <div className="bpm-card-meta-row bpm-card-period-row">
+                        <span className="bpm-card-meta-label">Период выполнения:</span>
+                        <div className="bpm-card-period-inputs">
+                          <input type="date" className="bpm-input-date" onClick={(e) => e.stopPropagation()} />
+                          <span className="bpm-card-period-sep">—</span>
+                          <input type="date" className="bpm-input-date" onClick={(e) => e.stopPropagation()} />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bpm-card-body">
+                      <div className="bpm-card-section-block">
+                        <button type="button" className="bpm-card-section-header">
+                          <span className="bpm-card-collapse-arrow bpm-card-section-chevron bpm-card-collapse-arrow-down" />
+                          <span className="bpm-card-section-title">Используемые системы</span>
+                        </button>
+                      </div>
+                      <div className="bpm-card-divider" />
+                      <div className="bpm-card-section-block">
+                        <button type="button" className="bpm-card-section-header">
+                          <span className="bpm-card-collapse-arrow bpm-card-section-chevron bpm-card-collapse-arrow-down" />
+                          <span className="bpm-card-section-title">Входные данные</span>
+                        </button>
+                      </div>
+                      <div className="bpm-card-divider" />
+                      <div className="bpm-card-section-block">
+                        <button type="button" className="bpm-card-section-header">
+                          <span className="bpm-card-collapse-arrow bpm-card-section-chevron bpm-card-collapse-arrow-down" />
+                          <span className="bpm-card-section-title">Результаты расчета</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+          </React.Fragment>
+        ))}
       </div>
           </div>
         </div>
@@ -1230,7 +1347,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
       {aiModalOpen && (
         <div className="bpm-modal-overlay" onClick={() => setAiModalOpen(false)}>
           <div className="bpm-modal bpm-modal-autosvyazi" onClick={(e) => e.stopPropagation()}>
-            <h3 className="bpm-modal-title">НАСТРОЙКА ИИ-АВТОВЗАИМОСВЯЗИ</h3>
+            <h3 className="bpm-modal-title">НАСТРОЙКА ИИ-АВТОВЗАИМОСВЯЗЕЙ</h3>
             <div className="bpm-modal-section">
               <label className="bpm-modal-label">Учитывать регламенты ПАО Газпромнефть:</label>
               <ul className="bpm-modal-regulations-list">
@@ -1257,7 +1374,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
               </label>
             </div>
             <div className="bpm-modal-section">
-              <label className="bpm-modal-label">Промпт (по желанию)</label>
+              <label className="bpm-modal-label">Промпт</label>
               <textarea className="bpm-modal-prompt" placeholder="Введите свой промпт" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} rows={3} />
             </div>
             <div className="bpm-modal-actions">

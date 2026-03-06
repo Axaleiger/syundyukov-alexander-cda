@@ -33,9 +33,25 @@ function generateVisNetworkHtml(stages, tasks) {
         shape: 'dot',
         size: 18,
         color: { background: '#0078D2', border: '#005a9e' },
-        font: { color: '#fff', size: 10, face: 'sans-serif' },
+        font: { color: '#002033', size: 10, face: 'sans-serif' },
       })
       edges.push({ from: sid, to: tid, arrows: 'to', color: { color: 'rgba(0,65,102,0.35)' } })
+      const entries = task.entries || []
+      entries.filter((e) => e && e.system && String(e.system).trim()).forEach((entry) => {
+        const sysId = id++
+        const sysName = String(entry.system).trim()
+        const sysShort = sysName.length > 10 ? sysName.slice(0, 8) + '…' : sysName
+        nodes.push({
+          id: sysId,
+          label: sysShort,
+          title: sysName,
+          shape: 'dot',
+          size: 12,
+          color: { background: '#003d5c', border: '#002033' },
+          font: { color: '#fff', size: 9, face: 'sans-serif' },
+        })
+        edges.push({ from: tid, to: sysId, arrows: 'to', color: { color: 'rgba(0,61,92,0.5)' } })
+      })
     })
   })
   stages.forEach((stageName, si) => {
@@ -71,7 +87,7 @@ function generateVisNetworkHtml(stages, tasks) {
   }
   const nodesJson = JSON.stringify(nodes)
   const edgesJson = JSON.stringify(edges)
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"><\/script><style>body{margin:0;background:#f8fafc;}#mynetwork{width:100%;height:100vh;}.vis-tooltip{font-size:11px;padding:6px 10px;max-width:220px;word-wrap:break-word;white-space:normal;overflow-wrap:break-word;}<\/style></head><body><div id="mynetwork"></div><script>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"><\/script><style>body{margin:0;background:#f8fafc;}#mynetwork{width:100%;height:100vh;}.vis-tooltip{font-size:11px;padding:8px 12px;min-width:60px;max-width:85vw;width:max-content;word-wrap:break-word;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;}<\/style></head><body><div id="mynetwork"></div><script>
 var n=new vis.DataSet(${nodesJson});var e=new vis.DataSet(${edgesJson});
 var d={nodes:n,edges:e};var o=${JSON.stringify(options)};
 var c=document.getElementById("mynetwork");var net=new vis.Network(c,d,o);

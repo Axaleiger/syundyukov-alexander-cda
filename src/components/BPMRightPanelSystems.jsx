@@ -2,21 +2,28 @@ import React, { useState, useMemo } from 'react'
 import { SYSTEMS_LIST } from '../data/bpmData'
 import './BPMRightPanel.css'
 
-/** Рекомендованные по "светофору" — первые 5 систем как пример */
-const RECOMMENDED_INDICES = [0, 3, 8, 12, 18]
+/** Рекомендованные по "светофору" (первые три для ИИ-автовыбора) */
+const RECOMMENDED_INDICES = [0, 3, 8]
+const RECOMMENDED_SET = new Set(RECOMMENDED_INDICES)
 
 function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDeselectSystem, existingSystems, taskName, taskId, aiMode }) {
   const [search, setSearch] = useState('')
   const [customName, setCustomName] = useState('')
-  const [aiPriorities, setAiPriorities] = useState(null) // after autoselect: Map or array of { name, priority 1|2|3 }
 
   const existingSet = useMemo(() => new Set(existingSystems || []), [existingSystems])
 
   const filtered = useMemo(() => {
     const q = (search || '').trim().toLowerCase()
-    if (!q) return SYSTEMS_LIST
-    return SYSTEMS_LIST.filter((s) => s.toLowerCase().includes(q))
-  }, [search])
+    const fromList = q ? SYSTEMS_LIST.filter((s) => s.toLowerCase().includes(q)) : SYSTEMS_LIST
+    const fromExisting = (existingSystems || []).filter((s) => !SYSTEMS_LIST.includes(s))
+    const existingFiltered = q ? fromExisting.filter((s) => s.toLowerCase().includes(q)) : fromExisting
+    const combined = []
+    const seen = new Set()
+    ;[...fromList, ...existingFiltered].forEach((s) => {
+      if (!seen.has(s)) { seen.add(s); combined.push(s) }
+    })
+    return combined
+  }, [search, existingSystems])
 
   const handleToggle = (systemName, checked) => {
     if (checked && !existingSet.has(systemName)) {
@@ -28,18 +35,15 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
 
   const handleAutoselect = () => {
     const toAdd = RECOMMENDED_INDICES.slice(0, 3).map((i) => SYSTEMS_LIST[i]).filter(Boolean)
-    const withPriority = toAdd.map((name, i) => ({ name, priority: i + 1 })) // 1, 2, 3
-    setAiPriorities(withPriority)
-    if (toAdd.length) {
-      const newOnes = toAdd.filter((n) => !existingSet.has(n))
-      if (newOnes.length) onSelectSystems(newOnes)
-    }
+    const newOnes = toAdd.filter((n) => !existingSet.has(n))
+    if (newOnes.length) onSelectSystems(newOnes)
   }
 
-  const getPriorityFor = (name) => {
-    if (!aiPriorities) return null
-    const p = aiPriorities.find((x) => x.name === name)
-    return p ? p.priority : null
+  const handleAddCustom = () => {
+    const name = customName.trim()
+    if (!name) return
+    if (!existingSet.has(name)) onSelectSystem(name)
+    setCustomName('')
   }
 
   return (
@@ -70,12 +74,24 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="bpm-right-panel-systems-list">
-          {filtered.map((name) => {
+        <div className="bpm-right-panel-systems-list bpm-right-panel-systems-list-full">
+          {filtered.map((name, idx) => {
             const checked = existingSet.has(name)
-            const priority = getPriorityFor(name)
+            const listIndex = SYSTEMS_LIST.indexOf(name)
+            const priorityNum = listIndex >= 0 && RECOMMENDED_SET.has(listIndex)
+              ? RECOMMENDED_INDICES.indexOf(listIndex) + 1
+              : null
             return (
-              <div key={name} className="bpm-right-panel-system-panel">
+              <div key={`${name}-${idx}`} className="bpm-right-panel-system-panel bpm-right-panel-system-panel-full">
+                <div className="bpm-right-panel-system-badges">
+                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-data">ДАННЫЕ</span>
+                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-calc">РАСЧЁТ</span>
+                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-result">РЕЗУЛЬТАТ</span>
+                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-info" title="Информация">i</span>
+                  {priorityNum != null && (
+                    <span className="bpm-right-panel-system-priority-num" title="ИИ-приоритет">{priorityNum}</span>
+                  )}
+                </div>
                 <label className="bpm-right-panel-system-row">
                   <input
                     type="checkbox"
@@ -83,13 +99,8 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
                     checked={checked}
                     onChange={(e) => handleToggle(name, e.target.checked)}
                   />
-                  <span className="bpm-right-panel-system-name">{name}</span>
+                  <span className="bpm-right-panel-system-name" title={name}>{name}</span>
                 </label>
-                {aiMode && priority != null && (
-                  <span className={`bpm-right-panel-priority bpm-right-panel-priority-${priority}`} title={`Приоритет ${priority}`}>
-                    {priority}
-                  </span>
-                )}
               </div>
             )
           })}
@@ -101,8 +112,9 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
             placeholder="Ввести название вручную"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
           />
-          <button type="button" className="bpm-btn-sm" onClick={() => { if (customName.trim()) { onSelectSystem(customName.trim()); onClose(); } setCustomName(''); }}>Добавить</button>
+          <button type="button" className="bpm-btn-sm" onClick={handleAddCustom}>Добавить</button>
         </div>
       </div>
     </div>
