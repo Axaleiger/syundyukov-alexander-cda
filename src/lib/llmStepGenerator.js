@@ -34,23 +34,33 @@ function getApiKey() {
  * @param { string } topic — тема кейса (например "ремонт трубы", "управление базовой добычей")
  * @returns { Promise<string[]> } — массив названий этапов
  */
+const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions'
+
 export async function generateSmartSteps(topic) {
   const apiKey = getApiKey()
   if (!apiKey) return [...FALLBACK_STEPS]
 
-  try {
-    const { default: Groq } = await import('groq-sdk')
-    const groq = new Groq({ apiKey })
-    const prompt = `${PROMPT_PREFIX}\n\nТема кейса: ${topic || 'планирование'}`
+  const prompt = `${PROMPT_PREFIX}\n\nТема кейса: ${topic || 'планирование'}`
 
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 1024,
+  try {
+    const response = await fetch(GROQ_CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1024,
+      }),
     })
 
-    const content = completion?.choices?.[0]?.message?.content?.trim()
+    if (!response.ok) return [...FALLBACK_STEPS]
+
+    const data = await response.json()
+    const content = data?.choices?.[0]?.message?.content?.trim()
     if (!content) return [...FALLBACK_STEPS]
 
     const jsonStr = content.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
