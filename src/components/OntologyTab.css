@@ -392,11 +392,18 @@
   flex: 1;
   min-height: 400px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   background: #f8fafc;
   border-radius: 8px;
-  overflow: auto;
+  overflow: hidden;
+}
+
+.ontology-n8n-canvas {
+  flex: 1;
+  min-height: 420px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 .ontology-config-img {
   max-width: 100%;

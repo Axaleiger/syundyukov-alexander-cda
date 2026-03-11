@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import MermaidSchema from './MermaidSchema'
+import N8nStyleCanvas from './N8nStyleCanvas'
 import './OntologyTab.css'
 
 const IconCode = () => (
@@ -55,7 +56,7 @@ export const DEFAULT_FLOW_CODE = `flowchart LR
 `
 
 function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange }) {
-  const [mode, setMode] = useState('code')
+  const [mode, setMode] = useState('n8n')
   const localCode = flowCode !== undefined ? flowCode : undefined
   const setCode = onFlowCodeChange || (() => {})
   const [internalCode, setInternalCode] = useState(DEFAULT_FLOW_CODE)
@@ -67,6 +68,10 @@ function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange }) {
       <h2 className="ontology-title">Конфигуратор систем</h2>
       <p className="ontology-subtitle">Код и схема синхронны с вкладкой «Планирование». Реализовано на базе концепции workflow-редактора (n8n).</p>
       <div className="ontology-view-toggle">
+        <button type="button" className={`ontology-toggle-btn ${mode === 'n8n' ? 'active' : ''}`} onClick={() => setMode('n8n')}>
+          <span className="ontology-toggle-icon"><IconSchema /></span>
+          Схема n8n
+        </button>
         <button type="button" className={`ontology-toggle-btn ${mode === 'code' ? 'active' : ''}`} onClick={() => setMode('code')}>
           <span className="ontology-toggle-icon"><IconCode /></span>
           Код
@@ -77,6 +82,9 @@ function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange }) {
         </button>
       </div>
       <div className="ontology-config-wrap">
+        {mode === 'n8n' && (
+          <N8nStyleCanvas className="ontology-n8n-canvas" />
+        )}
         {mode === 'code' && (
           <div className="ontology-code-panel">
             <div className="ontology-code-toolbar">
