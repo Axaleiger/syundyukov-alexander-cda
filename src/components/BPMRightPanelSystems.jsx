@@ -5,21 +5,28 @@ import './BPMRightPanel.css'
 function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDeselectSystem, existingSystems, taskName, taskId, aiMode, hasUsedAiAutoselect = false, onUsedAiAutoselect, priorityIndices = [] }) {
   const [search, setSearch] = useState('')
   const [customName, setCustomName] = useState('')
+  const [justAdded, setJustAdded] = useState([])
 
-  const existingSet = useMemo(() => new Set(existingSystems || []), [existingSystems])
+  const existingSet = useMemo(() => {
+    const set = new Set(existingSystems || [])
+    justAdded.forEach((s) => set.add(s))
+    return set
+  }, [existingSystems, justAdded])
 
   const filtered = useMemo(() => {
     const q = (search || '').trim().toLowerCase()
     const fromList = q ? SYSTEMS_LIST.filter((s) => s.toLowerCase().includes(q)) : SYSTEMS_LIST
     const fromExisting = (existingSystems || []).filter((s) => !SYSTEMS_LIST.includes(s))
-    const existingFiltered = q ? fromExisting.filter((s) => s.toLowerCase().includes(q)) : fromExisting
+    const fromJustAdded = (justAdded || []).filter((s) => !SYSTEMS_LIST.includes(s))
+    const mergedExisting = [...fromExisting, ...fromJustAdded]
+    const existingFiltered = q ? mergedExisting.filter((s) => s.toLowerCase().includes(q)) : mergedExisting
     const combined = []
     const seen = new Set()
     ;[...fromList, ...existingFiltered].forEach((s) => {
       if (!seen.has(s)) { seen.add(s); combined.push(s) }
     })
     return combined
-  }, [search, existingSystems])
+  }, [search, existingSystems, justAdded])
 
   const handleToggle = (systemName, checked) => {
     if (checked && !existingSet.has(systemName)) {
@@ -30,8 +37,7 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
   }
 
   const handleAutoselect = () => {
-    if (hasUsedAiAutoselect && priorityIndices.length > 0) return
-    const indices = SYSTEMS_LIST.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3)
+    const indices = SYSTEMS_LIST.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 1)
     onUsedAiAutoselect?.(indices)
     const toAdd = indices.map((i) => SYSTEMS_LIST[i]).filter(Boolean)
     const newOnes = toAdd.filter((n) => !existingSet.has(n))
@@ -41,9 +47,17 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
   const handleAddCustom = () => {
     const name = customName.trim()
     if (!name) return
-    if (!existingSet.has(name)) onSelectSystem(name)
+    if (!existingSet.has(name)) {
+      setJustAdded((prev) => (prev.includes(name) ? prev : [...prev, name]))
+      onSelectSystem(name)
+    }
     setCustomName('')
   }
+
+  React.useEffect(() => {
+    if (!existingSystems?.length) return
+    setJustAdded((prev) => prev.filter((s) => !(existingSystems || []).includes(s)))
+  }, [existingSystems])
 
   return (
     <div className="bpm-right-panel">
@@ -58,11 +72,9 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
             {taskName && <strong className="bpm-right-panel-task-name">{taskName}</strong>}
           </div>
         )}
-        {aiMode && (
-          <button type="button" className="bpm-btn bpm-btn-primary bpm-ai-autoselect-btn" onClick={handleAutoselect}>
-            ИИ-автовыбор систем
-          </button>
-        )}
+        <button type="button" className="bpm-btn bpm-btn-primary bpm-ai-autoselect-btn" onClick={handleAutoselect}>
+          ИИ-автовыбор систем
+        </button>
         <div className="bpm-right-panel-search-wrap">
           <span className="bpm-right-panel-search-icon" aria-hidden />
           <input

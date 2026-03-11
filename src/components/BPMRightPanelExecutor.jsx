@@ -71,11 +71,12 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
     : PERSONNEL
 
   const handleAiAutoselect = () => {
-    const first = filtered[0]
-    if (first) {
-      onSelect(first)
-      onClose()
-    }
+    const list = filtered.length ? filtered : PERSONNEL
+    if (!list.length) return
+    const idx = Math.floor(Math.random() * list.length)
+    const chosen = list[idx]
+    onSelect(chosen)
+    onClose()
   }
 
   const handleSelectUser = (name) => {
@@ -90,11 +91,9 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
         <button type="button" className="bpm-right-panel-close" onClick={onClose} aria-label="Закрыть">×</button>
       </div>
       <div className="bpm-right-panel-body bpm-right-panel-body-full">
-        {aiMode && (
-          <button type="button" className="bpm-btn bpm-btn-primary bpm-ai-autoselect-btn" onClick={handleAiAutoselect}>
-            ИИ-автовыбор {roleLabel === 'Согласующий' ? 'согласующего' : 'исполнителя'}
-          </button>
-        )}
+        <button type="button" className="bpm-btn bpm-btn-primary bpm-ai-autoselect-btn" onClick={handleAiAutoselect}>
+          ИИ-автовыбор {roleLabel === 'Согласующий' ? 'согласующего' : 'исполнителя'}
+        </button>
         <div className="bpm-right-panel-search-wrap">
           <span className="bpm-right-panel-search-icon" aria-hidden />
           <input
@@ -128,6 +127,7 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
                       <span className="bpm-right-panel-user-role-label">{isSyundyukov(name) ? 'Эксперт' : 'Должность'}</span>
                     </div>
                   </div>
+                  <button type="button" className="bpm-right-panel-user-select-btn" onClick={(e) => { e.stopPropagation(); handleSelectUser(name); }} title="Выбрать">Выбрать</button>
                   <button
                     type="button"
                     className="bpm-right-panel-user-expand"
@@ -147,14 +147,12 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
                         <span className="bpm-right-panel-user-photo-avatar" style={{ background: avatarColor(name) }}>{getInitials(name)}</span>
                       )}
                     </div>
-                    <div className="bpm-right-panel-switch-row" onClick={() => handleSelectUser(name)}>
-                      <div className="bpm-right-panel-switch-wrap">
-                        <span className="bpm-right-panel-switch on"><span className="bpm-right-panel-switch-thumb" /></span>
-                      </div>
+                    <button type="button" className="bpm-right-panel-switch-row" onClick={(e) => { e.stopPropagation(); handleSelectUser(name); }}>
+                      <span className="bpm-right-panel-switch on"><span className="bpm-right-panel-switch-thumb" /></span>
                       <span className="bpm-right-panel-switch-label">
                         {roleLabel === 'Согласующий' ? 'Выбрать согласующим' : 'Выбрать исполнителем'}
                       </span>
-                    </div>
+                    </button>
                     <div className="bpm-right-panel-info-row">
                       <span className="bpm-right-panel-info-label">Должность</span>
                       <span className="bpm-right-panel-info-value">{isSyundyukov(name) ? 'Эксперт' : 'Должность'}</span>

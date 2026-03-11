@@ -269,6 +269,12 @@
   font-size: 14px;
 }
 
+.bpm-right-panel-user-select-btn {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+  margin-right: 4px;
+}
 .bpm-right-panel-user-expand {
   width: 24px;
   height: 24px;
@@ -345,6 +351,7 @@
   visibility: visible;
   overflow: visible;
   min-height: 120px;
+  animation: bpm-panel-fade 0.2s ease;
 }
 
 .bpm-right-panel-switch-row {
@@ -642,7 +649,7 @@
 
 .bpm-right-panel-body-systems .bpm-right-panel-systems-list-full {
   flex: 1;
-  min-height: 0;
+  min-height: min(500px, calc(80vh - 140px));
   overflow-y: auto;
 }
 
@@ -661,7 +668,7 @@
 
 .bpm-right-panel-executor-full .bpm-right-panel-list.bpm-right-panel-users-full {
   flex: 1;
-  min-height: 0;
+  min-height: min(500px, calc(80vh - 140px));
   overflow-y: auto;
 }
 

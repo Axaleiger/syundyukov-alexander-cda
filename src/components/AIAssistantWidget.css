@@ -145,6 +145,19 @@
   color: var(--bpm-typo-primary);
 }
 
+.ai-assistant-chat-history {
+  margin-bottom: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.ai-assistant-msg {
+  margin: 4px 0;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.ai-assistant-msg-user { color: var(--bpm-typo-primary, #002d4d); }
+.ai-assistant-msg-assistant { color: rgba(0, 45, 77, 0.8); }
+.ai-assistant-msg-role { font-weight: 600; margin-right: 4px; }
 .ai-assistant-greeting {
   margin: 0;
   font-size: 13px;

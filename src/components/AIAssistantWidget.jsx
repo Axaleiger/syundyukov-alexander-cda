@@ -42,6 +42,7 @@ function AIAssistantWidget({
   const [transcript, setTranscript] = useState('')
   const [voiceError, setVoiceError] = useState(null)
   const [clarificationText, setClarificationText] = useState(null)
+  const [chatHistory, setChatHistory] = useState([])
   const dragStart = useRef({ x: 0, y: 0, left: 0, top: 0 })
   const didDrag = useRef(false)
   const widgetRef = useRef(null)
@@ -172,7 +173,10 @@ function AIAssistantWidget({
     setQuestion('')
     if (!text) return
 
+    setChatHistory((h) => [...h.slice(-14), { role: 'user', text }])
+
     if (/добавь ещё|ещё карточку|ещё одну|продолжи|добавь карточку/i.test(text) && lastTopicRef.current) {
+      setChatHistory((h) => [...h, { role: 'assistant', text: 'Добавляю карточку…' }])
       runExecutor('createPlanningCase', lastTopicRef.current)
       return
     }
@@ -184,6 +188,7 @@ function AIAssistantWidget({
     if (scenarioId === 'createPlanningCase' && topicOrMetric) lastTopicRef.current = topicOrMetric
 
     if (confidence >= 0.95 && scenarioId) {
+      setChatHistory((h) => [...h, { role: 'assistant', text: 'Выполняю…' }])
       runExecutor(scenarioId, topicOrMetric)
       return
     }
@@ -225,7 +230,16 @@ function AIAssistantWidget({
           </>
         ) : (
           <>
-            <p className="ai-assistant-greeting">Здравствуйте, задайте свой промпт.</p>
+            {chatHistory.length > 0 && (
+              <div className="ai-assistant-chat-history">
+                {chatHistory.slice(-6).map((msg, i) => (
+                  <p key={i} className={`ai-assistant-msg ai-assistant-msg-${msg.role}`}>
+                    <span className="ai-assistant-msg-role">{msg.role === 'user' ? 'Вы' : 'ИИ'}:</span> {msg.text}
+                  </p>
+                ))}
+              </div>
+            )}
+            <p className="ai-assistant-greeting">{chatHistory.length ? 'Продолжайте диалог.' : 'Здравствуйте, задайте свой промпт.'}</p>
             <button type="button" className="ai-assistant-open-thinking" onClick={() => onThinkingPanelOpen?.(true)}>
               Открыть мышление
             </button>
