@@ -148,7 +148,7 @@ function Sparkline({ data, color = '#2d5a87', width = 240, height = 44 }) {
   )
 }
 
-function ResultsTab() {
+function ResultsTab({ dashboardFocus = null, dashboardFocusExplanation = null }) {
   const [period, setPeriod] = useState('2025')
   const [doFilter, setDoFilter] = useState('Все')
   const [assetFilter, setAssetFilter] = useState('Все')
@@ -168,6 +168,16 @@ function ResultsTab() {
   return (
     <div className="results-tab">
       <h2 className="results-tab-title">Результаты и аналитика</h2>
+
+      {dashboardFocus && (
+        <div className="results-ai-badge" role="status">
+          <span className="results-ai-badge-icon">AI</span>
+          <span className="results-ai-badge-text">AI сгенерировал дашборд по {dashboardFocus}</span>
+          {dashboardFocusExplanation && (
+            <span className="results-ai-badge-explanation"> — {dashboardFocusExplanation}</span>
+          )}
+        </div>
+      )}
 
       <div className="results-filters">
         <div className="results-filter-group">
@@ -197,7 +207,7 @@ function ResultsTab() {
         </div>
       </div>
 
-      <div className="results-dashboard">
+      <div className={`results-dashboard ${dashboardFocus ? `results-dashboard-focus-${dashboardFocus.toLowerCase()}` : ''}`}>
         <div className="results-widget results-widget-span-2 results-widget-bar">
           <h3>Накопительная гистограмма</h3>
           <ResponsiveContainer width="100%" height={220}>
@@ -249,7 +259,7 @@ function ResultsTab() {
           <GaugeWidget value={92} label="план квартала" />
           <GaugeWidget value={88} max={120} label="план месяца" />
         </div>
-        <div className="results-widget results-widget-span-2 results-widget-line">
+        <div className={`results-widget results-widget-span-2 results-widget-line ${(dashboardFocus === 'NPV' || dashboardFocus === 'payback') ? 'results-widget-focus' : ''}`}>
           <h3>Динамика NPV и Cash flow</h3>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={data.lineData}>
@@ -324,7 +334,7 @@ function ResultsTab() {
             </div>
           </div>
         </div>
-        <div className="results-widget results-widget-spark">
+        <div className={`results-widget results-widget-spark ${dashboardFocus === 'NPV' ? 'results-widget-focus' : ''}`}>
           <h3>NPV тренд</h3>
           <div className="results-spark-axis-label">NPV, млн руб</div>
           <div className="results-spark-value">{data.lastNpv}</div>

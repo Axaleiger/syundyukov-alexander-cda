@@ -186,6 +186,88 @@
   background: #005a9e;
 }
 
+.ai-assistant-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.ai-assistant-input-row .ai-assistant-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-assistant-mic {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 65, 102, 0.25);
+  background: #f1f5f9;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.2s, border-color 0.2s;
+}
+
+.ai-assistant-mic:hover:not(.ai-assistant-mic-disabled) {
+  background: #e2e8f0;
+  transform: scale(1.05);
+}
+
+.ai-assistant-mic:active:not(.ai-assistant-mic-disabled) {
+  transform: scale(0.95);
+}
+
+.ai-assistant-mic .ai-assistant-mic-svg {
+  color: var(--bpm-typo-primary, #002d4d);
+}
+
+.ai-assistant-mic-active {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.ai-assistant-mic-active .ai-assistant-mic-svg {
+  color: #dc2626;
+}
+
+.ai-assistant-mic-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-assistant-clarification {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.ai-assistant-voice-error {
+  margin: 0;
+  font-size: 12px;
+  color: #b91c1c;
+  line-height: 1.4;
+}
+
+.ai-assistant-exit-thinking {
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.ai-assistant-exit-thinking:hover {
+  background: #e2e8f0;
+}
+
 /* Скрыть панель по умолчанию, показывать при открытии */
 .ai-assistant-widget .ai-assistant-panel {
   display: none;

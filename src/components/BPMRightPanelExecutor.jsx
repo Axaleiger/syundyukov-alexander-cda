@@ -115,10 +115,9 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
             return (
               <div key={name} className="bpm-right-panel-user-block">
                 <div
-                  className={`bpm-right-panel-user-row-wrap ${currentValue === name ? 'active' : ''}`}
-                  onClick={() => setExpandedUser(isExpanded ? null : name)}
+                  className={`bpm-right-panel-user-row-wrap ${currentValue === name ? 'active' : ''} ${isExpanded ? 'bpm-right-panel-user-row-expanded' : ''}`}
                 >
-                  <div className="bpm-right-panel-user-row-inner">
+                  <div className="bpm-right-panel-user-row-inner" onClick={() => setExpandedUser(isExpanded ? null : name)}>
                     {isSyundyukov(name) ? (
                       <img src={`${base}sanya-bodibilder.png`} alt="" className="bpm-right-panel-user-avatar bpm-right-panel-user-avatar-img" />
                     ) : (
@@ -126,13 +125,13 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
                     )}
                     <div className="bpm-right-panel-user-info">
                       <span className="bpm-right-panel-user-name">{name}</span>
-                      <span className="bpm-right-panel-user-role-label">Должность</span>
+                      <span className="bpm-right-panel-user-role-label">{isSyundyukov(name) ? 'Эксперт' : 'Должность'}</span>
                     </div>
                   </div>
                   <button
                     type="button"
                     className="bpm-right-panel-user-expand"
-                    onClick={(e) => { e.stopPropagation(); setExpandedUser(isExpanded ? null : name); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpandedUser(isExpanded ? null : name); }}
                     aria-expanded={isExpanded}
                     aria-label={isExpanded ? 'Свернуть' : 'Развернуть'}
                   >

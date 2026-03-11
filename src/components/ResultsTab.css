@@ -11,6 +11,38 @@
   font-weight: 600;
 }
 
+.results-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.results-ai-badge-icon {
+  font-weight: 700;
+  color: #047857;
+}
+
+.results-ai-badge-text {
+  color: #065f46;
+  font-weight: 500;
+}
+
+.results-ai-badge-explanation {
+  color: #047857;
+  margin-left: 0.25rem;
+}
+
+.results-widget-focus {
+  box-shadow: 0 0 0 2px #059669;
+  border-color: #10b981;
+}
+
 .results-filters {
   display: flex;
   align-items: center;

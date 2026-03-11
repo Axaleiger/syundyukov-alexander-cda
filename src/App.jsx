@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import './App.css'
 import RussiaMap from './components/RussiaMap'
 import WindRose from './components/WindRose'
@@ -17,6 +17,7 @@ import { bpmToMermaid } from './lib/bpmToMermaid'
 import ConfiguratorDocPage from './components/ConfiguratorDocPage'
 import ResultsTab from './components/ResultsTab'
 import AdminTab from './components/AdminTab'
+import AiThinkingUI from './components/AiThinkingUI'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
 import { SCENARIO_STAGE_FILTERS } from './data/scenariosData'
 import mapPointsData from './data/mapPoints.json'
@@ -93,8 +94,23 @@ function App() {
   const [flowCode, setFlowCode] = useState(DEFAULT_FLOW_CODE)
   const [selectedScenarioName, setSelectedScenarioName] = useState('Управление добычей с учетом ближайшего бурения')
   const [aiMode, setAiMode] = useState(false)
+  const [bpmCommand, setBpmCommand] = useState(null)
+  const [resultsDashboardFocus, setResultsDashboardFocus] = useState(null)
+  const bpmCommandConsumedRef = useRef(null)
+  const [thinkingSteps, setThinkingSteps] = useState([])
+  const [thinkingCurrentMessage, setThinkingCurrentMessage] = useState('')
+  const [thinkingPaused, setThinkingPaused] = useState(false)
+  const [thinkingPanelOpen, setThinkingPanelOpen] = useState(false)
+  const addThinkingStep = useCallback((label) => {
+    setThinkingSteps((s) => [...s, { id: `step-${Date.now()}-${s.length}`, label, status: 'done' }])
+    setThinkingCurrentMessage(label)
+  }, [])
   const handleBoardChange = useCallback((stages, tasks) => {
     setFlowCode(bpmToMermaid(stages, tasks))
+  }, [])
+  const onBpmCommandConsumed = useCallback(() => {
+    setBpmCommand(null)
+    bpmCommandConsumedRef.current?.()
   }, [])
 
   useEffect(() => {
@@ -217,9 +233,41 @@ function App() {
             onClose={() => { setShowBpm(false); setBpmHighlight(null) }}
             aiMode={aiMode}
             setAiMode={setAiMode}
+            bpmCommand={bpmCommand}
+            onBpmCommandConsumed={onBpmCommandConsumed}
           />
         </Suspense>
-        <AIAssistantWidget visible={aiMode} />
+        <AIAssistantWidget
+          visible={aiMode}
+          setActiveTab={setActiveTab}
+          setBpmCommand={setBpmCommand}
+          setResultsDashboardFocus={setResultsDashboardFocus}
+          onBpmCommandConsumedRef={bpmCommandConsumedRef}
+          onThinkingPanelOpen={setThinkingPanelOpen}
+          isThinkingPanelOpen={thinkingPanelOpen}
+          thinkingSteps={thinkingSteps}
+          currentMessage={thinkingCurrentMessage}
+          isPaused={thinkingPaused}
+          addThinkingStep={addThinkingStep}
+          setThinkingSteps={setThinkingSteps}
+          setCurrentMessage={setThinkingCurrentMessage}
+          setIsPaused={setThinkingPaused}
+        />
+        {thinkingPanelOpen && (
+          <>
+            <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
+            <div className="app-thinking-drawer">
+              <div className="app-thinking-drawer-head">
+                <h3 className="app-thinking-drawer-title">Режим мышления</h3>
+                <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
+              </div>
+              <div className="app-thinking-drawer-body">
+                <AiThinkingUI steps={thinkingSteps} currentMessage={thinkingCurrentMessage} isPaused={thinkingPaused} onStop={() => setThinkingPaused(true)} onResume={() => setThinkingPaused(false)} />
+                <button type="button" className="app-thinking-drawer-exit" onClick={() => { setThinkingPanelOpen(false); setThinkingSteps([]); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>Закрыть панель</button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     )
   }
@@ -227,10 +275,9 @@ function App() {
   return (
     <div className="app app-with-sidebar">
       <header className="app-header">
-        <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/emblem.png`} alt="ЦДА" className="app-header-emblem" />
+        <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/emblem.png`} alt="Оркестратор актива" className="app-header-emblem" />
         <div className="app-header-text">
-          <h1>ЦДА</h1>
-          <p>(Цифровой Двойник Актива)</p>
+          <h1>Оркестратор актива</h1>
         </div>
         <div className="app-header-actions">
           <button
@@ -332,7 +379,7 @@ function App() {
           {activeTab === 'face' && (
             <div className="app-content app-content-face">
               <section className="section map-section">
-                <h2>Карта объектов ЦДА</h2>
+                <h2>Карта объектов Оркестратора актива</h2>
                 <RussiaMap onAssetSelect={handleMapAssetSelect} />
               </section>
 
@@ -400,7 +447,9 @@ function App() {
                   initialBoardId={
                     selectedScenarioName && selectedScenarioName.includes('Управление добычей с учетом ближайшего бурения')
                       ? 'do-burenie'
-                      : (selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos')
+                      : selectedScenarioName && selectedScenarioName.includes('Проактивное управление ремонтами')
+                        ? 'hantos'
+                        : (selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos')
                   }
                   selectedAssetName={selectedAssetPoint?.name}
                   highlightCardName={bpmHighlight}
@@ -408,6 +457,9 @@ function App() {
                   onBoardChange={handleBoardChange}
                   aiMode={aiMode}
                   setAiMode={setAiMode}
+                  onOpenPlanningWithScenario={(name) => { setSelectedScenarioName(name || 'Проактивное управление ремонтами и приоритетами'); setActiveTab('planning'); }}
+                  bpmCommand={bpmCommand}
+                  onBpmCommandConsumed={onBpmCommandConsumed}
                 />
               </Suspense>
             </div>
@@ -420,7 +472,12 @@ function App() {
                 onFlowCodeChange={setFlowCode}
               />
             )}
-          {activeTab === 'results' && <ResultsTab />}
+          {activeTab === 'results' && (
+            <ResultsTab
+              dashboardFocus={resultsDashboardFocus?.metric ?? null}
+              dashboardFocusExplanation={resultsDashboardFocus?.explanation ?? null}
+            />
+          )}
           {activeTab === 'admin' && <AdminTab activeSub={adminSubTab} />}
         </main>
 
@@ -430,7 +487,45 @@ function App() {
           </aside>
         )}
       </div>
-      <AIAssistantWidget visible={aiMode} />
+      <AIAssistantWidget
+        visible={aiMode}
+        setActiveTab={setActiveTab}
+        setBpmCommand={setBpmCommand}
+        setResultsDashboardFocus={setResultsDashboardFocus}
+        onBpmCommandConsumedRef={bpmCommandConsumedRef}
+        onThinkingPanelOpen={setThinkingPanelOpen}
+        isThinkingPanelOpen={thinkingPanelOpen}
+        thinkingSteps={thinkingSteps}
+        currentMessage={thinkingCurrentMessage}
+        isPaused={thinkingPaused}
+        addThinkingStep={addThinkingStep}
+        setThinkingSteps={setThinkingSteps}
+        setCurrentMessage={setThinkingCurrentMessage}
+        setIsPaused={setThinkingPaused}
+      />
+      {thinkingPanelOpen && (
+        <>
+          <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
+          <div className="app-thinking-drawer">
+            <div className="app-thinking-drawer-head">
+              <h3 className="app-thinking-drawer-title">Режим мышления</h3>
+              <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
+            </div>
+            <div className="app-thinking-drawer-body">
+              <AiThinkingUI
+                steps={thinkingSteps}
+                currentMessage={thinkingCurrentMessage}
+                isPaused={thinkingPaused}
+                onStop={() => setThinkingPaused(true)}
+                onResume={() => setThinkingPaused(false)}
+              />
+              <button type="button" className="app-thinking-drawer-exit" onClick={() => { setThinkingPanelOpen(false); setThinkingSteps([]); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>
+                Закрыть панель
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

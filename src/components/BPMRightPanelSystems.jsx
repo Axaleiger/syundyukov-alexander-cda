@@ -2,11 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { SYSTEMS_LIST } from '../data/bpmData'
 import './BPMRightPanel.css'
 
-/** Рекомендованные по "светофору" (первые три для ИИ-автовыбора) */
-const RECOMMENDED_INDICES = [0, 3, 8]
-const RECOMMENDED_SET = new Set(RECOMMENDED_INDICES)
-
-function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDeselectSystem, existingSystems, taskName, taskId, aiMode }) {
+function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDeselectSystem, existingSystems, taskName, taskId, aiMode, hasUsedAiAutoselect = false, onUsedAiAutoselect, priorityIndices = [] }) {
   const [search, setSearch] = useState('')
   const [customName, setCustomName] = useState('')
 
@@ -34,7 +30,10 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
   }
 
   const handleAutoselect = () => {
-    const toAdd = RECOMMENDED_INDICES.slice(0, 3).map((i) => SYSTEMS_LIST[i]).filter(Boolean)
+    if (hasUsedAiAutoselect && priorityIndices.length > 0) return
+    const indices = SYSTEMS_LIST.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3)
+    onUsedAiAutoselect?.(indices)
+    const toAdd = indices.map((i) => SYSTEMS_LIST[i]).filter(Boolean)
     const newOnes = toAdd.filter((n) => !existingSet.has(n))
     if (newOnes.length) onSelectSystems(newOnes)
   }
@@ -52,7 +51,7 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
         <h3 className="bpm-right-panel-title">Добавление системы</h3>
         <button type="button" className="bpm-right-panel-close" onClick={onClose} aria-label="Закрыть">×</button>
       </div>
-      <div className="bpm-right-panel-body">
+      <div className="bpm-right-panel-body bpm-right-panel-body-systems">
         {(taskId || taskName) && (
           <div className="bpm-right-panel-task-info">
             {taskId && <span className="bpm-right-panel-task-id">Задача {taskId}</span>}
@@ -78,18 +77,20 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
           {filtered.map((name, idx) => {
             const checked = existingSet.has(name)
             const listIndex = SYSTEMS_LIST.indexOf(name)
-            const priorityNum = listIndex >= 0 && RECOMMENDED_SET.has(listIndex)
-              ? RECOMMENDED_INDICES.indexOf(listIndex) + 1
+            const priorityNum = hasUsedAiAutoselect && listIndex >= 0 && priorityIndices.includes(listIndex)
+              ? priorityIndices.indexOf(listIndex) + 1
               : null
             return (
-              <div key={`${name}-${idx}`} className="bpm-right-panel-system-panel bpm-right-panel-system-panel-full">
-                <div className="bpm-right-panel-system-badges">
-                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-data">ДАННЫЕ</span>
-                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-calc">РАСЧЁТ</span>
-                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-result">РЕЗУЛЬТАТ</span>
-                  <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-info" title="Информация">i</span>
+              <div key={`${name}-${idx}`} className="bpm-right-panel-system-item-wrap">
+                <div className="bpm-right-panel-system-badges-row">
+                  <div className="bpm-right-panel-system-badges">
+                    <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-data">ДАННЫЕ</span>
+                    <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-calc">РАСЧЁТ</span>
+                    <span className="bpm-right-panel-system-badge bpm-right-panel-system-badge-result">РЕЗУЛЬТАТ</span>
+                    <span className="bpm-right-panel-system-badge-info-circle" title="Информация" aria-label="Информация" />
+                  </div>
                   {priorityNum != null && (
-                    <span className="bpm-right-panel-system-priority-num" title="ИИ-приоритет">{priorityNum}</span>
+                    <span className={`bpm-right-panel-system-priority-dot bpm-right-panel-system-priority-${priorityNum}`} title="ИИ-приоритет">{priorityNum}</span>
                   )}
                 </div>
                 <label className="bpm-right-panel-system-row">

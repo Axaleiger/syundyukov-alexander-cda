@@ -44,11 +44,11 @@ function generateVisNetworkHtml(stages, tasks) {
         nodes.push({
           id: sysId,
           label: sysShort,
-          title: sysName,
+          title: `Этап: ${stageName}\nКарточка: ${name}\nСистема: ${sysName}`,
           shape: 'dot',
           size: 12,
           color: { background: '#003d5c', border: '#002033' },
-          font: { color: '#fff', size: 9, face: 'sans-serif' },
+          font: { color: '#002033', size: 9, face: 'sans-serif' },
         })
         edges.push({ from: tid, to: sysId, arrows: 'to', color: { color: 'rgba(0,61,92,0.5)' } })
       })
