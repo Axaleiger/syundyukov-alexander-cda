@@ -262,7 +262,7 @@ function App() {
                 <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
               </div>
               <div className="app-thinking-drawer-body">
-                <AiThinkingUI steps={thinkingSteps} currentMessage={thinkingCurrentMessage} isPaused={thinkingPaused} onStop={() => setThinkingPaused(true)} onResume={() => setThinkingPaused(false)} />
+                <AiThinkingUI steps={thinkingSteps} currentMessage={thinkingCurrentMessage} isPaused={thinkingPaused} isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))} onStop={() => setThinkingPaused(true)} onResume={() => setThinkingPaused(false)} />
                 <button type="button" className="app-thinking-drawer-exit" onClick={() => { setThinkingPanelOpen(false); setThinkingSteps([]); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>Закрыть панель</button>
               </div>
             </div>
@@ -516,6 +516,7 @@ function App() {
                 steps={thinkingSteps}
                 currentMessage={thinkingCurrentMessage}
                 isPaused={thinkingPaused}
+                isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))}
                 onStop={() => setThinkingPaused(true)}
                 onResume={() => setThinkingPaused(false)}
               />

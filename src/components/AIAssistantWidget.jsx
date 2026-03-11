@@ -46,6 +46,7 @@ function AIAssistantWidget({
   const didDrag = useRef(false)
   const widgetRef = useRef(null)
   const isPausedRef = useRef(false)
+  const lastTopicRef = useRef(null)
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
   isPausedRef.current = isPaused
 
@@ -67,7 +68,7 @@ function AIAssistantWidget({
 
   const handlePointerDown = useCallback((e) => {
     if (!e.target.closest('.ai-assistant-toggle') && !e.target.closest('.ai-assistant-panel')) return
-    if (e.target.closest('.ai-assistant-panel-close') || e.target.closest('.ai-assistant-input') || e.target.closest('.ai-assistant-send') || e.target.closest('.ai-assistant-mic')) return
+    if (e.target.closest('.ai-assistant-panel-close') || e.target.closest('.ai-assistant-input') || e.target.closest('.ai-assistant-send') || e.target.closest('.ai-assistant-mic') || e.target.closest('.ai-assistant-open-thinking')) return
     didDrag.current = false
     const el = widgetRef.current
     const left = position != null ? position.x : (el ? el.getBoundingClientRect().left : 0)
@@ -171,9 +172,16 @@ function AIAssistantWidget({
     setQuestion('')
     if (!text) return
 
+    if (/добавь ещё|ещё карточку|ещё одну|продолжи|добавь карточку/i.test(text) && lastTopicRef.current) {
+      runExecutor('createPlanningCase', lastTopicRef.current)
+      return
+    }
+
     const result = classifyIntent(text)
     const { scenarioId, confidence, topic, metric } = result
     const topicOrMetric = topic ?? metric
+
+    if (scenarioId === 'createPlanningCase' && topicOrMetric) lastTopicRef.current = topicOrMetric
 
     if (confidence >= 0.95 && scenarioId) {
       runExecutor(scenarioId, topicOrMetric)
@@ -209,10 +217,18 @@ function AIAssistantWidget({
         </div>
 
         {isThinkingMode ? (
-          <p className="ai-assistant-greeting">Режим мышления открыт в правой панели.</p>
+          <>
+            <p className="ai-assistant-greeting">Режим мышления открыт в правой панели.</p>
+            <button type="button" className="ai-assistant-open-thinking" onClick={() => onThinkingPanelOpen?.(true)}>
+              Открыть мышление
+            </button>
+          </>
         ) : (
           <>
             <p className="ai-assistant-greeting">Здравствуйте, задайте свой промпт.</p>
+            <button type="button" className="ai-assistant-open-thinking" onClick={() => onThinkingPanelOpen?.(true)}>
+              Открыть мышление
+            </button>
             {displayClarification && (
               <p className="ai-assistant-clarification">{displayClarification}</p>
             )}

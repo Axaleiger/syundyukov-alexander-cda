@@ -4,40 +4,37 @@
  * Третий аргумент: topic (для createPlanningCase) или metric (для focusMetric).
  */
 
+import { generateSmartSteps } from './llmStepGenerator.js'
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-const STEP_DELAY = 600
+const STEP_DELAY = 650
 
 /**
- * Создание кейса планирования: подробные шаги 1–12, задержки 500–800 мс.
+ * Создание кейса планирования: сразу переход на Планирование, умные шаги через Groq, карточки по одной.
+ * Этапы мышления идут параллельно созданию карточек (BPM получает команду и рисует карточки; здесь только addThinkingStep с задержкой).
  */
 export async function createPlanningCase(ctx, topic) {
   const { setActiveTab, setBpmCommand, addThinkingStep, isPaused } = ctx
   const topicLabel = topic || 'планирование'
-  const steps = [
-    `Анализирую запрос: «${topicLabel}»`,
-    `Создаю корневую карточку «Кейс: ${topicLabel}»`,
-    'Добавляю этап «Инициация»',
-    'Добавляю этап «Планирование работ»',
-    'Добавляю этап «Закупки материалов»',
-    'Создаю связи между карточками',
-    'Назначаю ответственных',
-    'Добавляю даты и бюджеты',
-    'Переключаюсь на вкладку Планирование',
-    'Открываю правую панель мышления',
-    'Завершаю формирование кейса',
-    'Готово ✓',
-  ]
+
+  setActiveTab?.('planning')
+
+  if (isPaused?.()) return
+  addThinkingStep?.('Анализирую запрос: «' + topicLabel + '»…')
+
+  const steps = await generateSmartSteps(topicLabel)
+  if (isPaused?.()) return
+  addThinkingStep?.('Создаю карточки по теме «' + topicLabel + '»…')
+
+  setBpmCommand?.({ scenarioId: 'createPlanningCase', params: { topic: topicLabel, steps } })
+
   for (let i = 0; i < steps.length; i++) {
     if (isPaused?.()) return
-    addThinkingStep?.(steps[i])
-    if (i === 8) {
-      setActiveTab?.('planning')
-      setBpmCommand?.({ scenarioId: 'createPlanningCase', params: { topic: topicLabel } })
-    }
-    await delay(i < steps.length - 1 ? STEP_DELAY : 400)
+    addThinkingStep?.('Добавляю: ' + steps[i])
+    await delay(STEP_DELAY)
   }
 }
 
@@ -56,12 +53,12 @@ export async function focusMetric(ctx, metric) {
     cashflow: 'cashflow',
   }
   const metricLabel = labels[m] || metric || 'NPV'
-  addThinkingStep?.(`Переключаю на вкладку «Результаты»…`)
+  addThinkingStep?.('Переключаю на вкладку «Результаты»…')
   setActiveTab?.('results')
   await delay(STEP_DELAY)
   if (isPaused?.()) return
-  addThinkingStep?.(`Применяю фокус на «${metricLabel}»…`)
-  setResultsDashboardFocus?.({ metric: metricLabel, explanation: `Дашборд по метрике «${metricLabel}» по вашему запросу` })
+  addThinkingStep?.('Применяю фокус на «' + metricLabel + '»…')
+  setResultsDashboardFocus?.({ metric: metricLabel, explanation: 'Дашборд по метрике «' + metricLabel + '» по вашему запросу' })
   await delay(400)
   if (isPaused?.()) return
   addThinkingStep?.('Готово ✓')

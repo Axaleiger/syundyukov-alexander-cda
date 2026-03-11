@@ -268,6 +268,21 @@
   background: #e2e8f0;
 }
 
+.ai-assistant-open-thinking {
+  margin-top: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ai-assistant-open-thinking:hover {
+  background: #e2e8f0;
+}
+
 /* Скрыть панель по умолчанию, показывать при открытии */
 .ai-assistant-widget .ai-assistant-panel {
   display: none;
