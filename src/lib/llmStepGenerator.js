@@ -20,8 +20,10 @@ const PROMPT_PREFIX = `Ты нефтяник с 20-летним опытом в 
 
 function getApiKey() {
   try {
+    // В GitHub Actions передавайте секрет с именем именно VITE_GROQ_API_KEY
     const key = import.meta.env.VITE_GROQ_API_KEY
-    return typeof key === 'string' && key.length > 0 ? key : null
+    const valid = typeof key === 'string' && key.trim().length > 0
+    return valid ? key.trim() : null
   } catch {
     return null
   }

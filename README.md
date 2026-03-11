@@ -65,6 +65,8 @@ npm run preview
 2. В настройках репозитория: **Settings → Pages → Source** — выберите **GitHub Actions**.
 3. Сделайте `git push` в `main` или запустите workflow **Deploy to GitHub Pages** вручную (Actions → Deploy to GitHub Pages → Run workflow).
 
+**ИИ-генерация шагов (Groq):** чтобы запросы в ИИ-помощнике использовали Groq и в консоли Groq отображались API Calls, добавьте в репозитории секрет с **точным** именем **`VITE_GROQ_API_KEY`** (Settings → Secrets and variables → Actions → New repository secret). Значение — ваш API-ключ с https://console.groq.com . При сборке в GitHub Actions он подставляется в приложение. Если секрет назван иначе (например `GROQ_API_KEY`) или не создан, приложение будет использовать статический список шагов без вызова API.
+
 ## Технологии
 
 - **React 18** - UI библиотека
