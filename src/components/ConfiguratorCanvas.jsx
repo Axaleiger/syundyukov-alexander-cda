@@ -108,6 +108,15 @@ function ConfiguratorCanvas({
     }
   }, [])
 
+  // При добавлении нод (в т.ч. ИИ) держим схему по центру экрана
+  useEffect(() => {
+    if (!nodes.length) return
+    const id = setTimeout(() => {
+      if (wrapRef.current) fitView()
+    }, 100)
+    return () => clearTimeout(id)
+  }, [nodes.length, fitView])
+
   const handleWheel = useCallback((e) => {
     e.preventDefault()
     e.stopPropagation()
