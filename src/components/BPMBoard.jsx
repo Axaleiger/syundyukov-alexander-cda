@@ -596,10 +596,10 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
             const task = { id, name, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) }
             return { ...prev, [stage]: [task, ...(prev[stage] || [])] }
           })
-          if (i === cardNames.length - 1) onBpmCommandConsumed()
+          if (i === cardNames.length - 1) onBpmCommandConsumed?.()
         }, i * cardDelayMs)
       })
-      if (cardNames.length === 0) onBpmCommandConsumed()
+      if (cardNames.length === 0) onBpmCommandConsumed?.()
       return
     }
     if (scenarioId === 'analyzeRisks') {
@@ -655,7 +655,16 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
       onBpmCommandConsumed()
       return
     }
-  }, [bpmCommand, onBpmCommandConsumed])
+    if (scenarioId === 'appendPlanningCard') {
+      const topic = bpmCommand.params?.topic || 'Доп. шаг'
+      const firstStage = stages[0] || 'Подготовка'
+      const id = `AIC${10000 + Date.now() % 99999}`
+      const task = { id, name: topic, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) }
+      setTasks((prev) => ({ ...prev, [firstStage]: [task, ...(prev[firstStage] || [])] }))
+      if (typeof onBpmCommandConsumed === 'function') onBpmCommandConsumed({ switchToOntology: false })
+      return
+    }
+  }, [bpmCommand, onBpmCommandConsumed, stages])
 
   useEffect(() => {
     if (typeof onBoardChange === 'function') {

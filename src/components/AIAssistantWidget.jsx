@@ -21,6 +21,7 @@ function AIAssistantWidget({
   onClose,
   setActiveTab,
   setBpmCommand,
+  setConfiguratorNodeCommand,
   setResultsDashboardFocus,
   onBpmCommandConsumedRef,
   onThinkingPanelOpen,
@@ -154,6 +155,7 @@ function AIAssistantWidget({
       const ctx = {
         setActiveTab,
         setBpmCommand,
+        setConfiguratorNodeCommand,
         setResultsDashboardFocus,
         addThinkingStep: addStep,
         isPaused: () => isPausedRef.current,
@@ -164,7 +166,7 @@ function AIAssistantWidget({
         addStep?.(`Ошибка: ${err?.message || 'неизвестная'}`)
       }
     },
-    [setActiveTab, setBpmCommand, setResultsDashboardFocus, addStep, setThinkingSteps, setCurrentMessage, setIsPaused, onThinkingPanelOpen]
+    [setActiveTab, setBpmCommand, setConfiguratorNodeCommand, setResultsDashboardFocus, addStep, setThinkingSteps, setCurrentMessage, setIsPaused, onThinkingPanelOpen]
   )
 
   const handleSend = useCallback(() => {
@@ -177,7 +179,7 @@ function AIAssistantWidget({
 
     if (/добавь ещё|ещё карточку|ещё одну|продолжи|добавь карточку/i.test(text) && lastTopicRef.current) {
       setChatHistory((h) => [...h, { role: 'assistant', text: 'Добавляю карточку…' }])
-      runExecutor('createPlanningCase', lastTopicRef.current)
+      runExecutor('appendPlanningCard', lastTopicRef.current)
       return
     }
 

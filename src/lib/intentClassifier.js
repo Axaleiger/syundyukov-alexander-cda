@@ -9,6 +9,8 @@ export const SCENARIO_IDS = {
   buildFullProject: 'buildFullProject',
   analyzeRisks: 'analyzeRisks',
   generateCashflow: 'generateCashflow',
+  addConfiguratorNode: 'addConfiguratorNode',
+  appendPlanningCard: 'appendPlanningCard',
 }
 
 const CASE_TRIGGERS = [
@@ -77,6 +79,11 @@ export function classifyIntent(text) {
 
   const focusResult = detectFocusMetric(text)
   if (focusResult) return focusResult
+
+  const addBlockMatch = norm.match(/добавь\s+блок\s+(.+?)(?:\s*$|\.|,|пожалуйста)/i) || norm.match(/добавить\s+блок\s+(.+?)(?:\s*$|\.|,|пожалуйста)/i)
+  if (addBlockMatch && addBlockMatch[1]) {
+    return { scenarioId: SCENARIO_IDS.addConfiguratorNode, confidence: 0.95, topic: addBlockMatch[1].trim().replace(/\s+/g, ' ') }
+  }
 
   const phrasesByScenario = {
     [SCENARIO_IDS.buildFullProject]: ['полный проект', 'от идеи до расчёта', 'весь проект', 'полный цикл', 'полный кейс и результаты'],

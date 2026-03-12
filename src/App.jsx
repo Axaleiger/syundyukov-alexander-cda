@@ -95,6 +95,7 @@ function App() {
   const [selectedScenarioName, setSelectedScenarioName] = useState('Управление добычей с учетом ближайшего бурения')
   const [aiMode, setAiMode] = useState(false)
   const [bpmCommand, setBpmCommand] = useState(null)
+  const [configuratorNodeCommand, setConfiguratorNodeCommand] = useState(null)
   const [resultsDashboardFocus, setResultsDashboardFocus] = useState(null)
   const bpmCommandConsumedRef = useRef(null)
   const [thinkingSteps, setThinkingSteps] = useState([])
@@ -109,10 +110,12 @@ function App() {
     setFlowCode(bpmToMermaid(stages, tasks))
   }, [])
   const [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning] = useState(false)
-  const onBpmCommandConsumed = useCallback(() => {
+  const onBpmCommandConsumed = useCallback((opts) => {
     setBpmCommand(null)
-    setActiveTab('ontology')
-    setOpenConfiguratorFromPlanning(true)
+    if (opts?.switchToOntology !== false) {
+      setActiveTab('ontology')
+      setOpenConfiguratorFromPlanning(true)
+    }
     bpmCommandConsumedRef.current?.()
   }, [])
 
@@ -475,6 +478,8 @@ function App() {
                 onFlowCodeChange={setFlowCode}
                 openFromPlanning={openConfiguratorFromPlanning}
                 onOpenFromPlanningConsumed={() => setOpenConfiguratorFromPlanning(false)}
+                configuratorNodeCommand={configuratorNodeCommand}
+                onConfiguratorNodeConsumed={() => setConfiguratorNodeCommand(null)}
               />
             )}
           {activeTab === 'results' && (
@@ -496,6 +501,7 @@ function App() {
         visible={aiMode}
         setActiveTab={setActiveTab}
         setBpmCommand={setBpmCommand}
+        setConfiguratorNodeCommand={setConfiguratorNodeCommand}
         setResultsDashboardFocus={setResultsDashboardFocus}
         onBpmCommandConsumedRef={bpmCommandConsumedRef}
         onThinkingPanelOpen={setThinkingPanelOpen}

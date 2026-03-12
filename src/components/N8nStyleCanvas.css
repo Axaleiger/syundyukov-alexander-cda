@@ -11,14 +11,15 @@
   touch-action: none;
 }
 
+/* Размер в пределах лимита браузера (~32k), сетка 20px повторяется — визуально бесконечное поле */
 .n8n-canvas {
   position: absolute;
-  width: 100000px;
-  height: 100000px;
+  width: 32768px;
+  height: 32768px;
   left: 50%;
   top: 50%;
-  margin-left: -50000px;
-  margin-top: -50000px;
+  margin-left: -16384px;
+  margin-top: -16384px;
   transform-origin: center center;
   background-color: #1e293b;
 }

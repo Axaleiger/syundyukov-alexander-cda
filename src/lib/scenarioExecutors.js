@@ -112,6 +112,27 @@ export async function generateCashflow(ctx) {
   addThinkingStep?.('Готово ✓')
 }
 
+export async function addConfiguratorNode(ctx, label) {
+  const { setActiveTab, setConfiguratorNodeCommand, addThinkingStep, isPaused } = ctx
+  const name = label || 'Новый блок'
+  addThinkingStep?.('Добавляю блок «' + name + '» на схему…')
+  setActiveTab?.('ontology')
+  setConfiguratorNodeCommand?.({ label: name })
+  await delay(STEP_DELAY)
+  if (isPaused?.()) return
+  addThinkingStep?.('Готово ✓')
+}
+
+export async function appendPlanningCard(ctx, topic) {
+  const { setActiveTab, setBpmCommand, addThinkingStep, isPaused } = ctx
+  addThinkingStep?.('Добавляю карточку в кейс…')
+  setActiveTab?.('planning')
+  setBpmCommand?.({ scenarioId: 'appendPlanningCard', params: { topic: topic || 'планирование' } })
+  await delay(STEP_DELAY)
+  if (isPaused?.()) return
+  addThinkingStep?.('Готово ✓')
+}
+
 const EXECUTORS = {
   createPlanningCase,
   focusMetric,
@@ -119,6 +140,8 @@ const EXECUTORS = {
   buildFullProject,
   analyzeRisks,
   generateCashflow,
+  addConfiguratorNode,
+  appendPlanningCard,
 }
 
 /**

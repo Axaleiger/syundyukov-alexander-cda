@@ -28,6 +28,7 @@ function ConfiguratorCanvas({
   const [draggingNodeId, setDraggingNodeId] = useState(null)
   const [dragOffset, setDragOffset] = useState({ dx: 0, dy: 0 })
   const [selectedEdgeId, setSelectedEdgeId] = useState(null)
+  const [selectedNodeId, setSelectedNodeId] = useState(null)
   const [pendingFromId, setPendingFromId] = useState(null)
   const [pendingDrag, setPendingDrag] = useState(null)
   const [rightPanel, setRightPanel] = useState(null)
@@ -37,6 +38,7 @@ function ConfiguratorCanvas({
   const canvasRef = useRef(null)
   const didFitViewRef = useRef(false)
   const selectedEdgeIdRef = useRef(null)
+  const pendingSelectNodeRef = useRef(null)
 
   const nodes = controlledNodes || []
   const edges = controlledEdges || []
@@ -73,11 +75,11 @@ function ConfiguratorCanvas({
     const padding = 80
     const contentW = maxX - minX + padding * 2
     const contentH = maxY - minY + padding * 2
-    const scale = Math.min(rect.width / contentW, rect.height / contentH, 1.2)
+    const scale = Math.max(0.45, Math.min(rect.width / contentW, rect.height / contentH, 1.2))
     const cx = (minX + maxX) / 2
     const cy = (minY + maxY) / 2
-    const CANVAS_HALF_W = 50000
-    const CANVAS_HALF_H = 50000
+    const CANVAS_HALF_W = 16384
+    const CANVAS_HALF_H = 16384
     setTransform({
       x: (CANVAS_HALF_W - cx) * scale,
       y: (CANVAS_HALF_H - cy) * scale,
@@ -109,12 +111,13 @@ function ConfiguratorCanvas({
   const handleWheel = useCallback((e) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.05 : 0.05
-    setTransform((t) => ({ ...t, scale: Math.min(2, Math.max(0.25, t.scale + delta)) }))
+    setTransform((t) => ({ ...t, scale: Math.min(2, Math.max(0.45, t.scale + delta)) }))
   }, [])
 
   const handleCanvasMouseDown = useCallback((e) => {
     if (e.target.closest('.configurator-node') || e.target.closest('.configurator-edge-hit') || e.target.closest('.configurator-right-panel')) return
     setSelectedEdgeId(null)
+    setSelectedNodeId(null)
     setPendingFromId(null)
     setPendingDrag(null)
     setIsPanning(true)
@@ -145,6 +148,7 @@ function ConfiguratorCanvas({
             setDragOffset({ dx: clickCanvasX - node.x, dy: clickCanvasY - node.y })
           }
           setDraggingNodeId(pendingDrag.nodeId)
+          pendingSelectNodeRef.current = null
         }
         setPendingDrag(null)
         setPendingFromId(null)
@@ -157,6 +161,11 @@ function ConfiguratorCanvas({
   }, [draggingNodeId, dragOffset, isPanning, startPan, transform, nodes, setNodes, pendingDrag])
 
   const handleMouseUp = useCallback(() => {
+    const nodeIdToSelect = pendingSelectNodeRef.current
+    if (nodeIdToSelect) {
+      setSelectedNodeId(nodeIdToSelect)
+      pendingSelectNodeRef.current = null
+    }
     setIsPanning(false)
     setDraggingNodeId(null)
     setPendingDrag(null)
@@ -169,6 +178,13 @@ function ConfiguratorCanvas({
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedNodeId) {
+        setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId))
+        setEdges((prev) => prev.filter((ed) => ed.from !== selectedNodeId && ed.to !== selectedNodeId))
+        setSelectedNodeId(null)
+        setRightPanel(null)
+        return
+      }
       const id = selectedEdgeIdRef.current || selectedEdgeId
       if (id) {
         setEdges((prev) => prev.filter((ed) => ed.id !== id))
@@ -181,7 +197,7 @@ function ConfiguratorCanvas({
       e.preventDefault()
       setRightPanel('newNode')
     }
-  }, [selectedEdgeId, setEdges])
+  }, [selectedEdgeId, selectedNodeId, setEdges, setNodes])
 
   useEffect(() => {
     wrapRef.current?.focus()
@@ -202,10 +218,12 @@ function ConfiguratorCanvas({
       }
       setPendingFromId(null)
       setPendingDrag(null)
+      pendingSelectNodeRef.current = null
       return
     }
     setSelectedEdgeId(null)
     setPendingFromId(nodeId)
+    pendingSelectNodeRef.current = nodeId
     setPendingDrag({ nodeId, clientX: e.clientX, clientY: e.clientY })
   }, [pendingFromId, edges, setEdges])
 
@@ -217,18 +235,35 @@ function ConfiguratorCanvas({
     setEdgeSettings((prev) => ({ ...prev, [edgeId]: { dashed: (edges.find((x) => x.id === edgeId) || {}).dashed } }))
   }, [edges])
 
-  const addNode = useCallback((type, label) => {
+  const addNode = useCallback((type, label, atPosition) => {
     const id = `node-${Date.now()}`
-    const rect = wrapRef.current?.getBoundingClientRect()
-    const cx = rect ? rect.width / 2 : 400
-    const cy = rect ? rect.height / 2 : 300
-    const scale = transform.scale
-    const x = Math.round((cx - transform.x) / scale - NODE_WIDTH / 2)
-    const y = Math.round((cy - transform.y) / scale - NODE_HEIGHT / 2)
+    let x, y
+    if (atPosition && typeof atPosition.x === 'number' && typeof atPosition.y === 'number') {
+      x = atPosition.x
+      y = atPosition.y
+    } else if (nodes.length > 0) {
+      let maxX = -Infinity
+      let refY = 0
+      nodes.forEach((n) => {
+        if (n.x + NODE_WIDTH > maxX) {
+          maxX = n.x + NODE_WIDTH
+          refY = n.y
+        }
+      })
+      x = maxX + 50
+      y = refY
+    } else {
+      const rect = wrapRef.current?.getBoundingClientRect()
+      const cx = rect ? rect.width / 2 : 400
+      const cy = rect ? rect.height / 2 : 300
+      const scale = transform.scale
+      x = Math.round((cx - transform.x) / scale - NODE_WIDTH / 2)
+      y = Math.round((cy - transform.y) / scale - NODE_HEIGHT / 2)
+    }
     setNodes((prev) => [...prev, { id, label: label || 'Новый узел', type: type || 'process', x, y }])
     setRightPanel(null)
     setNewNodeForm({ type: 'process', label: 'Новый узел' })
-  }, [setNodes, transform])
+  }, [setNodes, transform, nodes.length])
 
   const updateEdgeOption = useCallback((edgeId, key, value) => {
     setEdges((prev) => prev.map((e) => e.id === edgeId ? { ...e, [key]: value } : e))
@@ -258,7 +293,7 @@ function ConfiguratorCanvas({
         }}
       >
         <div className="n8n-canvas-dots" aria-hidden />
-        <svg className="n8n-edges configurator-edges" width="100000" height="100000" style={{ left: 0, top: 0, pointerEvents: 'auto' }}>
+        <svg className="n8n-edges configurator-edges" width="32768" height="32768" style={{ left: 0, top: 0, pointerEvents: 'auto' }}>
           <defs>
             <marker id="config-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
               <path d="M0 0 L6 3 L0 6 z" fill="#94a3b8" />
@@ -273,7 +308,7 @@ function ConfiguratorCanvas({
             const x2 = b.x
             const y2 = b.y + HANDLE_OFFSET
             const mx = (x1 + x2) / 2
-            const pathD = `M ${x1} ${y1} L ${mx} ${y1} L ${mx} ${y2} L ${x2} ${y2}`
+            const pathD = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`
             const isSelected = edge.id === selectedEdgeId
             return (
               <g key={edge.id}>
@@ -308,7 +343,7 @@ function ConfiguratorCanvas({
         {nodes.map((node) => (
           <div
             key={node.id}
-            className={`n8n-node configurator-node n8n-node-${node.type} ${pendingFromId === node.id ? 'configurator-pending' : ''}`}
+            className={`n8n-node configurator-node n8n-node-${node.type} ${pendingFromId === node.id ? 'configurator-pending' : ''} ${selectedNodeId === node.id ? 'configurator-node-selected' : ''}`}
             style={{ left: node.x, top: node.y }}
             onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
           >
@@ -331,7 +366,7 @@ function ConfiguratorCanvas({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" /></svg>
       </button>
       <div className="configurator-hotkeys-hint" aria-hidden>
-        <span>Del — удалить связь</span>
+        <span>Del — удалить связь/ноду</span>
         <span>Пробел — новая карточка</span>
       </div>
 

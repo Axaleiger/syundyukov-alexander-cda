@@ -45,6 +45,7 @@ const INITIAL_UBD_NODES = [
   { id: 'ipa', label: 'ИПА', type: 'process', x: 3 * COL, y: 2 * ROW },
   { id: 'condition', label: 'Условие достижения макс. профиля ДДН', type: 'output', x: 2 * COL, y: 6 * ROW },
   { id: 'cdrb', label: 'ЦДРБ', type: 'output', x: 0, y: 4 * ROW },
+  { id: 'burenie', label: 'Бурение', type: 'process', x: 1 * COL, y: 5 * ROW },
 ]
 
 const INITIAL_UBD_EDGES = [
@@ -62,7 +63,9 @@ const INITIAL_UBD_EDGES = [
 
 export const DEFAULT_FLOW_CODE = schemaToMermaid(INITIAL_UBD_NODES, INITIAL_UBD_EDGES)
 
-function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, onOpenFromPlanningConsumed }) {
+const NODE_WIDTH = 200
+
+function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, onOpenFromPlanningConsumed, configuratorNodeCommand, onConfiguratorNodeConsumed }) {
   const [mode, setMode] = useState('schema')
   const [schemaNodes, setSchemaNodes] = useState(() => [...INITIAL_UBD_NODES])
   const [schemaEdges, setSchemaEdges] = useState(() => [...INITIAL_UBD_EDGES])
@@ -70,6 +73,26 @@ function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, 
   const fitViewRef = useRef(null)
 
   const syncedCode = schemaToMermaid(schemaNodes, schemaEdges)
+
+  useEffect(() => {
+    if (!configuratorNodeCommand?.label) return
+    const label = configuratorNodeCommand.label
+    setSchemaNodes((prev) => {
+      let maxX = -Infinity
+      let refY = 0
+      prev.forEach((n) => {
+        if (n.x + NODE_WIDTH > maxX) {
+          maxX = n.x + NODE_WIDTH
+          refY = n.y
+        }
+      })
+      const x = maxX + 50
+      const y = refY
+      const id = `node-${Date.now()}`
+      return [...prev, { id, label, type: 'process', x, y }]
+    })
+    onConfiguratorNodeConsumed?.()
+  }, [configuratorNodeCommand, onConfiguratorNodeConsumed])
 
   useEffect(() => {
     if (mode === 'code') setCodeValue(syncedCode)

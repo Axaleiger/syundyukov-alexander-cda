@@ -37,6 +37,11 @@
   box-shadow: 0 0 0 2px #22c55e;
 }
 
+.configurator-node-selected {
+  box-shadow: 0 0 0 2px #3b82f6;
+  outline: none;
+}
+
 .configurator-fit-btn {
   position: absolute;
   bottom: 12px;
