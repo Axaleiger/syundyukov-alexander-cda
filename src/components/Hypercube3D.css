@@ -4,6 +4,20 @@
   gap: 2rem;
 }
 
+/* Подсветка древа этапов и точек при создании кейса (ИИ-помощник) */
+.hypercube-container.hypercube-highlight-case-tree .hypercube-window {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6), 0 0 24px rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+  animation: hypercube-case-glow 1.5s ease-in-out infinite alternate;
+}
+.hypercube-container.hypercube-highlight-case-tree .cube-canvas-wrap {
+  filter: brightness(1.08);
+}
+@keyframes hypercube-case-glow {
+  from { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.2); }
+  to   { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.75), 0 0 32px rgba(59, 130, 246, 0.35); }
+}
+
 .hypercube-controls {
   display: flex;
   flex-wrap: wrap;

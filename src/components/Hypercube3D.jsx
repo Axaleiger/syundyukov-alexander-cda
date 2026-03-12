@@ -776,7 +776,7 @@ function toMillions(pct, scale) {
   return ((pct / 100) * scale).toFixed(2)
 }
 
-function Hypercube3D({ onOpenBpm }) {
+function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
   const [npv, setNpv] = useState(50)
   const [reserves, setReserves] = useState(50)
   const [extraction, setExtraction] = useState(50)
@@ -813,6 +813,10 @@ function Hypercube3D({ onOpenBpm }) {
   }, [])
 
   useEffect(() => {
+    if (highlightCaseTree) setSelectedVariantId(0)
+  }, [highlightCaseTree])
+
+  useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onFullscreenChange)
     return () => document.removeEventListener('fullscreenchange', onFullscreenChange)
@@ -823,7 +827,7 @@ function Hypercube3D({ onOpenBpm }) {
   const extractionMillions = toMillions(extraction, 15)
 
   return (
-    <div className="hypercube-container">
+    <div className={`hypercube-container ${highlightCaseTree ? 'hypercube-highlight-case-tree' : ''}`}>
       <div className="hypercube-controls">
         <div className="control-group control-group-inline">
           <label className="slider-full-label" title="NPV — оперативный рычаг, деньги за год (млн руб)">

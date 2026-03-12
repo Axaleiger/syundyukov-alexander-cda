@@ -150,32 +150,20 @@ function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, 
 
   useEffect(() => {
     if (!openFromPlanning || !flowCode) return
+    setMode('schema')
     try {
       const { nodes: parsed, edges: parsedEdges } = mermaidToSchema(flowCode)
       if (!parsed.length) {
         onOpenFromPlanningConsumed?.()
         return
       }
-      setSchemaNodes([])
-      setSchemaEdges([])
-      const delay = 120
-      parsed.forEach((node, i) => {
-        setTimeout(() => {
-          setSchemaNodes((prev) => [...prev, node])
-        }, i * delay)
-      })
-      const edgesStart = parsed.length * delay
-      parsedEdges.forEach((edge, i) => {
-        setTimeout(() => {
-          setSchemaEdges((prev) => [...prev, edge])
-        }, edgesStart + i * delay)
-      })
-      const total = edgesStart + parsedEdges.length * delay + 100
-      const t = setTimeout(() => {
-        fitViewRef.current?.()
-        onOpenFromPlanningConsumed?.()
-      }, total)
-      return () => clearTimeout(t)
+      const centered = centerNodesInField(parsed)
+      setSchemaNodes(centered)
+      setSchemaEdges(parsedEdges || [])
+      const t1 = setTimeout(() => { fitViewRef.current?.() }, 50)
+      const t2 = setTimeout(() => { fitViewRef.current?.() }, 200)
+      const t3 = setTimeout(() => { fitViewRef.current?.(); onOpenFromPlanningConsumed?.() }, 400)
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
     } catch (_) {
       onOpenFromPlanningConsumed?.()
     }

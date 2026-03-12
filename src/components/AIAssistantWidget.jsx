@@ -23,6 +23,8 @@ function AIAssistantWidget({
   setBpmCommand,
   setConfiguratorNodeCommand,
   setResultsDashboardFocus,
+  setHypercubeCaseIntro,
+  setShowBpm,
   onBpmCommandConsumedRef,
   onThinkingPanelOpen,
   isThinkingPanelOpen,
@@ -157,6 +159,8 @@ function AIAssistantWidget({
         setBpmCommand,
         setConfiguratorNodeCommand,
         setResultsDashboardFocus,
+        setHypercubeCaseIntro,
+        setShowBpm,
         addThinkingStep: addStep,
         isPaused: () => isPausedRef.current,
       }
@@ -166,7 +170,7 @@ function AIAssistantWidget({
         addStep?.(`Ошибка: ${err?.message || 'неизвестная'}`)
       }
     },
-    [setActiveTab, setBpmCommand, setConfiguratorNodeCommand, setResultsDashboardFocus, addStep, setThinkingSteps, setCurrentMessage, setIsPaused, onThinkingPanelOpen]
+    [setActiveTab, setBpmCommand, setConfiguratorNodeCommand, setResultsDashboardFocus, setHypercubeCaseIntro, setShowBpm, addStep, setThinkingSteps, setCurrentMessage, setIsPaused, onThinkingPanelOpen]
   )
 
   const handleSend = useCallback(() => {

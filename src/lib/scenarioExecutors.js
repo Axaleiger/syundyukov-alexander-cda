@@ -12,16 +12,29 @@ function delay(ms) {
 
 const STEP_DELAY = 650
 
+const CASE_INTRO_DURATION_MS = 2800
+
 /**
- * Создание кейса планирования: сразу переход на Планирование, умные шаги через Groq, карточки по одной.
- * Этапы мышления идут параллельно созданию карточек (BPM получает команду и рисует карточки; здесь только addThinkingStep с задержкой).
+ * Создание кейса планирования: сначала вкладка «Главная страница», гиперкуб раскрывает уровни и ярко подсвечивает древо этапов и точек; затем переход на Планирование и создание карточек.
  */
 export async function createPlanningCase(ctx, topic) {
-  const { setActiveTab, setBpmCommand, addThinkingStep, isPaused } = ctx
+  const { setActiveTab, setBpmCommand, setHypercubeCaseIntro, setShowBpm, addThinkingStep, isPaused } = ctx
   const topicLabel = topic || 'планирование'
 
+  if (isPaused?.()) return
+  addThinkingStep?.('Начинаю с главной страницы…')
+  setShowBpm?.(false)
+  setActiveTab?.('face')
+  await delay(300)
+  if (isPaused?.()) return
+  addThinkingStep?.('Раскрываю дерево этапов и связей в гиперкубе…')
+  setHypercubeCaseIntro?.(true)
+  await delay(CASE_INTRO_DURATION_MS)
+  if (isPaused?.()) return
+  setHypercubeCaseIntro?.(false)
+  addThinkingStep?.('Переход к планированию…')
   setActiveTab?.('planning')
-
+  await delay(400)
   if (isPaused?.()) return
   addThinkingStep?.('Анализирую запрос: «' + topicLabel + '»…')
 
@@ -31,9 +44,9 @@ export async function createPlanningCase(ctx, topic) {
 
   setBpmCommand?.({ scenarioId: 'createPlanningCase', params: { topic: topicLabel, steps } })
 
-  for (let i = 0; i < steps.length; i++) {
+  for (let i = 0; i < (steps?.length ?? 0); i++) {
     if (isPaused?.()) return
-    addThinkingStep?.('Добавляю: ' + steps[i])
+    addThinkingStep?.('Добавляю: ' + (steps[i] ?? ''))
     await delay(STEP_DELAY)
   }
 }

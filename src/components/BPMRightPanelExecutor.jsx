@@ -116,17 +116,6 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="bpm-right-panel-custom bpm-right-panel-custom-inline">
-          <input
-            type="text"
-            className="bpm-input"
-            placeholder="Ввести ФИО вручную"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
-          />
-          <button type="button" className="bpm-btn-sm" onClick={handleAddCustom}>Добавить сотрудника</button>
-        </div>
         <div className="bpm-right-panel-list bpm-right-panel-users bpm-right-panel-users-full">
           {filtered.map((name) => {
             const isExpanded = expandedUser === name
@@ -212,6 +201,17 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
               </div>
             )
           })}
+        </div>
+        <div className="bpm-right-panel-custom">
+          <input
+            type="text"
+            className="bpm-input"
+            placeholder="Ввести ФИО вручную"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
+          />
+          <button type="button" className="bpm-btn-sm" onClick={handleAddCustom}>Добавить сотрудника</button>
         </div>
       </div>
     </div>

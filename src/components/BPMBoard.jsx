@@ -22,6 +22,7 @@ function getAiCardData(seed) {
   }
 }
 import { parseBoardFromExcel, parseBoardFromExcelLenient, parseConnectionsFromExcel, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
+import { bpmToMermaid } from '../lib/bpmToMermaid'
 import CalculateGraph from './CalculateGraph'
 import BPMRightPanelSystems from './BPMRightPanelSystems'
 import BPMRightPanelExecutor from './BPMRightPanelExecutor'
@@ -29,6 +30,7 @@ import './BPMBoard.css'
 
 const SCHEDULE_EVERY_OPTIONS = ['каждые 1 день', 'каждые 2 дня', 'каждые 3 дня', 'каждые 5 дней', 'каждую неделю', 'каждые 2 недели']
 const AI_STAGE_NAME = 'ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП'
+const AI_STAGE_NAME_2 = 'ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП 2'
 
 function getInitials(name) {
   if (!name || !String(name).trim()) return '?'
@@ -405,14 +407,14 @@ function lessSaturated(hex, factor = 0.5) {
   return `hsl(${h}, ${Math.round(s * factor)}%, ${l}%)`
 }
 
-function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed }) {
+function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed }) {
   const boardData = useMemo(() => {
     const data = getInitialBoard(initialBoardId)
     if (data) return data
     return { stages: [], tasks: {} }
   }, [initialBoardId])
-  const [stages, setStages] = useState(() => boardData.stages || [])
-  const [tasks, setTasks] = useState(() => boardData.tasks || {})
+  const [stages, setStages] = useState(() => (initialStages != null && initialStages.length >= 0) ? initialStages : (boardData.stages || []))
+  const [tasks, setTasks] = useState(() => initialTasks != null ? initialTasks : (boardData.tasks || {}))
   const [viewMode, setViewMode] = useState('Подробный вид')
   const [expanded, setExpanded] = useState({}) // key: task.id — сохраняется при перетаскивании между этапами
   const [expandedSections, setExpandedSections] = useState({}) // key: task.id, value: { systems, input, results }
@@ -448,9 +450,17 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   const [aiAutoselectByTaskId, setAiAutoselectByTaskId] = useState({})
   const [agreedAiCardIds, setAgreedAiCardIds] = useState(() => new Set())
   const [aiStageAgreed, setAiStageAgreed] = useState(false)
-  const [aiStaticCardOverrides, setAiStaticCardOverrides] = useState({}) // { 'ai-stage-0': { executor, approver }, ... }
+  const [aiStage2Agreed, setAiStage2Agreed] = useState(false)
+  const [aiCaseStageNames, setAiCaseStageNames] = useState(() => new Set())
+  const [aiCaseCardIds, setAiCaseCardIds] = useState(() => new Set())
+  const [agreedAiCaseCardIds, setAgreedAiCaseCardIds] = useState(() => new Set())
+  const [aiStaticCardOverrides, setAiStaticCardOverrides] = useState({}) // { 'aiId': { executor, approver, name }, ... }
+  const [editingAiCardId, setEditingAiCardId] = useState(null)
   const [aiSuggestionsOn, setAiSuggestionsOn] = useState(false)
   const [removedAiCardIds, setRemovedAiCardIds] = useState(() => new Set())
+  const [aiSuggestionCardPlacements, setAiSuggestionCardPlacements] = useState(null)
+  const aiSuggestionPlacementsRef = React.useRef(null)
+  const draggedAiCardRef = React.useRef(null)
   const boardRef = React.useRef(null)
 
   const removeAiCard = useCallback((aiId) => {
@@ -463,8 +473,58 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
 
   useEffect(() => {
     if (aiSuggestionsOn) {
-      setTasks((t) => ({ ...t, [AI_STAGE_NAME]: t[AI_STAGE_NAME] || [] }))
-      setStages((prev) => (prev.includes(AI_STAGE_NAME) ? prev : (prev.length ? [prev[0], AI_STAGE_NAME, ...prev.slice(1)] : [AI_STAGE_NAME])))
+      setStages((prev) => {
+        const base = prev.filter((s) => s !== AI_STAGE_NAME && s !== AI_STAGE_NAME_2)
+        if (!base.length) return [AI_STAGE_NAME, AI_STAGE_NAME_2]
+        let placements = aiSuggestionPlacementsRef.current
+        if (!placements || !Array.isArray(placements.stageIndices)) {
+          const len = base.length + 1
+          let i1 = Math.floor(Math.random() * len)
+          let i2 = Math.floor(Math.random() * len)
+          if (i1 > i2) [i1, i2] = [i2, i1]
+          if (i1 === i2) i2 = Math.min(i1 + 1, len)
+          aiSuggestionPlacementsRef.current = { stageIndices: [i1, i2] }
+          placements = aiSuggestionPlacementsRef.current
+        }
+        const [i1, i2] = placements.stageIndices
+        return [
+          ...base.slice(0, i1),
+          AI_STAGE_NAME,
+          ...base.slice(i1, i2),
+          AI_STAGE_NAME_2,
+          ...base.slice(i2),
+        ]
+      })
+      setTasks((t) => {
+        const buildStatic = (seeds, ids, indices) => seeds.map((seed, i) => {
+          const ad = getAiCardData(seed)
+          return { id: ids[i], isAiStatic: true, aiCardDataIndex: indices[i], name: 'ИИ-автопредложенная карточка', executor: ad.executor, approver: ad.approver, periodStart: ad.periodStart, periodEnd: ad.periodEnd }
+        })
+        const col1 = buildStatic(['ai-stage-0', 'ai-stage-1', 'ai-stage-2'], ['ai-static-0', 'ai-static-1', 'ai-static-2'], [1, 2, 3])
+        const col2 = (() => { const ad = getAiCardData('ai-stage-3'); return [{ id: 'ai-static-col2-0', isAiStatic: true, aiCardDataIndex: 4, name: 'ИИ-автопредложенная карточка', executor: ad.executor, approver: ad.approver, periodStart: ad.periodStart, periodEnd: ad.periodEnd }] })()
+        return { ...t, [AI_STAGE_NAME]: col1, [AI_STAGE_NAME_2]: col2 }
+      })
+      if (!aiSuggestionCardPlacements) {
+        const base = stages.filter((s) => s !== AI_STAGE_NAME && s !== AI_STAGE_NAME_2)
+        if (base.length) {
+          const placements = []
+          for (let c = 0; c < 3; c++) {
+            const stageName = base[Math.floor(Math.random() * base.length)]
+            const list = (tasks[stageName] || [])
+            const index = Math.floor(Math.random() * (list.length + 1))
+            placements.push({ stageName, index, cardKey: c })
+          }
+          setAiSuggestionCardPlacements(placements)
+        }
+      }
+    } else {
+      setStages((prev) => prev.filter((s) => s !== AI_STAGE_NAME && s !== AI_STAGE_NAME_2))
+      setTasks((t) => {
+        const next = { ...t }
+        delete next[AI_STAGE_NAME]
+        delete next[AI_STAGE_NAME_2]
+        return next
+      })
     }
   }, [aiSuggestionsOn])
 
@@ -482,6 +542,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
     getAiCardData('ai-stage-0'),
     getAiCardData('ai-stage-1'),
     getAiCardData('ai-stage-2'),
+    getAiCardData('ai-stage-3'),
   ], [])
 
   const AI_DONA_COMMENTS = ['Доработка данных', 'Устранение выбросов', 'Восполнение пропусков', 'Корректировка аномалий', 'Приведение к формату']
@@ -594,22 +655,35 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
           ]
       const cardNames = [...new Set(rawNames)].slice(0, 12)
       const cardDelayMs = 700
+      setAiCaseStageNames(new Set(stagesList))
       setStages(stagesList)
       const initialTasks = {}
       stagesList.forEach((s) => { initialTasks[s] = [] })
       setTasks(initialTasks)
+      const idsToMark = new Set()
       cardNames.forEach((name, i) => {
         setTimeout(() => {
           setTasks((prev) => {
             const stage = stagesList[i % stagesList.length]
             const id = `AIC${10000 + i}`
+            idsToMark.add(id)
             const task = { id, name, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) }
             return { ...prev, [stage]: [task, ...(prev[stage] || [])] }
           })
-          if (i === cardNames.length - 1) onBpmCommandConsumed?.()
+          if (i === cardNames.length - 1) {
+            setAiCaseCardIds(new Set(idsToMark))
+            const fullTasks = {}
+            stagesList.forEach((s) => { fullTasks[s] = [] })
+            cardNames.forEach((nm, j) => {
+              const st = stagesList[j % stagesList.length]
+              const id = `AIC${10000 + j}`
+              fullTasks[st].unshift({ id, name: nm, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) })
+            })
+            onBpmCommandConsumed?.({ flowCode: bpmToMermaid(stagesList, fullTasks) })
+          }
         }, i * cardDelayMs)
       })
-      if (cardNames.length === 0) onBpmCommandConsumed?.()
+      if (cardNames.length === 0) { setAiCaseCardIds(new Set()); onBpmCommandConsumed?.({ flowCode: bpmToMermaid(stagesList, {}) }) }
       return
     }
     if (scenarioId === 'analyzeRisks') {
@@ -965,6 +1039,70 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   const analytics = useMemo(() => computeAnalytics(stages, tasks), [stages, tasks])
   const oilFlowHtml = useMemo(() => generateOilFlowHtml(stages, tasks), [stages, tasks])
 
+  const handleStageDropWithAi = useCallback((stageName, displayIndex, e, taskIndexForDropAt) => {
+    e.preventDefault()
+    e.stopPropagation()
+    let cardKey = null
+    let fromIndex = null
+    let fromStage = null
+    const raw = e.dataTransfer.getData('text/plain')
+    try {
+      const d = JSON.parse(raw)
+      if (d != null && typeof d.aiCardKey === 'number') cardKey = d.aiCardKey
+    } catch (_) {}
+    if (cardKey == null && draggedAiCardRef.current) {
+      cardKey = draggedAiCardRef.current.cardKey
+      fromIndex = draggedAiCardRef.current.fromIndex
+      fromStage = draggedAiCardRef.current.stageName
+    }
+    if (cardKey != null) {
+      setAiSuggestionCardPlacements((prev) => {
+        const prevList = prev || []
+        const sameStage = fromStage === stageName
+        const targetHere = prevList.filter((p) => p.stageName === stageName).sort((a, b) => a.index - b.index)
+        const targetOrder = targetHere.map((h) => h.cardKey)
+        const targetNewOrder = targetOrder.filter((k) => k !== cardKey)
+        targetNewOrder.splice(Math.min(displayIndex, targetNewOrder.length), 0, cardKey)
+        const targetNewIndices = {}
+        targetNewOrder.forEach((k, i) => { targetNewIndices[k] = i })
+        let sourceNewIndices = null
+        if (!sameStage && fromStage != null) {
+          const sourceHere = prevList.filter((p) => p.stageName === fromStage).sort((a, b) => a.index - b.index)
+          const sourceNewOrder = sourceHere.map((h) => h.cardKey).filter((k) => k !== cardKey)
+          sourceNewIndices = {}
+          sourceNewOrder.forEach((k, i) => { sourceNewIndices[k] = i })
+        }
+        return prevList.map((p) => {
+          if (p.cardKey === cardKey) return { ...p, stageName, index: targetNewIndices[cardKey] ?? displayIndex }
+          if (p.stageName === stageName) return { ...p, index: targetNewIndices[p.cardKey] ?? p.index }
+          if (sourceNewIndices && p.stageName === fromStage) return { ...p, index: sourceNewIndices[p.cardKey] ?? p.index }
+          return p
+        })
+      })
+      draggedAiCardRef.current = null
+      return
+    }
+    handleDropAt(stageName, taskIndexForDropAt != null ? taskIndexForDropAt : displayIndex)
+  }, [handleDropAt])
+
+  const getStageDisplayItems = useCallback((stageName) => {
+    const list = tasks[stageName] || []
+    const placements = aiSuggestionCardPlacements || []
+    const here = placements.filter((p) => p.stageName === stageName).sort((a, b) => a.index - b.index)
+    if (!here.length) return list.map((task, i) => ({ type: 'task', task, taskIdx: i }))
+    const items = []
+    let tIdx = 0
+    for (let pos = 0; pos < list.length + here.length; pos++) {
+      const ac = here.find((h) => h.index === pos)
+      if (ac != null) items.push({ type: 'ai', cardKey: ac.cardKey })
+      else {
+        if (tIdx < list.length && list[tIdx] != null) items.push({ type: 'task', task: list[tIdx], taskIdx: tIdx })
+        tIdx++
+      }
+    }
+    return items
+  }, [tasks, aiSuggestionCardPlacements])
+
   const matchesSearch = useCallback((task, q) => {
     if (!q || !String(q).trim()) return true
     const lower = String(q).toLowerCase().trim()
@@ -1168,11 +1306,13 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                 </span>
                 <span className={`bpm-toggle-label ${viewMode === 'Подробный вид' ? 'active' : ''}`} onClick={() => setViewMode('Подробный вид')}>Подробный</span>
               </div>
-              <button type="button" className={`bpm-btn bpm-btn-ghost bpm-ai-autosvyazi-inline bpm-ai-suggestions-btn ${aiSuggestionsOn ? 'bpm-ai-suggestions-btn-on' : ''}`} onClick={() => { setAiSuggestionsOn((on) => !on); if (!aiSuggestionsOn) { setAgreedAiCardIds(new Set()); setRemovedAiCardIds(new Set()); setAiStageAgreed(false); setTasks((t) => ({ ...t, [AI_STAGE_NAME]: [] })); } }} title={aiSuggestionsOn ? 'Выключить ИИ-автопредложения' : 'Включить ИИ-автопредложения'}>ИИ-автопредложения</button>
+              <button type="button" className={`bpm-btn bpm-btn-ghost bpm-ai-autosvyazi-inline bpm-ai-suggestions-btn ${aiSuggestionsOn ? 'bpm-ai-suggestions-btn-on' : ''}`} onClick={() => { setAiSuggestionsOn((on) => !on); if (!aiSuggestionsOn) { setAgreedAiCardIds(new Set()); setRemovedAiCardIds(new Set()); setAiStageAgreed(false); setAiStage2Agreed(false); } }} title={aiSuggestionsOn ? 'Выключить ИИ-автопредложения' : 'Включить ИИ-автопредложения'}>ИИ-автопредложения</button>
               <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)} style={{ marginLeft: 'auto' }}>Рассчитать</button>
             </div>
           </div>
-          <div className="bpm-top-panel bpm-top-panel-compact bpm-top-panel-in-scroll" style={{ '--stages': stages.length }}>
+          <div className="bpm-toolbar-top-panel-divider-wrap">
+            <div className="bpm-board-header-divider" />
+            <div className="bpm-top-panel bpm-top-panel-compact bpm-top-panel-in-scroll" style={{ '--stages': stages.length }}>
             <div className="bpm-top-panel-row">
               <span className="bpm-top-panel-title">Взаимосвязи этапов</span>
               <button type="button" className="bpm-btn bpm-btn-ghost bpm-ai-autosvyazi-inline" onClick={() => setAiModalOpen(true)}>ИИ-автовзаимосвязи</button>
@@ -1208,6 +1348,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                 </div>
               </div>
             )}
+            </div>
           </div>
           <div className="bpm-board-row">
           <button type="button" className="bpm-add-stage-vertical" onClick={addStage} title="Добавить этап">
@@ -1226,13 +1367,14 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
         {stages.map((stageName, stageIdx) => (
           <React.Fragment key={stageName}>
           <div
-            className={`bpm-stage-column ${stageName === AI_STAGE_NAME ? 'bpm-stage-ai-suggestion' : ''} ${draggedStageIndex === stageIdx ? 'bpm-stage-column-dragging' : ''}`}
+            className={`bpm-stage-column ${(stageName === AI_STAGE_NAME || stageName === AI_STAGE_NAME_2) ? 'bpm-stage-ai-suggestion' : ''} ${aiCaseStageNames.has(stageName) ? 'bpm-stage-ai-suggestion' : ''} ${stageName === AI_STAGE_NAME && aiStageAgreed ? 'bpm-stage-column-agreed' : ''} ${stageName === AI_STAGE_NAME_2 && aiStage2Agreed ? 'bpm-stage-column-agreed' : ''} ${draggedStageIndex === stageIdx ? 'bpm-stage-column-dragging' : ''}`}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
-            onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleDropAt(stageName, (tasks[stageName] || []).length); }}
+            onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleStageDropWithAi(stageName, (tasks[stageName] || []).length, e); }}
           >
-            {stageName === AI_STAGE_NAME ? (
+            {(stageName === AI_STAGE_NAME || stageName === AI_STAGE_NAME_2) ? (
+              stageName === AI_STAGE_NAME ? (
               <>
-                <div className={`bpm-stage-header bpm-stage-header-ai ${aiStageAgreed ? 'bpm-stage-agreed' : ''}`}>
+                <div className={`bpm-stage-header bpm-stage-header-ai ${aiStageAgreed ? 'bpm-stage-agreed' : ''}`} draggable onDragStart={(e) => handleStageDragStart(e, stageIdx, AI_STAGE_NAME)} onDragEnd={() => setDraggedStageIndex(null)}>
                   <span className="bpm-stage-title bpm-stage-title-clickable">ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП</span>
                   <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge bpm-stage-agree-badge" onClick={(e) => { e.stopPropagation(); setAiStageAgreed((v) => !v); }} role="button" tabIndex={0} title="Согласовать">{aiStageAgreed ? 'СОГЛАСОВАНО' : 'СОГЛАСОВАТЬ'}</span>
                   <div className="bpm-stage-btns">
@@ -1242,169 +1384,325 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                 <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(AI_STAGE_NAME)}>+ Добавить задачу</button>
                 <div className="bpm-stage-cards">
                   <div className="bpm-drop-zone bpm-drop-zone-first" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, 0); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                  {[1, 2, 3].map((n) => {
-                    const ad = aiCardsData[n]
-                    if (!ad || removedAiCardIds.has(ad.id)) return null
-                    const aiId = ad.id
-                    const aiSystems = getAiCardSystems(aiId)
-                    const aiInputs = getAiCardInputFiles(aiId)
-                    const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', aiId)
-                    const agreed = agreedAiCardIds.has(aiId)
-                    return (
-                    <React.Fragment key={aiId}>
-                      <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, n - 1); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                      <div
-                        className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, n - 1)}
-                        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, n - 1); }}
-                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}
-                      >
-                        <div className="bpm-card-top-row">
-                          <span className="bpm-card-id">{aiId}</span>
-                          <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
-                          <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
-                          <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(aiId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
-                        </div>
-                        <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
-                        <div className="bpm-card-meta">
-                          <div className="bpm-card-meta-row">
-                            <span className="bpm-card-meta-label">Исполнитель:</span>
-                            {/сюндюков/i.test(ad.executor || '') ? (
-                              <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.executor} />
-                            ) : (
-                              <span className="bpm-card-avatar bpm-card-avatar-executor" style={{ background: avatarColor(ad.executor) }} title={ad.executor}>{getInitials(ad.executor).slice(0, 1)}</span>
-                            )}
-                            <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx: n - 1, role: 'executor', aiCardId: aiId })}>{ad.executor}</span>
-                          </div>
-                          <div className="bpm-card-meta-row">
-                            <span className="bpm-card-meta-label">Согласующий:</span>
-                            {/сюндюков/i.test(ad.approver || '') ? (
-                              <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.approver} />
-                            ) : (
-                              <span className="bpm-card-avatar bpm-card-avatar-approver" style={{ background: avatarColor(ad.approver) }} title={ad.approver}>{getInitials(ad.approver).slice(0, 1)}</span>
-                            )}
-                            <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx: n - 1, role: 'approver', aiCardId: aiId })}>{ad.approver}</span>
-                          </div>
-                          <div className="bpm-card-meta-row bpm-card-schedule-row">
-                            <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
-                            <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
-                              {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                          </div>
-                          <div className="bpm-card-meta-row bpm-card-period-row">
-                            <span className="bpm-card-meta-label">Период выполнения:</span>
-                            <div className="bpm-card-period-inputs">
-                              <input type="date" className="bpm-input-date" defaultValue={ad.periodStart} onClick={(e) => e.stopPropagation()} />
-                              <span className="bpm-card-period-sep">—</span>
-                              <input type="date" className="bpm-input-date" defaultValue={ad.periodEnd} onClick={(e) => e.stopPropagation()} />
+                  {((tasks[AI_STAGE_NAME] || []).map((task, taskIdx) => {
+                    if (task.isAiStatic) {
+                      const ad = aiCardsData[task.aiCardDataIndex]
+                      if (!ad || removedAiCardIds.has(task.id)) return null
+                      const aiId = task.id
+                      const aiSystems = getAiCardSystems(aiId)
+                      const aiInputs = getAiCardInputFiles(aiId)
+                      const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', aiId)
+                      const agreed = agreedAiCardIds.has(aiId)
+                      return (
+                        <React.Fragment key={aiId}>
+                          <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                          <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                            <div className="bpm-card-top-row">
+                              <span className="bpm-card-id">{aiId}</span>
+                              <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
+                              <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
+                              <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(aiId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
                             </div>
-                          </div>
-                        </div>
-                        <div className="bpm-card-body">
-                          <div className="bpm-card-section-block">
-                            <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'systems'); } }}>
-                              <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
-                              <span className="bpm-card-section-title">Используемые системы</span>
-                              <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
-                            </div>
-                            {getSectionOpen(aiId, 'systems') && (
-                              <ul className="bpm-card-systems-list">
-                                {aiSystems.map((s, i) => (
-                                  <li key={i} className="bpm-card-system-item">
-                                    <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(s)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link"><span className="bpm-card-system-link-text">{s}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                          <div className="bpm-card-divider" />
-                          <div className="bpm-card-section-block">
-                            <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'input'); } }}>
-                              <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
-                              <span className="bpm-card-section-title">Входные данные</span>
-                              <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                              <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
-                            </div>
-                            {getSectionOpen(aiId, 'input') && (
-                              <div className="bpm-card-file-pills">
-                                {aiInputs.map((f, i) => (
-                                  <div key={i} className="bpm-file-pill bpm-file-pill-minimal">
-                                    <span className="bpm-icon-file-sm bpm-icon-file-ok" />
-                                    <span className="bpm-file-pill-name">{f.name}</span>
-                                    <span className="bpm-file-pill-date">{f.date}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <div className="bpm-card-divider" />
-                          <div className="bpm-card-section-block">
-                            <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'results'); } }}>
-                              <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
-                              <span className="bpm-card-section-title">Результаты расчета</span>
-                              <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                              <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
-                            </div>
-                            {getSectionOpen(aiId, 'results') && (
-                              <>
-                                {aiSuggestionsOn && (
-                                  <button type="button" className="bpm-ai-dona-btn" onClick={(e) => { e.stopPropagation(); addSyntheticResult(aiId); }}>ИИ-донасыщение результатов расчета синтетикой</button>
+                            <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
+                            <div className="bpm-card-meta">
+                              <div className="bpm-card-meta-row">
+                                <span className="bpm-card-meta-label">Исполнитель:</span>
+                                {/сюндюков/i.test(ad.executor || '') ? (
+                                  <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.executor} />
+                                ) : (
+                                  <span className="bpm-card-avatar bpm-card-avatar-executor" style={{ background: avatarColor(ad.executor) }} title={ad.executor}>{getInitials(ad.executor).slice(0, 1)}</span>
                                 )}
-                                <div className="bpm-card-file-pills">
-                                  {[...aiResults, ...getSyntheticLabels(aiId)].map((name, i) => {
-                                    const dateStr = new Date(Date.now() - (hashStr(aiId + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
-                                    const status = ['ok', 'missing', 'warning'][hashStr(aiId + String(i)) % 3]
-                                    const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
-                                    return (
-                                      <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
-                                        <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
-                                        <span className="bpm-file-pill-name">{name}</span>
-                                        <span className="bpm-file-pill-date">{dateStr}</span>
-                                      </div>
-                                    )
-                                  })}
+                                <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx, role: 'executor', aiCardId: aiId })}>{ad.executor}</span>
+                              </div>
+                              <div className="bpm-card-meta-row">
+                                <span className="bpm-card-meta-label">Согласующий:</span>
+                                {/сюндюков/i.test(ad.approver || '') ? (
+                                  <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.approver} />
+                                ) : (
+                                  <span className="bpm-card-avatar bpm-card-avatar-approver" style={{ background: avatarColor(ad.approver) }} title={ad.approver}>{getInitials(ad.approver).slice(0, 1)}</span>
+                                )}
+                                <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx, role: 'approver', aiCardId: aiId })}>{ad.approver}</span>
+                              </div>
+                              <div className="bpm-card-meta-row bpm-card-schedule-row">
+                                <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
+                                <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
+                                  {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                              </div>
+                              <div className="bpm-card-meta-row bpm-card-period-row">
+                                <span className="bpm-card-meta-label">Период выполнения:</span>
+                                <div className="bpm-card-period-inputs">
+                                  <input type="date" className="bpm-input-date" defaultValue={ad.periodStart} onClick={(e) => e.stopPropagation()} />
+                                  <span className="bpm-card-period-sep">—</span>
+                                  <input type="date" className="bpm-input-date" defaultValue={ad.periodEnd} onClick={(e) => e.stopPropagation()} />
                                 </div>
-                              </>
-                            )}
+                              </div>
+                            </div>
+                            <div className="bpm-card-body">
+                              <div className="bpm-card-section-block">
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'systems'); } }}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Используемые системы</span>
+                                  <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
+                                </div>
+                                {getSectionOpen(aiId, 'systems') && (
+                                  <ul className="bpm-card-systems-list">
+                                    {aiSystems.map((s, i) => (
+                                      <li key={i} className="bpm-card-system-item">
+                                        <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(s)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link"><span className="bpm-card-system-link-text">{s}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                              <div className="bpm-card-divider" />
+                              <div className="bpm-card-section-block">
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'input'); } }}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Входные данные</span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                                </div>
+                                {getSectionOpen(aiId, 'input') && (
+                                  <div className="bpm-card-file-pills">
+                                    {aiInputs.map((f, i) => (
+                                      <div key={i} className="bpm-file-pill bpm-file-pill-minimal">
+                                        <span className="bpm-icon-file-sm bpm-icon-file-ok" />
+                                        <span className="bpm-file-pill-name">{f.name}</span>
+                                        <span className="bpm-file-pill-date">{f.date}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="bpm-card-divider" />
+                              <div className="bpm-card-section-block">
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'results'); } }}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Результаты расчета</span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                                </div>
+                                {getSectionOpen(aiId, 'results') && (
+                                  <>
+                                    {aiSuggestionsOn && (
+                                      <button type="button" className="bpm-ai-dona-btn" onClick={(e) => { e.stopPropagation(); addSyntheticResult(aiId); }}>ИИ-донасыщение результатов расчета синтетикой</button>
+                                    )}
+                                    <div className="bpm-card-file-pills">
+                                      {[...aiResults, ...getSyntheticLabels(aiId)].map((name, i) => {
+                                        const dateStr = new Date(Date.now() - (hashStr(aiId + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
+                                        const status = ['ok', 'missing', 'warning'][hashStr(aiId + String(i)) % 3]
+                                        const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
+                                        return (
+                                          <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
+                                            <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
+                                            <span className="bpm-file-pill-name">{name}</span>
+                                            <span className="bpm-file-pill-date">{dateStr}</span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      )
+                    }
+                    return (
+                      <React.Fragment key={task.id}>
+                        <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                        <div className="bpm-card" draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                          <div className="bpm-card-top-row">
+                            <span className="bpm-card-id">№{task.id}</span>
+                            <span className="bpm-card-badge bpm-card-badge-in-work">В РАБОТЕ</span>
+                            <button type="button" className="bpm-card-delete" onClick={(ev) => { ev.stopPropagation(); deleteTask(AI_STAGE_NAME, taskIdx); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
+                          </div>
+                          <div className="bpm-card-name">{task.name || 'Новая задача'}</div>
+                          <div className="bpm-card-meta">
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Исполнитель:</span>
+                              <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx, role: 'executor' })}>{task.executor || '—'}</span>
+                            </div>
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Согласующий:</span>
+                              <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx, role: 'approver' })}>{task.approver || '—'}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </React.Fragment>
+                      </React.Fragment>
                     )
-                  })}
-                  {(tasks[AI_STAGE_NAME] || []).map((task, taskIdx) => (
-                    <React.Fragment key={task.id}>
-                      <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                      <div
-                        className="bpm-card"
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)}
-                        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }}
-                        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}
-                      >
-                        <div className="bpm-card-top-row">
-                          <span className="bpm-card-id">№{task.id}</span>
-                          <span className="bpm-card-badge bpm-card-badge-in-work">В РАБОТЕ</span>
-                          <button type="button" className="bpm-card-delete" onClick={(ev) => { ev.stopPropagation(); deleteTask(AI_STAGE_NAME, taskIdx); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
-                        </div>
-                        <div className="bpm-card-name">{task.name || 'Новая задача'}</div>
-                        <div className="bpm-card-meta">
-                          <div className="bpm-card-meta-row">
-                            <span className="bpm-card-meta-label">Исполнитель:</span>
-                            <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx, role: 'executor' })}>{task.executor || '—'}</span>
-                          </div>
-                          <div className="bpm-card-meta-row">
-                            <span className="bpm-card-meta-label">Согласующий:</span>
-                            <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME, taskIdx, role: 'approver' })}>{task.approver || '—'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </React.Fragment>
-                  ))}
+                  }))}
                   <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, (tasks[AI_STAGE_NAME] || []).length); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
                 </div>
               </>
+            ) : (
+              <>
+                <div className={`bpm-stage-header bpm-stage-header-ai ${aiStage2Agreed ? 'bpm-stage-agreed' : ''}`} draggable onDragStart={(e) => handleStageDragStart(e, stageIdx, AI_STAGE_NAME_2)} onDragEnd={() => setDraggedStageIndex(null)}>
+                  <span className="bpm-stage-title bpm-stage-title-clickable">ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП 2</span>
+                  <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge bpm-stage-agree-badge" onClick={(e) => { e.stopPropagation(); setAiStage2Agreed((v) => !v); }} role="button" tabIndex={0} title="Согласовать">{aiStage2Agreed ? 'СОГЛАСОВАНО' : 'СОГЛАСОВАТЬ'}</span>
+                  <div className="bpm-stage-btns">
+                    <button type="button" className="bpm-card-delete bpm-stage-delete" onClick={(e) => { e.stopPropagation(); setStages((prev) => prev.filter((s) => s !== AI_STAGE_NAME_2)); }} title="Удалить этап" aria-label="Удалить этап">🗑</button>
+                  </div>
+                </div>
+                <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(AI_STAGE_NAME_2)}>+ Добавить задачу</button>
+                <div className="bpm-stage-cards">
+                  <div className="bpm-drop-zone bpm-drop-zone-first" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, 0); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                  {(tasks[AI_STAGE_NAME_2] || []).map((task, taskIdx) => {
+                    if (task.isAiStatic) {
+                      const ad = aiCardsData[task.aiCardDataIndex]
+                      if (!ad || removedAiCardIds.has(task.id)) return null
+                      const aiId = task.id
+                      const aiSystems = getAiCardSystems(aiId)
+                      const aiInputs = getAiCardInputFiles(aiId)
+                      const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', aiId)
+                      const agreed = agreedAiCardIds.has(aiId)
+                      return (
+                        <React.Fragment key={aiId}>
+                          <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                          <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME_2, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                            <div className="bpm-card-top-row">
+                              <span className="bpm-card-id">{aiId}</span>
+                              <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
+                              <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
+                              <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(aiId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
+                            </div>
+                            <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
+                            <div className="bpm-card-meta">
+                              <div className="bpm-card-meta-row">
+                                <span className="bpm-card-meta-label">Исполнитель:</span>
+                                {/сюндюков/i.test(ad.executor || '') ? (
+                                  <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.executor} />
+                                ) : (
+                                  <span className="bpm-card-avatar bpm-card-avatar-executor" style={{ background: avatarColor(ad.executor) }} title={ad.executor}>{getInitials(ad.executor).slice(0, 1)}</span>
+                                )}
+                                <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME_2, taskIdx, role: 'executor', aiCardId: aiId })}>{ad.executor}</span>
+                              </div>
+                              <div className="bpm-card-meta-row">
+                                <span className="bpm-card-meta-label">Согласующий:</span>
+                                {/сюндюков/i.test(ad.approver || '') ? (
+                                  <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.approver} />
+                                ) : (
+                                  <span className="bpm-card-avatar bpm-card-avatar-approver" style={{ background: avatarColor(ad.approver) }} title={ad.approver}>{getInitials(ad.approver).slice(0, 1)}</span>
+                                )}
+                                <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME_2, taskIdx, role: 'approver', aiCardId: aiId })}>{ad.approver}</span>
+                              </div>
+                              <div className="bpm-card-meta-row bpm-card-schedule-row">
+                                <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
+                                <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
+                                  {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                                </select>
+                              </div>
+                              <div className="bpm-card-meta-row bpm-card-period-row">
+                                <span className="bpm-card-meta-label">Период выполнения:</span>
+                                <div className="bpm-card-period-inputs">
+                                  <input type="date" className="bpm-input-date" defaultValue={ad.periodStart} onClick={(e) => e.stopPropagation()} />
+                                  <span className="bpm-card-period-sep">—</span>
+                                  <input type="date" className="bpm-input-date" defaultValue={ad.periodEnd} onClick={(e) => e.stopPropagation()} />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="bpm-card-body">
+                              <div className="bpm-card-section-block">
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'systems'); } }}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Используемые системы</span>
+                                  <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
+                                </div>
+                                {getSectionOpen(aiId, 'systems') && (
+                                  <ul className="bpm-card-systems-list">
+                                    {aiSystems.map((s, i) => (
+                                      <li key={i} className="bpm-card-system-item">
+                                        <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(s)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link"><span className="bpm-card-system-link-text">{s}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                              <div className="bpm-card-divider" />
+                              <div className="bpm-card-section-block">
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'input'); } }}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Входные данные</span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                                </div>
+                                {getSectionOpen(aiId, 'input') && (
+                                  <div className="bpm-card-file-pills">
+                                    {aiInputs.map((f, i) => (
+                                      <div key={i} className="bpm-file-pill bpm-file-pill-minimal">
+                                        <span className="bpm-icon-file-sm bpm-icon-file-ok" />
+                                        <span className="bpm-file-pill-name">{f.name}</span>
+                                        <span className="bpm-file-pill-date">{f.date}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="bpm-card-divider" />
+                              <div className="bpm-card-section-block">
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'results'); } }}>
+                                  <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                  <span className="bpm-card-section-title">Результаты расчета</span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
+                                  <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                                </div>
+                                {getSectionOpen(aiId, 'results') && (
+                                  <>
+                                    {aiSuggestionsOn && (
+                                      <button type="button" className="bpm-ai-dona-btn" onClick={(e) => { e.stopPropagation(); addSyntheticResult(aiId); }}>ИИ-донасыщение результатов расчета синтетикой</button>
+                                    )}
+                                    <div className="bpm-card-file-pills">
+                                      {[...aiResults, ...getSyntheticLabels(aiId)].map((name, i) => {
+                                        const dateStr = new Date(Date.now() - (hashStr(aiId + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
+                                        const status = ['ok', 'missing', 'warning'][hashStr(aiId + String(i)) % 3]
+                                        const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
+                                        return (
+                                          <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
+                                            <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
+                                            <span className="bpm-file-pill-name">{name}</span>
+                                            <span className="bpm-file-pill-date">{dateStr}</span>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      )
+                    }
+                    return (
+                      <React.Fragment key={task.id}>
+                        <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                        <div className="bpm-card" draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME_2, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                          <div className="bpm-card-top-row">
+                            <span className="bpm-card-id">№{task.id}</span>
+                            <span className="bpm-card-badge bpm-card-badge-in-work">В РАБОТЕ</span>
+                            <button type="button" className="bpm-card-delete" onClick={(ev) => { ev.stopPropagation(); deleteTask(AI_STAGE_NAME_2, taskIdx); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
+                          </div>
+                          <div className="bpm-card-name">{task.name || 'Задача'}</div>
+                          <div className="bpm-card-meta">
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Исполнитель:</span>
+                              <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME_2, taskIdx, role: 'executor' })}>{task.executor || '—'}</span>
+                            </div>
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Согласующий:</span>
+                              <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName: AI_STAGE_NAME_2, taskIdx, role: 'approver' })}>{task.approver || '—'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    )
+                  })}
+                  <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, (tasks[AI_STAGE_NAME_2] || []).length); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                </div>
+              </>
+            )
             ) : (
               <>
                 <div
@@ -1426,133 +1724,141 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                 </div>
                 <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(stageName)}>+ Добавить задачу</button>
                 <div className="bpm-stage-cards">
-                  <div className="bpm-drop-zone bpm-drop-zone-first" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, 0); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                  <div className="bpm-drop-zone bpm-drop-zone-first" onDrop={(e) => handleStageDropWithAi(stageName, 0, e)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
                   {(() => {
-                const _skip = true
-                if (_skip) return null
-                const ad = aiCardsData[0]
-                const aiId = ad.id
-                const aiSystems = getAiCardSystems(aiId)
-                const aiInputs = getAiCardInputFiles(aiId)
-                const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', aiId)
-                const agreed = agreedAiCardIds.has(aiId)
-                return (
-                <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} aria-hidden>
-                  <div className="bpm-card-top-row">
-                    <span className="bpm-card-id">{aiId}</span>
-                    <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
-                    <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
-                    <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(aiId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
-                  </div>
-                  <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
-                  <div className="bpm-card-meta">
-                    <div className="bpm-card-meta-row">
-                      <span className="bpm-card-meta-label">Исполнитель:</span>
-                      {/сюндюков/i.test(ad.executor || '') ? (
-                        <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.executor} />
-                      ) : (
-                        <span className="bpm-card-avatar bpm-card-avatar-executor" style={{ background: avatarColor(ad.executor) }} title={ad.executor}>{getInitials(ad.executor).slice(0, 1)}</span>
-                      )}
-                      <span className="bpm-card-meta-value">{ad.executor}</span>
-                    </div>
-                    <div className="bpm-card-meta-row">
-                      <span className="bpm-card-meta-label">Согласующий:</span>
-                      {/сюндюков/i.test(ad.approver || '') ? (
-                        <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.approver} />
-                      ) : (
-                        <span className="bpm-card-avatar bpm-card-avatar-approver" style={{ background: avatarColor(ad.approver) }} title={ad.approver}>{getInitials(ad.approver).slice(0, 1)}</span>
-                      )}
-                      <span className="bpm-card-meta-value">{ad.approver}</span>
-                    </div>
-                    <div className="bpm-card-meta-row bpm-card-schedule-row">
-                      <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
-                      <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
-                        {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                    </div>
-                    <div className="bpm-card-meta-row bpm-card-period-row">
-                      <span className="bpm-card-meta-label">Период выполнения:</span>
-                      <div className="bpm-card-period-inputs">
-                        <input type="date" className="bpm-input-date" defaultValue={ad.periodStart} onClick={(e) => e.stopPropagation()} readOnly />
-                        <span className="bpm-card-period-sep">—</span>
-                        <input type="date" className="bpm-input-date" defaultValue={ad.periodEnd} onClick={(e) => e.stopPropagation()} readOnly />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bpm-card-body">
-                    <div className="bpm-card-section-block">
-                      <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'systems'); } }}>
-                        <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
-                        <span className="bpm-card-section-title">Используемые системы</span>
-                        <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
-                      </div>
-                      {getSectionOpen(aiId, 'systems') && (
-                        <ul className="bpm-card-systems-list">
-                          {aiSystems.map((s, i) => (
-                            <li key={i} className="bpm-card-system-item">
-                              <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(s)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link"><span className="bpm-card-system-link-text">{s}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    <div className="bpm-card-divider" />
-                    <div className="bpm-card-section-block">
-                      <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'input'); } }}>
-                        <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
-                        <span className="bpm-card-section-title">Входные данные</span>
-                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
-                      </div>
-                      {getSectionOpen(aiId, 'input') && (
-                        <div className="bpm-card-file-pills">
-                          {aiInputs.map((f, i) => (
-                            <div key={i} className="bpm-file-pill bpm-file-pill-minimal">
-                              <span className={`bpm-icon-file-sm bpm-icon-file-ok`} />
-                              <span className="bpm-file-pill-name">{f.name}</span>
-                              <span className="bpm-file-pill-date">{f.date}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="bpm-card-divider" />
-                    <div className="bpm-card-section-block">
-                      <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'results'); } }}>
-                        <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
-                        <span className="bpm-card-section-title">Результаты расчета</span>
-                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
-                      </div>
-                      {getSectionOpen(aiId, 'results') && (
-                        <>
-                          {aiMode && (
-                            <button type="button" className="bpm-ai-dona-btn" onClick={(e) => { e.stopPropagation(); addSyntheticResult(aiId); }}>ИИ-донасыщение результатов расчета синтетикой</button>
-                          )}
-                          <div className="bpm-card-file-pills">
-                            {[...aiResults, ...getSyntheticLabels(aiId)].map((name, i) => {
-                              const dateStr = new Date(Date.now() - (hashStr(aiId + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
-                              const status = ['ok', 'missing', 'warning'][hashStr(aiId + String(i)) % 3]
-                              const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
-                              return (
-                                <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
-                                  <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
-                                  <span className="bpm-file-pill-name">{name}</span>
-                                  <span className="bpm-file-pill-date">{dateStr}</span>
-                                </div>
-                              )
-                            })}
+                const list = aiSuggestionsOn && aiSuggestionCardPlacements?.length ? getStageDisplayItems(stageName) : (filteredTasksByStage[stageName] || []).map((task) => ({ type: 'task', task, taskIdx: (tasks[stageName] || []).findIndex((t) => t.id === task.id) }))
+                return list.map((item, i) => {
+                  const dropTaskIdx = list.slice(0, i).filter((x) => x.type === 'task').length
+                  if (item.type === 'ai') {
+                    const ad = aiCardsData[item.cardKey + 1]
+                    if (!ad) return null
+                    const displayId = `ai-inline-${item.cardKey}`
+                    if (removedAiCardIds.has(displayId)) return null
+                    const aiSystems = getAiCardSystems(displayId)
+                    const aiInputs = getAiCardInputFiles(displayId)
+                    const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', displayId)
+                    const agreed = agreedAiCardIds.has(displayId)
+                    return (
+                      <React.Fragment key={`ai-${item.cardKey}-${stageName}`}>
+                        <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => handleStageDropWithAi(stageName, i, e)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                        <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} draggable onDragStart={(e) => { draggedAiCardRef.current = { stageName, fromIndex: i, cardKey: item.cardKey }; e.dataTransfer.setData('text/plain', JSON.stringify({ stageName, taskIdx: i, aiCardKey: item.cardKey })); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { draggedAiCardRef.current = null; }} onDrop={(e) => handleStageDropWithAi(stageName, i, e)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                          <div className="bpm-card-top-row">
+                            <span className="bpm-card-id">{displayId}</span>
+                            <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
+                            <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(displayId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
+                            <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(displayId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
                           </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                )
-              })()}
-              {(filteredTasksByStage[stageName] || []).map((task) => {
-                const taskIdx = (tasks[stageName] || []).findIndex((t) => t.id === task.id)
-                if (taskIdx < 0) return null
+                          {editingAiCardId === displayId ? (
+                            <input className="bpm-card-name-input" defaultValue={aiStaticCardOverrides[displayId]?.name || 'ИИ-автопредложенная карточка'} onBlur={(e) => { const v = e.target.value.trim(); if (v) setAiStaticCardOverrides((p) => ({ ...p, [displayId]: { ...p[displayId], name: v } })); setEditingAiCardId(null); }} onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }} onClick={(ev) => ev.stopPropagation()} autoFocus />
+                          ) : (
+                            <div className="bpm-card-name" onClick={(ev) => { ev.stopPropagation(); setEditingAiCardId(displayId); }} title="Нажмите для редактирования">{aiStaticCardOverrides[displayId]?.name || 'ИИ-автопредложенная карточка'}</div>
+                          )}
+                          <div className="bpm-card-meta">
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Исполнитель:</span>
+                              {/сюндюков/i.test(ad.executor || '') ? (
+                                <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.executor} />
+                              ) : (
+                                <span className="bpm-card-avatar bpm-card-avatar-executor" style={{ background: avatarColor(ad.executor) }} title={ad.executor}>{getInitials(ad.executor).slice(0, 1)}</span>
+                              )}
+                              <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName, taskIdx: i, role: 'executor', aiCardId: displayId })}>{ad.executor}</span>
+                            </div>
+                            <div className="bpm-card-meta-row">
+                              <span className="bpm-card-meta-label">Согласующий:</span>
+                              {/сюндюков/i.test(ad.approver || '') ? (
+                                <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/sanya-bodibilder.png`} alt="" className="bpm-card-avatar bpm-card-avatar-img" title={ad.approver} />
+                              ) : (
+                                <span className="bpm-card-avatar bpm-card-avatar-approver" style={{ background: avatarColor(ad.approver) }} title={ad.approver}>{getInitials(ad.approver).slice(0, 1)}</span>
+                              )}
+                              <span className="bpm-card-meta-value" onClick={() => setRightPanel({ type: 'executor', stageName, taskIdx: i, role: 'approver', aiCardId: displayId })}>{ad.approver}</span>
+                            </div>
+                            <div className="bpm-card-meta-row bpm-card-schedule-row">
+                              <span className="bpm-card-meta-label bpm-card-meta-label-wrap">График<br />выполнения:</span>
+                              <select className="bpm-select-inline bpm-select-tiny" defaultValue="каждые 2 дня" onClick={(e) => e.stopPropagation()}>
+                                {SCHEDULE_EVERY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                              </select>
+                            </div>
+                            <div className="bpm-card-meta-row bpm-card-period-row">
+                              <span className="bpm-card-meta-label">Период выполнения:</span>
+                              <div className="bpm-card-period-inputs">
+                                <input type="date" className="bpm-input-date" defaultValue={ad.periodStart} onClick={(e) => e.stopPropagation()} />
+                                <span className="bpm-card-period-sep">—</span>
+                                <input type="date" className="bpm-input-date" defaultValue={ad.periodEnd} onClick={(e) => e.stopPropagation()} />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="bpm-card-body">
+                            <div className="bpm-card-section-block">
+                              <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(displayId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(displayId, 'systems'); } }}>
+                                <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(displayId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                <span className="bpm-card-section-title">Используемые системы</span>
+                                <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
+                              </div>
+                              {getSectionOpen(displayId, 'systems') && (
+                                <ul className="bpm-card-systems-list">
+                                  {aiSystems.map((s, idx) => (
+                                    <li key={idx} className="bpm-card-system-item">
+                                      <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#/service/${encodeURIComponent(s)}`} target="_blank" rel="noopener noreferrer" className="bpm-card-system-link"><span className="bpm-card-system-link-text">{s}</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                            <div className="bpm-card-divider" />
+                            <div className="bpm-card-section-block">
+                              <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(displayId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(displayId, 'input'); } }}>
+                                <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(displayId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                <span className="bpm-card-section-title">Входные данные</span>
+                                <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
+                                <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                              </div>
+                              {getSectionOpen(displayId, 'input') && (
+                                <div className="bpm-card-file-pills">
+                                  {aiInputs.map((f, idx) => (
+                                    <div key={idx} className="bpm-file-pill bpm-file-pill-minimal">
+                                      <span className="bpm-icon-file-sm bpm-icon-file-ok" />
+                                      <span className="bpm-file-pill-name">{f.name}</span>
+                                      <span className="bpm-file-pill-date">{f.date}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="bpm-card-divider" />
+                            <div className="bpm-card-section-block">
+                              <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(displayId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(displayId, 'results'); } }}>
+                                <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(displayId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
+                                <span className="bpm-card-section-title">Результаты расчета</span>
+                                <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
+                                <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(displayId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(displayId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                              </div>
+                              {getSectionOpen(displayId, 'results') && (
+                                <div className="bpm-card-file-pills">
+                                  {[...aiResults, ...getSyntheticLabels(displayId)].map((name, idx) => {
+                                    const dateStr = new Date(Date.now() - (hashStr(displayId + String(idx)) % 30) * 86400000).toLocaleDateString('ru-RU')
+                                    const status = ['ok', 'missing', 'warning'][hashStr(displayId + String(idx)) % 3]
+                                    const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
+                                    return (
+                                      <div key={idx} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
+                                        <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
+                                        <span className="bpm-file-pill-name">{name}</span>
+                                        <span className="bpm-file-pill-date">{dateStr}</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    )
+                  }
+                  const task = item.task
+                  const taskIdx = item.taskIdx
+                  if (!task || taskIdx < 0) return null
+                const isAiCaseCard = aiCaseCardIds.has(task.id)
+                const agreedAiCase = agreedAiCaseCardIds.has(task.id)
                 const isHighlight = cardMatchesHighlight(task.name, highlightCardName)
                 const key = `${stageIdx}-${taskIdx}`
                 const cardKey = `${stageName}-${task.id}`
@@ -1563,19 +1869,22 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                 const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
                 return (
                   <React.Fragment key={cardKey}>
-                    <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                    <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => handleStageDropWithAi(stageName, i, e, dropTaskIdx)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
                     <div
-                      className={`bpm-card ${isHighlight ? 'bpm-card-highlight' : ''} ${(task.name || '').trim() === 'Реинжениринг' ? 'bpm-card-reinjing' : ''} ${connectionFrom && connectionFrom.stageName === stageName && connectionFrom.taskId === task.id ? 'bpm-card-connection-from' : ''}`}
+                      className={`bpm-card ${isAiCaseCard ? 'bpm-card-ai-suggestion ' + (agreedAiCase ? 'bpm-card-ai-agreed' : '') : ''} ${isHighlight ? 'bpm-card-highlight' : ''} ${(task.name || '').trim() === 'Реинжениринг' ? 'bpm-card-reinjing' : ''} ${connectionFrom && connectionFrom.stageName === stageName && connectionFrom.taskId === task.id ? 'bpm-card-connection-from' : ''}`}
                       data-connection-stage={stageName}
                       data-connection-id={task.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, stageName, taskIdx)}
-                      onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, taskIdx); }}
+                      onDrop={(e) => handleStageDropWithAi(stageName, i + 1, e, dropTaskIdx + 1)}
                       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}
                       onClick={connectionsMode ? (ev) => { ev.stopPropagation(); if (connectionFrom) { if (connectionFrom.stageName !== stageName || connectionFrom.taskId !== task.id) { setConnections((c) => [...c, { fromStage: connectionFrom.stageName, fromId: connectionFrom.taskId, toStage: stageName, toId: task.id }]); } setConnectionFrom(null); } else { setConnectionFrom({ stageName, taskId: task.id }); } } : undefined}
                     >
                       <div className="bpm-card-top-row">
                         <span className="bpm-card-id">№{task.id}</span>
+                        {isAiCaseCard && (
+                          <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); setAgreedAiCaseCardIds((prev) => { const n = new Set(prev); if (n.has(task.id)) n.delete(task.id); else n.add(task.id); return n; }); }} role="button" tabIndex={0} title="Согласовать">{agreedAiCase ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
+                        )}
                         <span className={'bpm-card-badge bpm-card-badge-' + ({ 'в работе': 'in-work', 'завершен': 'success', 'ошибка': 'error', 'пауза': 'pause' }[task.status] || 'in-work')}>
                           {(task.status || 'в работе').toUpperCase()}
                         </span>
@@ -1779,8 +2088,9 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                     </div>
                   </React.Fragment>
                 )
-              })}
-              <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, (tasks[stageName] || []).length); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
+                })
+                })()}
+              <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => handleStageDropWithAi(stageName, list.length, e, (tasks[stageName] || []).length)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
                 </div>
               </>
             )}

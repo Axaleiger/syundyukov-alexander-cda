@@ -106,12 +106,18 @@ function App() {
     setThinkingSteps((s) => [...s, { id: `step-${Date.now()}-${s.length}`, label, status: 'done' }])
     setThinkingCurrentMessage(label)
   }, [])
+  const [bpmStages, setBpmStages] = useState(null)
+  const [bpmTasks, setBpmTasks] = useState(null)
   const handleBoardChange = useCallback((stages, tasks) => {
     setFlowCode(bpmToMermaid(stages, tasks))
+    setBpmStages(stages)
+    setBpmTasks(tasks)
   }, [])
   const [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning] = useState(false)
+  const [hypercubeCaseIntro, setHypercubeCaseIntro] = useState(false)
   const onBpmCommandConsumed = useCallback((opts) => {
     setBpmCommand(null)
+    if (opts?.flowCode) setFlowCode(opts.flowCode)
     if (opts?.switchToOntology !== false) {
       setActiveTab('ontology')
       setOpenConfiguratorFromPlanning(true)
@@ -248,6 +254,8 @@ function App() {
           setActiveTab={setActiveTab}
           setBpmCommand={setBpmCommand}
           setResultsDashboardFocus={setResultsDashboardFocus}
+          setHypercubeCaseIntro={setHypercubeCaseIntro}
+          setShowBpm={setShowBpm}
           onBpmCommandConsumedRef={bpmCommandConsumedRef}
           onThinkingPanelOpen={setThinkingPanelOpen}
           isThinkingPanelOpen={thinkingPanelOpen}
@@ -415,9 +423,10 @@ function App() {
                 </div>
               </section>
 
-              <section className="section hypercube-section">
+              <section className={`section hypercube-section ${hypercubeCaseIntro ? 'hypercube-case-intro' : ''}`}>
                 <h2>Гиперкуб рычагов влияния</h2>
                 <Hypercube3D
+                  highlightCaseTree={hypercubeCaseIntro}
                   onOpenBpm={(highlight) => {
                     setBpmHighlight(highlight || null)
                     setActiveTab('planning')
@@ -457,6 +466,8 @@ function App() {
                         ? 'hantos'
                         : (selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos')
                   }
+                  initialStages={bpmStages}
+                  initialTasks={bpmTasks}
                   selectedAssetName={selectedAssetPoint?.name}
                   highlightCardName={bpmHighlight}
                   onClose={() => setActiveTab('scenarios')}
@@ -503,6 +514,8 @@ function App() {
         setBpmCommand={setBpmCommand}
         setConfiguratorNodeCommand={setConfiguratorNodeCommand}
         setResultsDashboardFocus={setResultsDashboardFocus}
+        setHypercubeCaseIntro={setHypercubeCaseIntro}
+        setShowBpm={setShowBpm}
         onBpmCommandConsumedRef={bpmCommandConsumedRef}
         onThinkingPanelOpen={setThinkingPanelOpen}
         isThinkingPanelOpen={thinkingPanelOpen}

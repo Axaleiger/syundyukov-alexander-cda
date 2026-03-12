@@ -433,6 +433,10 @@
   min-width: min-content;
 }
 
+.bpm-toolbar-top-panel-divider-wrap {
+  margin-top: -4px;
+}
+
 .bpm-board-header-divider {
   height: 0;
   border-bottom: 1px solid rgba(0, 65, 102, 0.2);
@@ -2293,6 +2297,10 @@
   background: #ECF1F4;
   border: 2px solid #00BFFF;
   min-width: 200px;
+}
+
+.bpm-stage-ai-suggestion.bpm-stage-column-agreed {
+  border-color: #22c55e;
 }
 
 .bpm-stage-header-ai {

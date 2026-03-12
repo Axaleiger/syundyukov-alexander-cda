@@ -78,11 +78,10 @@ function ConfiguratorCanvas({
     const scale = Math.max(0.45, Math.min(rect.width / contentW, rect.height / contentH, 1.2))
     const cx = (minX + maxX) / 2
     const cy = (minY + maxY) / 2
-    const CANVAS_HALF_W = 16384
-    const CANVAS_HALF_H = 16384
+    const CANVAS_HALF = 16384
     setTransform({
-      x: (CANVAS_HALF_W - cx) * scale,
-      y: (CANVAS_HALF_H - cy) * scale,
+      x: CANVAS_HALF - cx * scale,
+      y: CANVAS_HALF - cy * scale,
       scale,
     })
   }, [nodes.length])
