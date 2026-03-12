@@ -64,11 +64,21 @@ function getManagerByName(name, personnel) {
 function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiMode }) {
   const [search, setSearch] = useState('')
   const [expandedUser, setExpandedUser] = useState(null)
+  const [customName, setCustomName] = useState('')
+  const [customPersonnel, setCustomPersonnel] = useState([])
   const title = roleLabel === 'Согласующий' ? 'Выбор согласующего' : 'Выбор исполнителя'
 
+  const allPersonnel = [...customPersonnel, ...PERSONNEL]
   const filtered = (search || '').trim()
-    ? PERSONNEL.filter((p) => p.toLowerCase().includes((search || '').trim().toLowerCase()))
-    : PERSONNEL
+    ? allPersonnel.filter((p) => p.toLowerCase().includes((search || '').trim().toLowerCase()))
+    : allPersonnel
+
+  const handleAddCustom = () => {
+    const name = customName.trim()
+    if (!name || allPersonnel.some((p) => p === name)) return
+    setCustomPersonnel((prev) => [...prev, name])
+    setCustomName('')
+  }
 
   const handleAiAutoselect = () => {
     const list = filtered.length ? filtered : PERSONNEL
@@ -109,14 +119,14 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
             const isExpanded = expandedUser === name
             const load = getLoadByName(name)
             const loadColor = getLoadColor(load)
-            const manager = getManagerByName(name, PERSONNEL)
+            const manager = getManagerByName(name, allPersonnel)
             const email = getEmailByName(name)
             return (
               <div key={name} className="bpm-right-panel-user-block">
                 <div
                   className={`bpm-right-panel-user-row-wrap ${currentValue === name ? 'active' : ''} ${isExpanded ? 'bpm-right-panel-user-row-expanded' : ''}`}
                 >
-                  <div className="bpm-right-panel-user-row-inner" onClick={() => setExpandedUser(isExpanded ? null : name)}>
+                  <div className="bpm-right-panel-user-row-inner" onClick={(e) => { if (!e.target.closest('.bpm-right-panel-user-expand')) handleSelectUser(name); }}>
                     {isSyundyukov(name) ? (
                       <img src={`${base}sanya-bodibilder.png`} alt="" className="bpm-right-panel-user-avatar bpm-right-panel-user-avatar-img" />
                     ) : (
@@ -127,7 +137,6 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
                       <span className="bpm-right-panel-user-role-label">{isSyundyukov(name) ? 'Эксперт' : 'Должность'}</span>
                     </div>
                   </div>
-                  <button type="button" className="bpm-right-panel-user-select-btn" onClick={(e) => { e.stopPropagation(); handleSelectUser(name); }} title="Выбрать">Выбрать</button>
                   <button
                     type="button"
                     className="bpm-right-panel-user-expand"
@@ -190,6 +199,17 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
               </div>
             )
           })}
+        </div>
+        <div className="bpm-right-panel-custom">
+          <input
+            type="text"
+            className="bpm-input"
+            placeholder="Ввести ФИО вручную"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
+          />
+          <button type="button" className="bpm-btn-sm" onClick={handleAddCustom}>Добавить сотрудника</button>
         </div>
       </div>
     </div>

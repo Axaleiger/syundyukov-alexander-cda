@@ -230,7 +230,12 @@ function downloadBlob(blob, filename) {
 }
 
 function downloadInputListExcel(inputFiles) {
-  const rows = (inputFiles || []).map((f) => ({ 'Название данных': f.name || 'Название данных', 'Статус': f.status || '—', 'Дата': f.date || '—' }))
+  const rows = (inputFiles || []).map((f) => ({
+    'Название данных': f.name || 'Название данных',
+    'Статус': f.status || '—',
+    'Дата': f.date || '—',
+    ...(f.aiChanged && f.aiComment ? { 'Комментарий ИИ': f.aiComment } : {}),
+  }))
   const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Название данных': '', 'Статус': '', 'Дата': '' }])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Данные')
@@ -248,7 +253,13 @@ function downloadEmptyExcel(fileName) {
 }
 
 function downloadResultListExcel(resultLines) {
-  const rows = (resultLines || []).map((name) => ({ 'Результаты расчета': name }))
+  const rows = (resultLines || []).map((r) => {
+    const name = typeof r === 'string' ? r : (r.name || '')
+    const row = { 'Результаты расчета': name }
+    if (typeof r === 'object' && r.aiChanged && r.aiComment) row['Комментарий ИИ'] = r.aiComment
+    if (typeof r === 'object' && r.status) row['Статус'] = r.status
+    return row
+  })
   const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ 'Результаты расчета': '' }])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Результаты')
@@ -435,15 +446,21 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   const [syntheticCountByTaskId, setSyntheticCountByTaskId] = useState({})
   const [aiAutoselectByTaskId, setAiAutoselectByTaskId] = useState({})
   const [agreedAiCardIds, setAgreedAiCardIds] = useState(() => new Set())
+  const [aiSuggestionsOn, setAiSuggestionsOn] = useState(false)
+  const [removedAiCardIds, setRemovedAiCardIds] = useState(() => new Set())
   const boardRef = React.useRef(null)
+
+  const removeAiCard = useCallback((aiId) => {
+    setRemovedAiCardIds((prev) => new Set(prev).add(aiId))
+  }, [])
 
   useEffect(() => {
     if (!aiMode) setAiAutoselectByTaskId({})
   }, [aiMode])
 
   useEffect(() => {
-    if (aiMode) setTasks((t) => ({ ...t, [AI_STAGE_NAME]: t[AI_STAGE_NAME] || [] }))
-  }, [aiMode])
+    if (aiSuggestionsOn) setTasks((t) => ({ ...t, [AI_STAGE_NAME]: t[AI_STAGE_NAME] || [] }))
+  }, [aiSuggestionsOn])
 
   const toggleAgreedAiCard = useCallback((aiId) => {
     setAgreedAiCardIds((prev) => {
@@ -454,12 +471,6 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
     })
   }, [])
 
-  const aiCardOffset = useCallback((aiId) => {
-    let h = 0
-    for (let i = 0; i < aiId.length; i++) h = ((h << 5) - h + aiId.charCodeAt(i)) | 0
-    return { x: (h % 13) - 6, y: ((h >> 8) % 11) - 5, delay: 200 + (Math.abs(h) % 401) }
-  }, [])
-
   const aiCardsData = useMemo(() => [
     getAiCardData('ai-0'),
     getAiCardData('ai-stage-0'),
@@ -467,14 +478,72 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
     getAiCardData('ai-stage-2'),
   ], [])
 
+  const AI_DONA_COMMENTS = ['Доработка данных', 'Устранение выбросов', 'Восполнение пропусков', 'Корректировка аномалий', 'Приведение к формату']
+
+  const findTaskLocation = useCallback((taskId) => {
+    for (const stageName of Object.keys(tasks)) {
+      const list = tasks[stageName] || []
+      const idx = list.findIndex((t) => t.id === taskId)
+      if (idx >= 0) return { stageName, taskIdx: idx }
+    }
+    return null
+  }, [tasks])
+
+  const applyInputDona = useCallback((taskId) => {
+    const loc = findTaskLocation(taskId)
+    if (!loc) return
+    const { stageName, taskIdx } = loc
+    const task = tasks[stageName][taskIdx]
+    const inputFiles = (getTaskInputFiles(task)).map((f) => ({ ...f, name: f.name || 'Название данных', date: f.date || new Date().toLocaleDateString('ru-RU'), status: f.status || 'ok' }))
+    const next = inputFiles.map((f, i) => {
+      if (Math.random() > 0.4) return f
+      const status = f.status
+      let newStatus = status
+      if (status === 'warning') newStatus = Math.random() > 0.5 ? 'ok' : 'warning'
+      else if (status === 'missing') newStatus = ['ok', 'warning'][Math.floor(Math.random() * 2)]
+      if (newStatus !== status) {
+        return { ...f, status: newStatus, aiChanged: true, aiComment: AI_DONA_COMMENTS[hashStr(taskId + String(i)) % AI_DONA_COMMENTS.length] }
+      }
+      return f
+    })
+    setTasks((t) => {
+      const list = [...(t[stageName] || [])]
+      list[taskIdx] = { ...list[taskIdx], inputFiles: next }
+      return { ...t, [stageName]: list }
+    })
+  }, [tasks, findTaskLocation])
+
+  const applyResultDona = useCallback((taskId) => {
+    const loc = findTaskLocation(taskId)
+    if (!loc) return
+    const { stageName, taskIdx } = loc
+    const task = tasks[stageName][taskIdx]
+    const resultFiles = (getTaskResultFiles(task)).map((r) => ({ name: r.name || 'Результат расчета', status: r.status || ['ok', 'missing', 'warning'][hashStr(taskId + (r.name || '')) % 3] }))
+    const next = resultFiles.map((f, i) => {
+      if (Math.random() > 0.4) return f
+      const status = f.status
+      let newStatus = status
+      if (status === 'warning') newStatus = Math.random() > 0.5 ? 'ok' : 'warning'
+      else if (status === 'missing') newStatus = ['ok', 'warning'][Math.floor(Math.random() * 2)]
+      if (newStatus !== status) {
+        return { ...f, status: newStatus, aiChanged: true, aiComment: AI_DONA_COMMENTS[hashStr(taskId + String(i)) % AI_DONA_COMMENTS.length] }
+      }
+      return f
+    })
+    setTasks((t) => {
+      const list = [...(t[stageName] || [])]
+      list[taskIdx] = { ...list[taskIdx], resultFiles: next }
+      return { ...t, [stageName]: list }
+    })
+  }, [tasks, findTaskLocation])
+
   const addSyntheticResult = useCallback((taskId) => {
-    setSyntheticCountByTaskId((prev) => ({ ...prev, [taskId]: (prev[taskId] || 0) + 1 }))
-  }, [])
+    applyResultDona(taskId)
+  }, [applyResultDona])
 
   const getSyntheticLabels = useCallback((taskId) => {
-    const n = syntheticCountByTaskId[taskId] || 0
-    return Array.from({ length: n }, (_, i) => `Синтетика ${i + 1}`)
-  }, [syntheticCountByTaskId])
+    return []
+  }, [])
 
   useEffect(() => {
     const data = getInitialBoard(initialBoardId)
@@ -707,30 +776,10 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   const addStage = useCallback(() => {
     const name = 'Новый этап'
     setStages((s) => [name, ...s])
-    setTasks((t) => {
-      const next = { ...t, [name]: [] }
-      if (aiMode) {
-        const ad = getAiCardData(`new-stage-${Date.now()}`)
-        next[name] = [{
-          id: ad.id,
-          name: 'ИИ-автопредложенная карточка',
-          executor: ad.executor,
-          approver: ad.approver,
-          deadline: new Date(),
-          status: 'в работе',
-          date: new Date().toLocaleDateString('ru-RU'),
-          entries: [{ system: '', input: '', output: '' }],
-          scheduleEvery: 'каждые 2 дня',
-          periodStart: ad.periodStart,
-          periodEnd: ad.periodEnd,
-          isAiSuggested: true,
-        }]
-      }
-      return next
-    })
+    setTasks((t) => ({ ...t, [name]: [] }))
     setEditingStage(0)
     setStageNameEdit(name)
-  }, [aiMode])
+  }, [])
 
   const handleDropAt = useCallback((targetStage, insertBeforeIndex) => {
     if (!dragged) return
@@ -879,9 +928,9 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
     if (stages.length < 2) return []
     const n = stages.length
     return [
-      { iconEye: 'eye', iconAction: 'dash', color: lessSaturated('#F38B00'), label: '2 итерации', startStage: 0, endStage: n, leftPct: '0%', widthPct: '100%' },
-      { iconEye: 'eye-slash', iconAction: 'refresh', color: lessSaturated('#56B9F2'), label: '3 итерации', startStage: 1, endStage: Math.min(4, n), leftPct: `${(1 / n) * 100}%`, widthPct: `${(Math.min(3, n - 1) / n) * 100}%` },
-      { iconEye: 'eye-slash', iconAction: 'dots', color: lessSaturated('#22C38E'), label: '2 итерации', startStage: 0, endStage: n, leftPct: '0%', widthPct: '100%' },
+      { iconEye: 'eye', iconAction: 'dash', color: 'rgb(253, 232, 204)', label: '2 итерации', startStage: 0, endStage: n, leftPct: '0%', widthPct: '100%' },
+      { iconEye: 'eye-slash', iconAction: 'refresh', color: 'rgb(221, 241, 252)', label: '3 итерации', startStage: 1, endStage: Math.min(4, n), leftPct: `${(1 / n) * 100}%`, widthPct: `${(Math.min(3, n - 1) / n) * 100}%` },
+      { iconEye: 'eye-slash', iconAction: 'dots', color: 'rgb(211, 243, 232)', label: '2 итерации', startStage: 0, endStage: n, leftPct: '0%', widthPct: '100%' },
     ]
   }, [stages.length])
 
@@ -1091,7 +1140,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                 </span>
                 <span className={`bpm-toggle-label ${viewMode === 'Подробный вид' ? 'active' : ''}`} onClick={() => setViewMode('Подробный вид')}>Подробный</span>
               </div>
-              <button type="button" className="bpm-btn bpm-btn-ghost bpm-ai-auto-toolbar-btn" onClick={() => { setAiMode(true); setAgreedAiCardIds(new Set()); setTasks((t) => ({ ...t, [AI_STAGE_NAME]: [] })); }} title="Сгенерировать ИИ-этапы и карточки заново">ИИ-авто</button>
+              <button type="button" className={`bpm-btn bpm-btn-ghost bpm-ai-autosvyazi-inline bpm-ai-suggestions-btn ${aiSuggestionsOn ? 'bpm-ai-suggestions-btn-on' : ''}`} onClick={() => { setAiSuggestionsOn((on) => !on); if (!aiSuggestionsOn) { setAgreedAiCardIds(new Set()); setRemovedAiCardIds(new Set()); setTasks((t) => ({ ...t, [AI_STAGE_NAME]: [] })); } }} title={aiSuggestionsOn ? 'Выключить ИИ-автопредложения' : 'Включить ИИ-автопредложения'}>ИИ-автопредложения</button>
               <button type="button" className="bpm-btn bpm-btn-primary" onClick={() => setShowCalculateView(true)} style={{ marginLeft: 'auto' }}>Рассчитать</button>
             </div>
           </div>
@@ -1175,20 +1224,20 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
             <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(stageName)}>+ Добавить задачу</button>
             <div className="bpm-stage-cards">
               <div className="bpm-drop-zone bpm-drop-zone-first" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, 0); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-              {aiMode && stageIdx === 0 && (() => {
+              {aiSuggestionsOn && stageIdx === 0 && !removedAiCardIds.has(aiCardsData[0]?.id) && (() => {
                 const ad = aiCardsData[0]
                 const aiId = ad.id
                 const aiSystems = getAiCardSystems(aiId)
                 const aiInputs = getAiCardInputFiles(aiId)
                 const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', aiId)
-                const offset = aiCardOffset(aiId)
                 const agreed = agreedAiCardIds.has(aiId)
                 return (
-                <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} aria-hidden style={{ transform: `translate(${offset.x}px, ${offset.y}px)`, animationDelay: `${offset.delay}ms` }}>
+                <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} aria-hidden>
                   <div className="bpm-card-top-row">
                     <span className="bpm-card-id">{aiId}</span>
                     <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
-                    <button type="button" className="bpm-btn bpm-btn-ghost bpm-card-badge bpm-card-ai-agree-btn" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</button>
+                    <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
+                    <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(aiId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
                   </div>
                   <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
                   <div className="bpm-card-meta">
@@ -1227,11 +1276,11 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                   </div>
                   <div className="bpm-card-body">
                     <div className="bpm-card-section-block">
-                      <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')}>
+                      <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'systems'); } }}>
                         <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                         <span className="bpm-card-section-title">Используемые системы</span>
                         <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
-                      </button>
+                      </div>
                       {getSectionOpen(aiId, 'systems') && (
                         <ul className="bpm-card-systems-list">
                           {aiSystems.map((s, i) => (
@@ -1244,12 +1293,12 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                     </div>
                     <div className="bpm-card-divider" />
                     <div className="bpm-card-section-block">
-                      <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')}>
+                      <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'input'); } }}>
                         <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                         <span className="bpm-card-section-title">Входные данные</span>
                         <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-file-filled" /></span>
-                      </button>
+                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                      </div>
                       {getSectionOpen(aiId, 'input') && (
                         <div className="bpm-card-file-pills">
                           {aiInputs.map((f, i) => (
@@ -1264,12 +1313,12 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                     </div>
                     <div className="bpm-card-divider" />
                     <div className="bpm-card-section-block">
-                      <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')}>
+                      <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'results'); } }}>
                         <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                         <span className="bpm-card-section-title">Результаты расчета</span>
                         <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-file-filled" /></span>
-                      </button>
+                        <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                      </div>
                       {getSectionOpen(aiId, 'results') && (
                         <>
                           {aiMode && (
@@ -1279,7 +1328,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                             {[...aiResults, ...getSyntheticLabels(aiId)].map((name, i) => {
                               const dateStr = new Date(Date.now() - (hashStr(aiId + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
                               const status = ['ok', 'missing', 'warning'][hashStr(aiId + String(i)) % 3]
-                              const tooltip = { ok: 'корректно', missing: 'нехватка данных', warning: 'пропуски данных' }[status]
+                              const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
                               return (
                                 <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
                                   <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
@@ -1391,13 +1440,13 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                           {isExp && (
                             <div className="bpm-card-body">
                               <div className="bpm-card-section-block">
-                                <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'systems')}>
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(task.id, 'systems'); } }}>
                                   <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                                   <span className="bpm-card-section-title">{(task.name || '').trim() === 'Реинжениринг' ? 'Взаимосвязанный бизнес-процесс' : 'Используемые системы'}</span>
                                   {(task.name || '').trim() !== 'Реинжениринг' && (
                                     <button type="button" className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(ev) => { ev.stopPropagation(); setRightPanel({ type: 'systems', stageName, taskIdx }); }} title="Добавить систему">+</button>
                                   )}
-                                </button>
+                                </div>
                                 {getSectionOpen(task.id, 'systems') && (
                                   <>
                                     {(task.name || '').trim() === 'Реинжениринг' ? (
@@ -1428,23 +1477,28 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                               </div>
                               <div className="bpm-card-divider" />
                               <div className="bpm-card-section-block">
-                                <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'input')}>
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(task.id, 'input'); } }}>
                                   <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                                   <span className="bpm-card-section-title">Входные данные</span>
-                                  <button type="button" className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" aria-hidden /></button>
-                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadInputListExcel(getTaskInputFiles(task)); }} aria-label="Скачать список данных"><span className="bpm-icon-file-filled" aria-hidden /></button>
-                                </button>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download bpm-icon-arrow-down" aria-hidden /></button>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadInputListExcel(getTaskInputFiles(task)); }} aria-label="Скачать список данных"><span className="bpm-icon-arrow-up" aria-hidden /></button>
+                                </div>
                                 {getSectionOpen(task.id, 'input') && (
                                   <>
+                                    {aiMode && (
+                                      <button type="button" className="bpm-ai-dona-btn" onClick={(ev) => { ev.stopPropagation(); applyInputDona(task.id); }}>ИИ-донасыщение входных данных синтетикой</button>
+                                    )}
                                     <div className="bpm-card-file-pills">
                                       {getTaskInputFiles(task).map((f, i) => {
                                         const status = f.status || ['ok', 'missing', 'warning'][hashStr(task.id + String(i)) % 3]
                                         const dateStr = f.date || new Date().toLocaleDateString('ru-RU')
+                                        const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
                                         return (
-                                        <div key={i} className="bpm-file-pill bpm-file-pill-minimal">
-                                          <button type="button" className={`bpm-icon-file-sm bpm-icon-file-${status}`} title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadEmptyExcel(f.name || 'Название данных'); }} aria-label="Скачать" />
-                                          <span className="bpm-file-pill-name" title="Скачать">{f.name || 'Название данных'}</span>
+                                        <div key={i} className={`bpm-file-pill bpm-file-pill-minimal ${f.aiChanged ? 'bpm-file-pill-ai' : ''}`} title={f.aiComment || tooltip}>
+                                          <button type="button" className={`bpm-icon-file-sm bpm-icon-file-${status}`} title={f.aiComment || tooltip} onClick={(ev) => { ev.stopPropagation(); downloadEmptyExcel(f.name || 'Название данных'); }} aria-label="Скачать" />
+                                          <span className="bpm-file-pill-name">{f.name || 'Название данных'}</span>
                                           <span className="bpm-file-pill-date">{dateStr}</span>
+                                          {f.aiChanged && <span className="bpm-file-pill-ai-icon" title={f.aiComment} aria-hidden />}
                                         </div>
                                         )
                                       })}
@@ -1454,12 +1508,12 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                               </div>
                               <div className="bpm-card-divider" />
                               <div className="bpm-card-section-block">
-                                <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'results')}>
+                                <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(task.id, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(task.id, 'results'); } }}>
                                   <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(task.id, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                                   <span className="bpm-card-section-title">Результаты расчета</span>
-                                  <button type="button" className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" aria-hidden /></button>
-                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadResultListExcel([...getTaskResultFiles(task).map((r) => r.name), ...getSyntheticLabels(task.id)]); }} aria-label="Скачать результаты"><span className="bpm-icon-file-filled" aria-hidden /></button>
-                                </button>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download bpm-icon-arrow-down" aria-hidden /></button>
+                                  <button type="button" className="bpm-icon-file-outline-btn" title="Скачать" onClick={(ev) => { ev.stopPropagation(); downloadResultListExcel(getTaskResultFiles(task)); }} aria-label="Скачать результаты"><span className="bpm-icon-arrow-up" aria-hidden /></button>
+                                </div>
                                 {getSectionOpen(task.id, 'results') && (
                                   <>
                                     {aiMode && (
@@ -1468,13 +1522,14 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                                     <div className="bpm-card-file-pills">
                                       {[...getTaskResultFiles(task), ...getSyntheticLabels(task.id).map((name) => ({ name }))].map((f, i) => {
                                         const dateStr = f.date != null ? (typeof f.date === 'string' ? f.date : new Date(f.date).toLocaleDateString('ru-RU')) : new Date(Date.now() - (hashStr(task.id + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
-                                        const status = ['ok', 'missing', 'warning'][hashStr(task.id + String(i)) % 3]
-                                        const tooltip = { ok: 'корректно', missing: 'нехватка данных', warning: 'пропуски данных' }[status]
+                                        const status = f.status || ['ok', 'missing', 'warning'][hashStr(task.id + String(i)) % 3]
+                                        const tooltip = f.aiComment || { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
                                         return (
-                                          <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
-                                            <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />
+                                          <div key={i} className={`bpm-file-pill bpm-file-pill-minimal ${f.aiChanged ? 'bpm-file-pill-ai' : ''}`} title={tooltip}>
+                                            <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} title={tooltip} />
                                             <span className="bpm-file-pill-name">{f.name || 'Результат расчета'}</span>
                                             <span className="bpm-file-pill-date">{dateStr}</span>
+                                            {f.aiChanged && <span className="bpm-file-pill-ai-icon" title={f.aiComment} aria-hidden />}
                                           </div>
                                         )
                                       })}
@@ -1510,28 +1565,32 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
               <div className="bpm-drop-zone bpm-drop-zone-bottom" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(stageName, (tasks[stageName] || []).length); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
             </div>
           </div>
-          {stageIdx === 0 && aiMode && (
+          {stageIdx === 0 && aiSuggestionsOn && (
             <div className="bpm-stage-column bpm-stage-ai-suggestion" aria-hidden>
               <div className="bpm-stage-header bpm-stage-header-ai">
-                <span className="bpm-stage-title">ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП</span>
-                <div className="bpm-stage-btns" />
+                <span className="bpm-stage-title bpm-stage-title-clickable">ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП</span>
+                <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge bpm-stage-agree-badge" onClick={(e) => { e.stopPropagation(); }} role="button" tabIndex={0} title="Согласовать">СОГЛАСОВАТЬ</span>
+                <div className="bpm-stage-btns">
+                  <button type="button" className="bpm-card-delete bpm-stage-delete" onClick={(e) => { e.stopPropagation(); setAiSuggestionsOn(false); }} title="Удалить этап" aria-label="Удалить этап">🗑</button>
+                </div>
               </div>
               <button type="button" className="bpm-add-task bpm-add-task-top" onClick={() => addTask(AI_STAGE_NAME)}>+ Добавить задачу</button>
               <div className="bpm-stage-cards">
                 {[1, 2, 3].map((n) => {
                   const ad = aiCardsData[n]
                   const aiId = ad.id
+                  if (removedAiCardIds.has(aiId)) return null
                   const aiSystems = getAiCardSystems(aiId)
                   const aiInputs = getAiCardInputFiles(aiId)
                   const aiResults = getResultLinesForCard('ИИ-автопредложенная карточка', aiId)
-                  const offset = aiCardOffset(aiId)
                   const agreed = agreedAiCardIds.has(aiId)
                   return (
-                  <div key={aiId} className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} aria-hidden style={{ transform: `translate(${offset.x}px, ${offset.y}px)`, animationDelay: `${offset.delay}ms` }}>
+                  <div key={aiId} className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} aria-hidden>
                     <div className="bpm-card-top-row">
                       <span className="bpm-card-id">{aiId}</span>
                       <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
-                      <button type="button" className="bpm-btn bpm-btn-ghost bpm-card-badge bpm-card-ai-agree-btn" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</button>
+                      <span className="bpm-card-badge bpm-card-badge-in-work bpm-card-ai-agree-badge" onClick={(e) => { e.stopPropagation(); toggleAgreedAiCard(aiId); }} role="button" tabIndex={0} title="Согласовать">{agreed ? 'Согласовано' : 'СОГЛАСОВАТЬ'}</span>
+                      <button type="button" className="bpm-card-delete" onClick={(e) => { e.stopPropagation(); removeAiCard(aiId); }} title="Удалить карточку" aria-label="Удалить карточку">🗑</button>
                     </div>
                     <div className="bpm-card-name">ИИ-автопредложенная карточка</div>
                     <div className="bpm-card-meta">
@@ -1570,11 +1629,11 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                     </div>
                     <div className="bpm-card-body">
                       <div className="bpm-card-section-block">
-                        <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')}>
+                        <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'systems')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'systems'); } }}>
                           <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'systems') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                           <span className="bpm-card-section-title">Используемые системы</span>
                           <span role="button" tabIndex={0} className="bpm-btn-icon bpm-add-system-btn bpm-add-system-inline" onClick={(e) => e.stopPropagation()} title="Добавить систему" aria-label="Добавить систему">+</span>
-                        </button>
+                        </div>
                         {getSectionOpen(aiId, 'systems') && (
                           <ul className="bpm-card-systems-list">
                             {aiSystems.map((s, i) => (
@@ -1587,12 +1646,12 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                       </div>
                       <div className="bpm-card-divider" />
                       <div className="bpm-card-section-block">
-                        <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')}>
+                        <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'input')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'input'); } }}>
                           <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'input') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                           <span className="bpm-card-section-title">Входные данные</span>
                           <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                          <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-file-filled" /></span>
-                        </button>
+                          <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadInputListExcel(aiInputs); }} onKeyDown={(e) => e.key === 'Enter' && downloadInputListExcel(aiInputs)} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                        </div>
                         {getSectionOpen(aiId, 'input') && (
                           <div className="bpm-card-file-pills">
                             {aiInputs.map((f, i) => (
@@ -1607,22 +1666,22 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
                       </div>
                       <div className="bpm-card-divider" />
                       <div className="bpm-card-section-block">
-                        <button type="button" className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')}>
+                        <div role="button" tabIndex={0} className="bpm-card-section-header" onClick={() => toggleSection(aiId, 'results')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSection(aiId, 'results'); } }}>
                           <span className={`bpm-card-collapse-arrow bpm-card-section-chevron ${getSectionOpen(aiId, 'results') ? 'bpm-card-collapse-arrow-up' : 'bpm-card-collapse-arrow-down'}`} />
                           <span className="bpm-card-section-title">Результаты расчета</span>
                           <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Загрузить в карточку" aria-label="Загрузить"><span className="bpm-icon-file-download" /></span>
-                          <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-file-filled" /></span>
-                        </button>
+                          <span role="button" tabIndex={0} className="bpm-icon-file-outline-btn" title="Скачать" onClick={(e) => { e.stopPropagation(); e.preventDefault(); downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)]); }} onKeyDown={(e) => e.key === 'Enter' && downloadResultListExcel([...aiResults, ...getSyntheticLabels(aiId)])} aria-label="Скачать"><span className="bpm-icon-arrow-up" /></span>
+                        </div>
                         {getSectionOpen(aiId, 'results') && (
                           <>
-                            {aiMode && (
+                            {aiSuggestionsOn && (
                               <button type="button" className="bpm-ai-dona-btn" onClick={(e) => { e.stopPropagation(); addSyntheticResult(aiId); }}>ИИ-донасыщение результатов расчета синтетикой</button>
                             )}
                             <div className="bpm-card-file-pills">
                               {[...aiResults, ...getSyntheticLabels(aiId)].map((name, i) => {
                                 const dateStr = new Date(Date.now() - (hashStr(aiId + String(i)) % 30) * 86400000).toLocaleDateString('ru-RU')
                                 const status = ['ok', 'missing', 'warning'][hashStr(aiId + String(i)) % 3]
-                                const tooltip = { ok: 'корректно', missing: 'нехватка данных', warning: 'пропуски данных' }[status]
+                                const tooltip = { ok: 'Корректно', missing: 'Нехватка данных', warning: 'Пропуски данных' }[status]
                                 return (
                                   <div key={i} className="bpm-file-pill bpm-file-pill-minimal" title={tooltip}>
                                     <span className={`bpm-icon-file-sm bpm-icon-file-${status}`} />

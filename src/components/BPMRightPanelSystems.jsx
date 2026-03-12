@@ -37,9 +37,9 @@ function BPMRightPanelSystems({ onClose, onSelectSystem, onSelectSystems, onDese
   }
 
   const handleAutoselect = () => {
-    const indices = SYSTEMS_LIST.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 1)
+    const indices = SYSTEMS_LIST.map((_, i) => i).sort(() => Math.random() - 0.5).slice(0, 3)
     onUsedAiAutoselect?.(indices)
-    const toAdd = indices.map((i) => SYSTEMS_LIST[i]).filter(Boolean)
+    const toAdd = indices.slice(0, 1).map((i) => SYSTEMS_LIST[i]).filter(Boolean)
     const newOnes = toAdd.filter((n) => !existingSet.has(n))
     if (newOnes.length) onSelectSystems(newOnes)
   }

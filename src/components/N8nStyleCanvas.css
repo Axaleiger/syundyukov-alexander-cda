@@ -13,12 +13,12 @@
 
 .n8n-canvas {
   position: absolute;
-  width: 4000px;
-  height: 2000px;
+  width: 100000px;
+  height: 100000px;
   left: 50%;
   top: 50%;
-  margin-left: -2000px;
-  margin-top: -1000px;
+  margin-left: -50000px;
+  margin-top: -50000px;
   transform-origin: center center;
   background-color: #1e293b;
 }

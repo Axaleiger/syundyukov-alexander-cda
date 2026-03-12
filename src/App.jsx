@@ -108,8 +108,11 @@ function App() {
   const handleBoardChange = useCallback((stages, tasks) => {
     setFlowCode(bpmToMermaid(stages, tasks))
   }, [])
+  const [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning] = useState(false)
   const onBpmCommandConsumed = useCallback(() => {
     setBpmCommand(null)
+    setActiveTab('ontology')
+    setOpenConfiguratorFromPlanning(true)
     bpmCommandConsumedRef.current?.()
   }, [])
 
@@ -470,6 +473,8 @@ function App() {
                 onOpenDoc={() => setShowConfiguratorDoc(true)}
                 flowCode={flowCode}
                 onFlowCodeChange={setFlowCode}
+                openFromPlanning={openConfiguratorFromPlanning}
+                onOpenFromPlanningConsumed={() => setOpenConfiguratorFromPlanning(false)}
               />
             )}
           {activeTab === 'results' && (

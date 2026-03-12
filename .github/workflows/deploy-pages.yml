@@ -1,9 +1,9 @@
 name: Deploy to GitHub Pages
 
+# Один деплой только при push в main (без workflow_dispatch, чтобы не было двойных запусков)
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read

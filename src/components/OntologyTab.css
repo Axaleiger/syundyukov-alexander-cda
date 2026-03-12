@@ -305,6 +305,10 @@
   background: #f0f7ff;
 }
 
+.ontology-apply-btn {
+  margin-left: 8px;
+}
+
 .ontology-code-textarea {
   flex: 1;
   min-height: 360px;
@@ -397,6 +401,10 @@
   background: #f8fafc;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.ontology-config-wrap-schema {
+  background: #1e293b;
 }
 
 .ontology-n8n-canvas {

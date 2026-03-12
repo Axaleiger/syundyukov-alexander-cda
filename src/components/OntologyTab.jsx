@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import MermaidSchema from './MermaidSchema'
-import N8nStyleCanvas from './N8nStyleCanvas'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
+import ConfiguratorCanvas from './ConfiguratorCanvas'
+import { schemaToMermaid, mermaidToSchema } from '../lib/schemaToMermaid'
 import './OntologyTab.css'
 
 const IconCode = () => (
@@ -31,84 +31,136 @@ const IconDoc = () => (
   </svg>
 )
 
-export const DEFAULT_FLOW_CODE = `flowchart LR
-  subgraph Вход
-    A[Триггер события]
-    B[Проверка данных]
-  end
-  subgraph Обработка
-    C[Валидация]
-    D[Расчёт показателей]
-    E[Агрегация]
-  end
-  subgraph Выход
-    F[Отчёт]
-    G[Уведомление]
-  end
-  A --> B
-  B --> C
-  C --> D
-  D --> E
-  E --> F
-  E --> G
-  F --> H((Конец))
-  G --> H
-`
+/** Узлы по умолчанию из UBD — разложены без наложений (слои слева направо) */
+const COL = 260
+const ROW = 80
+const INITIAL_UBD_NODES = [
+  { id: 'spectr', label: 'СПЕКТР', type: 'trigger', x: 0, y: 1 * ROW },
+  { id: 'b6k', label: 'Б6К', type: 'process', x: 1 * COL, y: 0 },
+  { id: 'exoil', label: 'EXOIL', type: 'process', x: 1 * COL, y: 2 * ROW },
+  { id: 'cdwell', label: 'ЦД well', type: 'process', x: 2 * COL, y: 0 },
+  { id: 'gibrima', label: 'ГибрИМА', type: 'process', x: 2 * COL, y: 2 * ROW },
+  { id: 'eraiskra', label: 'ЭРА ИСКРА', type: 'process', x: 2 * COL, y: 4 * ROW },
+  { id: 'eraremonty', label: 'ЭраРемонты', type: 'process', x: 3 * COL, y: 0 },
+  { id: 'ipa', label: 'ИПА', type: 'process', x: 3 * COL, y: 2 * ROW },
+  { id: 'condition', label: 'Условие достижения макс. профиля ДДН', type: 'output', x: 2 * COL, y: 6 * ROW },
+  { id: 'cdrb', label: 'ЦДРБ', type: 'output', x: 0, y: 4 * ROW },
+]
 
-function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange }) {
-  const [mode, setMode] = useState('n8n')
-  const localCode = flowCode !== undefined ? flowCode : undefined
-  const setCode = onFlowCodeChange || (() => {})
-  const [internalCode, setInternalCode] = useState(DEFAULT_FLOW_CODE)
-  const flowCodeValue = localCode !== undefined ? localCode : internalCode
-  const setFlowCodeValue = localCode !== undefined ? setCode : setInternalCode
+const INITIAL_UBD_EDGES = [
+  { id: 'e-spectr-b6k', from: 'spectr', to: 'b6k' },
+  { id: 'e-spectr-exoil', from: 'spectr', to: 'exoil' },
+  { id: 'e-b6k-cdwell', from: 'b6k', to: 'cdwell' },
+  { id: 'e-exoil-gibrima', from: 'exoil', to: 'gibrima' },
+  { id: 'e-cdwell-gibrima', from: 'cdwell', to: 'gibrima' },
+  { id: 'e-eraiskra-gibrima', from: 'eraiskra', to: 'gibrima' },
+  { id: 'e-gibrima-condition', from: 'gibrima', to: 'condition' },
+  { id: 'e-cdwell-eraremonty', from: 'cdwell', to: 'eraremonty' },
+  { id: 'e-gibrima-ipa', from: 'gibrima', to: 'ipa' },
+  { id: 'e-spectr-cdrb', from: 'spectr', to: 'cdrb' },
+]
+
+export const DEFAULT_FLOW_CODE = schemaToMermaid(INITIAL_UBD_NODES, INITIAL_UBD_EDGES)
+
+function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, onOpenFromPlanningConsumed }) {
+  const [mode, setMode] = useState('schema')
+  const [schemaNodes, setSchemaNodes] = useState(() => [...INITIAL_UBD_NODES])
+  const [schemaEdges, setSchemaEdges] = useState(() => [...INITIAL_UBD_EDGES])
+  const [codeValue, setCodeValue] = useState('')
+  const fitViewRef = useRef(null)
+
+  const syncedCode = schemaToMermaid(schemaNodes, schemaEdges)
+
+  useEffect(() => {
+    if (mode === 'code') setCodeValue(syncedCode)
+  }, [mode, syncedCode])
+
+  const handleApplyCode = useCallback(() => {
+    try {
+      const { nodes: parsed, edges: parsedEdges } = mermaidToSchema(codeValue)
+      if (parsed.length) {
+        setSchemaNodes(parsed)
+        setSchemaEdges(parsedEdges)
+      }
+    } catch (_) {}
+  }, [codeValue])
+
+  useEffect(() => {
+    if (!openFromPlanning || !flowCode) return
+    try {
+      const { nodes: parsed, edges: parsedEdges } = mermaidToSchema(flowCode)
+      if (!parsed.length) {
+        onOpenFromPlanningConsumed?.()
+        return
+      }
+      setSchemaNodes([])
+      setSchemaEdges([])
+      const delay = 120
+      parsed.forEach((node, i) => {
+        setTimeout(() => {
+          setSchemaNodes((prev) => [...prev, node])
+        }, i * delay)
+      })
+      const edgesStart = parsed.length * delay
+      parsedEdges.forEach((edge, i) => {
+        setTimeout(() => {
+          setSchemaEdges((prev) => [...prev, edge])
+        }, edgesStart + i * delay)
+      })
+      const total = edgesStart + parsedEdges.length * delay + 100
+      const t = setTimeout(() => {
+        fitViewRef.current?.()
+        onOpenFromPlanningConsumed?.()
+      }, total)
+      return () => clearTimeout(t)
+    } catch (_) {
+      onOpenFromPlanningConsumed?.()
+    }
+  }, [openFromPlanning, flowCode, onOpenFromPlanningConsumed])
 
   return (
     <div className="ontology-tab ontology-tab-config">
       <h2 className="ontology-title">Конфигуратор систем</h2>
-      <p className="ontology-subtitle">Код и схема синхронны с вкладкой «Планирование». Реализовано на базе концепции workflow-редактора (n8n).</p>
+      <p className="ontology-subtitle">Код и схема синхронны с вкладкой «Планирование». Реализовано на базе концепции workflow-редактора.</p>
       <div className="ontology-view-toggle">
-        <button type="button" className={`ontology-toggle-btn ${mode === 'n8n' ? 'active' : ''}`} onClick={() => setMode('n8n')}>
+        <button type="button" className={`ontology-toggle-btn ${mode === 'schema' ? 'active' : ''}`} onClick={() => setMode('schema')}>
           <span className="ontology-toggle-icon"><IconSchema /></span>
-          Схема n8n
+          Схема
         </button>
         <button type="button" className={`ontology-toggle-btn ${mode === 'code' ? 'active' : ''}`} onClick={() => setMode('code')}>
           <span className="ontology-toggle-icon"><IconCode /></span>
           Код
         </button>
-        <button type="button" className={`ontology-toggle-btn ${mode === 'schema' ? 'active' : ''}`} onClick={() => setMode('schema')}>
-          <span className="ontology-toggle-icon"><IconSchema /></span>
-          Схема
-        </button>
       </div>
-      <div className="ontology-config-wrap">
-        {mode === 'n8n' && (
-          <N8nStyleCanvas className="ontology-n8n-canvas" />
+      <div className={`ontology-config-wrap ${mode === 'schema' ? 'ontology-config-wrap-schema' : ''}`}>
+        {mode === 'schema' && (
+          <ConfiguratorCanvas
+            nodes={schemaNodes}
+            edges={schemaEdges}
+            onNodesChange={setSchemaNodes}
+            onEdgesChange={setSchemaEdges}
+            className="ontology-n8n-canvas"
+            onMounted={(fit) => { fitViewRef.current = fit; fit?.(); }}
+          />
         )}
         {mode === 'code' && (
           <div className="ontology-code-panel">
             <div className="ontology-code-toolbar">
-              <button
-                type="button"
-                className="ontology-doc-btn"
-                onClick={() => onOpenDoc?.()}
-              >
+              <button type="button" className="ontology-doc-btn" onClick={() => onOpenDoc?.()}>
                 <IconDoc />
                 Документация
+              </button>
+              <button type="button" className="ontology-doc-btn ontology-apply-btn" onClick={handleApplyCode}>
+                Применить к схеме
               </button>
             </div>
             <textarea
               className="ontology-code-textarea"
-              value={flowCodeValue}
-              onChange={(e) => setFlowCodeValue(e.target.value)}
-              placeholder="flowchart LR&#10;  A --> B --> C"
+              value={codeValue}
+              onChange={(e) => setCodeValue(e.target.value)}
+              placeholder="flowchart LR"
               spellCheck={false}
             />
-          </div>
-        )}
-        {mode === 'schema' && (
-          <div className="ontology-schema-panel">
-            <MermaidSchema code={flowCodeValue} className="ontology-mermaid-schema" />
           </div>
         )}
       </div>
