@@ -195,11 +195,11 @@ function AIAssistantWidget({
       return
     }
     if (confidence < 0.7) {
-      setClarification('Уточните: создание кейса, фокус на метрику, полный проект, риски или cashflow.')
+      setClarification('Уточните: создание кейса, добавить стадию/карточку/блок, фокус на метрику, полный проект, риски или cashflow.')
       setOpen(true)
       return
     }
-    setClarification('Уточните: создание кейса, фокус на метрику, полный проект, риски или cashflow.')
+    setClarification('Уточните: создание кейса, добавить стадию/карточку/блок, фокус на метрику, полный проект, риски или cashflow.')
     setOpen(true)
   }, [question, transcript, runExecutor])
 

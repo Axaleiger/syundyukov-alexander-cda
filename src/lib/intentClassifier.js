@@ -11,6 +11,7 @@ export const SCENARIO_IDS = {
   generateCashflow: 'generateCashflow',
   addConfiguratorNode: 'addConfiguratorNode',
   appendPlanningCard: 'appendPlanningCard',
+  addPlanningStage: 'addPlanningStage',
 }
 
 const CASE_TRIGGERS = [
@@ -83,6 +84,10 @@ export function classifyIntent(text) {
   const addBlockMatch = norm.match(/добавь\s+блок\s+(.+?)(?:\s*$|\.|,|пожалуйста)/i) || norm.match(/добавить\s+блок\s+(.+?)(?:\s*$|\.|,|пожалуйста)/i)
   if (addBlockMatch && addBlockMatch[1]) {
     return { scenarioId: SCENARIO_IDS.addConfiguratorNode, confidence: 0.95, topic: addBlockMatch[1].trim().replace(/\s+/g, ' ') }
+  }
+  if (/\bдобавь\s+стадию\b|\bдобавить\s+стадию\b|\bдобавь\s+этап\b|\bдобавить\s+этап\b/i.test(norm)) {
+    const nameMatch = norm.match(/(?:стадию|этап)\s+(?:«)?([^»]+?)(?:»)?\s*[.!\s]*$/i) || norm.match(/(?:стадию|этап)\s+(\S+)/i)
+    return { scenarioId: SCENARIO_IDS.addPlanningStage, confidence: 0.95, topic: nameMatch?.[1]?.trim() || 'Новая стадия' }
   }
 
   const phrasesByScenario = {

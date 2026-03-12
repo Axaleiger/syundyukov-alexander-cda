@@ -110,8 +110,22 @@ function ConfiguratorCanvas({
 
   const handleWheel = useCallback((e) => {
     e.preventDefault()
+    e.stopPropagation()
     const delta = e.deltaY > 0 ? -0.05 : 0.05
     setTransform((t) => ({ ...t, scale: Math.min(2, Math.max(0.45, t.scale + delta)) }))
+  }, [])
+
+  useEffect(() => {
+    const el = wrapRef.current
+    if (!el) return
+    const onWheel = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = e.deltaY > 0 ? -0.05 : 0.05
+      setTransform((t) => ({ ...t, scale: Math.min(2, Math.max(0.45, t.scale + delta)) }))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
   const handleCanvasMouseDown = useCallback((e) => {
@@ -227,6 +241,14 @@ function ConfiguratorCanvas({
     setPendingDrag({ nodeId, clientX: e.clientX, clientY: e.clientY })
   }, [pendingFromId, edges, setEdges])
 
+  const handleNodeContextMenu = useCallback((e, nodeId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setSelectedNodeId(nodeId)
+    setSelectedEdgeId(null)
+    setRightPanel('nodeEdit')
+  }, [])
+
   const handleEdgeClick = useCallback((e, edgeId) => {
     e.stopPropagation()
     selectedEdgeIdRef.current = edgeId
@@ -270,8 +292,13 @@ function ConfiguratorCanvas({
     setEdgeSettings((prev) => ({ ...prev, [edgeId]: { ...(prev[edgeId] || {}), [key]: value } }))
   }, [setEdges])
 
+  const updateNodeOption = useCallback((nodeId, key, value) => {
+    setNodes((prev) => prev.map((n) => n.id === nodeId ? { ...n, [key]: value } : n))
+  }, [setNodes])
+
   const nm = nodeMap()
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId)
+  const selectedNode = nodes.find((n) => n.id === selectedNodeId)
 
   return (
     <div
@@ -282,6 +309,7 @@ function ConfiguratorCanvas({
       onMouseDown={handleCanvasMouseDown}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseUp}
+      onContextMenu={(e) => e.preventDefault()}
       style={{ outline: 'none' }}
     >
       <div
@@ -346,6 +374,7 @@ function ConfiguratorCanvas({
             className={`n8n-node configurator-node n8n-node-${node.type} ${pendingFromId === node.id ? 'configurator-pending' : ''} ${selectedNodeId === node.id ? 'configurator-node-selected' : ''}`}
             style={{ left: node.x, top: node.y }}
             onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+            onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
           >
             <div className="n8n-node-bar" />
             <div className="n8n-node-body">
@@ -410,6 +439,35 @@ function ConfiguratorCanvas({
               </select>
             </label>
             <button type="button" className="configurator-btn-danger" onClick={(e) => { e.stopPropagation(); const id = selectedEdgeIdRef.current || selectedEdgeId; if (id) { setEdges((prev) => prev.filter((ed) => ed.id !== id)); setRightPanel(null); setSelectedEdgeId(null); selectedEdgeIdRef.current = null; } }}>Удалить связь</button>
+          </div>
+        </div>
+      )}
+
+      {rightPanel === 'nodeEdit' && selectedNode && (
+        <div className="configurator-right-panel">
+          <div className="configurator-panel-head">
+            <h3>Редактирование ноды</h3>
+            <button type="button" className="configurator-panel-close" onClick={() => { setRightPanel(null); setSelectedNodeId(null); }}>×</button>
+          </div>
+          <div className="configurator-panel-body" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            <label>
+              Название
+              <input
+                type="text"
+                value={selectedNode.label}
+                onChange={(e) => updateNodeOption(selectedNode.id, 'label', e.target.value)}
+              />
+            </label>
+            <label>
+              Тип
+              <select
+                value={selectedNode.type}
+                onChange={(e) => updateNodeOption(selectedNode.id, 'type', e.target.value)}
+              >
+                {NODE_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </label>
+            <button type="button" className="configurator-btn-danger" onClick={() => { setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId)); setEdges((prev) => prev.filter((ed) => ed.from !== selectedNodeId && ed.to !== selectedNodeId)); setRightPanel(null); setSelectedNodeId(null); }}>Удалить ноду</button>
           </div>
         </div>
       )}

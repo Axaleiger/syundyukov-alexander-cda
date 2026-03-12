@@ -133,6 +133,17 @@ export async function appendPlanningCard(ctx, topic) {
   addThinkingStep?.('Готово ✓')
 }
 
+export async function addPlanningStage(ctx, stageName) {
+  const { setActiveTab, setBpmCommand, addThinkingStep, isPaused } = ctx
+  const name = stageName || 'Новая стадия'
+  addThinkingStep?.('Добавляю стадию «' + name + '» на доску…')
+  setActiveTab?.('planning')
+  setBpmCommand?.({ scenarioId: 'addPlanningStage', params: { name } })
+  await delay(STEP_DELAY)
+  if (isPaused?.()) return
+  addThinkingStep?.('Готово ✓')
+}
+
 const EXECUTORS = {
   createPlanningCase,
   focusMetric,
@@ -142,6 +153,7 @@ const EXECUTORS = {
   generateCashflow,
   addConfiguratorNode,
   appendPlanningCard,
+  addPlanningStage,
 }
 
 /**

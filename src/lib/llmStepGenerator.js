@@ -67,7 +67,8 @@ export async function generateSmartSteps(topic) {
     const parsed = JSON.parse(jsonStr)
     const steps = Array.isArray(parsed?.steps) ? parsed.steps : FALLBACK_STEPS
 
-    return steps.length > 0 ? steps.map((s) => (typeof s === 'string' ? s : String(s))) : FALLBACK_STEPS
+    const list = steps.length > 0 ? steps.map((s) => (typeof s === 'string' ? s : String(s))) : FALLBACK_STEPS
+    return list.slice(0, 12)
   } catch {
     return [...FALLBACK_STEPS]
   }

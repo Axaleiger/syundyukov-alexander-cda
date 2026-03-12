@@ -555,9 +555,12 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
   }, [initialBoardId])
 
   // Обработка команд ИИ-помощника: создание кейса, риски, cashflow
+  const stagesRef = React.useRef(stages)
+  stagesRef.current = stages
   useEffect(() => {
     if (!bpmCommand?.scenarioId || typeof onBpmCommandConsumed !== 'function') return
     const scenarioId = bpmCommand.scenarioId
+    const currentStages = stagesRef.current
     const d = new Date()
     const baseTask = {
       executor: PERSONNEL[0],
@@ -575,7 +578,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
       const customSteps = bpmCommand.params?.steps
       const preset = getInitialBoard('hantos') || { stages: ['Подготовка', 'Реализация', 'Контроль'], tasks: {} }
       const stagesList = preset.stages && preset.stages.length > 0 ? preset.stages : ['Подготовка', 'Реализация', 'Контроль']
-      const cardNames = Array.isArray(customSteps) && customSteps.length > 0
+      const rawNames = Array.isArray(customSteps) && customSteps.length > 0
         ? ['Кейс: ' + topic, ...customSteps]
         : [
             'Кейс: ' + topic,
@@ -583,6 +586,7 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
             'Контроль выполнения', 'Отчётность', 'Корректировка плана', 'Итоговая приёмка',
             'Сбор данных', 'Утверждение плана',
           ]
+      const cardNames = [...new Set(rawNames)].slice(0, 12)
       const cardDelayMs = 700
       setStages(stagesList)
       const initialTasks = {}
@@ -657,14 +661,23 @@ function BPMBoard({ initialBoardId = 'hantos', scenarioName = 'Управлен�
     }
     if (scenarioId === 'appendPlanningCard') {
       const topic = bpmCommand.params?.topic || 'Доп. шаг'
-      const firstStage = stages[0] || 'Подготовка'
+      const firstStage = currentStages[0] || 'Подготовка'
       const id = `AIC${10000 + Date.now() % 99999}`
       const task = { id, name: topic, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) }
       setTasks((prev) => ({ ...prev, [firstStage]: [task, ...(prev[firstStage] || [])] }))
       if (typeof onBpmCommandConsumed === 'function') onBpmCommandConsumed({ switchToOntology: false })
       return
     }
-  }, [bpmCommand, onBpmCommandConsumed, stages])
+    if (scenarioId === 'addPlanningStage') {
+      const stageName = bpmCommand.params?.name || 'Новая стадия'
+      if (!currentStages.includes(stageName)) {
+        setStages((prev) => [...prev, stageName])
+        setTasks((prev) => ({ ...prev, [stageName]: [] }))
+      }
+      if (typeof onBpmCommandConsumed === 'function') onBpmCommandConsumed({ switchToOntology: false })
+      return
+    }
+  }, [bpmCommand, onBpmCommandConsumed])
 
   useEffect(() => {
     if (typeof onBoardChange === 'function') {
