@@ -312,7 +312,7 @@
 .bpm-right-panel-user-block {
   border: 1px solid rgba(0, 65, 102, 0.2);
   border-radius: 4px;
-  overflow: visible;
+  overflow: hidden;
   margin-bottom: 8px;
   background: #fff;
   min-height: 52px;
@@ -803,6 +803,13 @@
   margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid rgba(0, 65, 102, 0.2);
+}
+
+.bpm-right-panel-custom-inline {
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: none;
+  flex-shrink: 0;
 }
 
 .bpm-right-panel-custom .bpm-input {

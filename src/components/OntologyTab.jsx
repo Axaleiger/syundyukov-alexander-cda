@@ -64,10 +64,49 @@ const INITIAL_UBD_EDGES = [
 export const DEFAULT_FLOW_CODE = schemaToMermaid(INITIAL_UBD_NODES, INITIAL_UBD_EDGES)
 
 const NODE_WIDTH = 200
+const CANVAS_CENTER = 16384
+
+function findFreeNodePosition(existing, startX, startY) {
+  const STEP_X = COL
+  const STEP_Y = ROW
+  const maxTries = 500
+  let x = startX
+  let y = startY
+  for (let i = 0; i < maxTries; i += 1) {
+    const overlaps = existing.some((n) => {
+      const dx = Math.abs((n.x || 0) - x)
+      const dy = Math.abs((n.y || 0) - y)
+      return dx < NODE_WIDTH && dy < 56
+    })
+    if (!overlaps) return { x, y }
+    y += STEP_Y
+    if (i % 12 === 11) {
+      x += STEP_X
+      y = startY
+    }
+  }
+  return { x: startX, y: startY }
+}
+
+function centerNodesInField(nodes) {
+  if (!nodes.length) return nodes
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  nodes.forEach((n) => {
+    minX = Math.min(minX, n.x)
+    minY = Math.min(minY, n.y)
+    maxX = Math.max(maxX, n.x + NODE_WIDTH)
+    maxY = Math.max(maxY, n.y + 56)
+  })
+  const cx = (minX + maxX) / 2
+  const cy = (minY + maxY) / 2
+  const dx = CANVAS_CENTER - cx
+  const dy = CANVAS_CENTER - cy
+  return nodes.map((n) => ({ ...n, x: n.x + dx, y: n.y + dy }))
+}
 
 function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, onOpenFromPlanningConsumed, configuratorNodeCommand, onConfiguratorNodeConsumed }) {
   const [mode, setMode] = useState('schema')
-  const [schemaNodes, setSchemaNodes] = useState(() => [...INITIAL_UBD_NODES])
+  const [schemaNodes, setSchemaNodes] = useState(() => centerNodesInField([...INITIAL_UBD_NODES]))
   const [schemaEdges, setSchemaEdges] = useState(() => [...INITIAL_UBD_EDGES])
   const [codeValue, setCodeValue] = useState('')
   const fitViewRef = useRef(null)
@@ -86,10 +125,11 @@ function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, 
           refY = n.y
         }
       })
-      const x = maxX + 50
-      const y = refY
+      const baseX = Number.isFinite(maxX) ? maxX + 50 : 0
+      const baseY = refY
+      const pos = findFreeNodePosition(prev, baseX, baseY)
       const id = `node-${Date.now()}`
-      return [...prev, { id, label, type: 'process', x, y }]
+      return [...prev, { id, label, type: 'process', x: pos.x, y: pos.y }]
     })
     onConfiguratorNodeConsumed?.()
   }, [configuratorNodeCommand, onConfiguratorNodeConsumed])

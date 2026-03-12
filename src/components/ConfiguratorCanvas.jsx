@@ -175,11 +175,7 @@ function ConfiguratorCanvas({
   }, [draggingNodeId, dragOffset, isPanning, startPan, transform, nodes, setNodes, pendingDrag])
 
   const handleMouseUp = useCallback(() => {
-    const nodeIdToSelect = pendingSelectNodeRef.current
-    if (nodeIdToSelect) {
-      setSelectedNodeId(nodeIdToSelect)
-      pendingSelectNodeRef.current = null
-    }
+    pendingSelectNodeRef.current = null
     setIsPanning(false)
     setDraggingNodeId(null)
     setPendingDrag(null)
@@ -225,6 +221,14 @@ function ConfiguratorCanvas({
 
   const handleNodeMouseDown = useCallback((e, nodeId) => {
     e.stopPropagation()
+    // повторный клик по той же ноде отменяет режим связывания и подсветку
+    if (pendingFromId && pendingFromId === nodeId) {
+      setPendingFromId(null)
+      setSelectedNodeId(null)
+      setPendingDrag(null)
+      pendingSelectNodeRef.current = null
+      return
+    }
     if (pendingFromId && pendingFromId !== nodeId) {
       const exists = edges.some((ed) => ed.from === pendingFromId && ed.to === nodeId)
       if (!exists) {
@@ -232,12 +236,14 @@ function ConfiguratorCanvas({
       }
       setPendingFromId(null)
       setPendingDrag(null)
+      setSelectedNodeId(null)
       pendingSelectNodeRef.current = null
       return
     }
     setSelectedEdgeId(null)
+    setSelectedNodeId(nodeId)
     setPendingFromId(nodeId)
-    pendingSelectNodeRef.current = nodeId
+    pendingSelectNodeRef.current = null
     setPendingDrag({ nodeId, clientX: e.clientX, clientY: e.clientY })
   }, [pendingFromId, edges, setEdges])
 

@@ -61,11 +61,12 @@ function getManagerByName(name, personnel) {
   return others[Math.abs(h) % others.length]
 }
 
-function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiMode }) {
+function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiMode, customPersonnel: customPersonnelProp, onAddCustomPerson }) {
   const [search, setSearch] = useState('')
   const [expandedUser, setExpandedUser] = useState(null)
   const [customName, setCustomName] = useState('')
-  const [customPersonnel, setCustomPersonnel] = useState([])
+  const [localCustom, setLocalCustom] = useState([])
+  const customPersonnel = customPersonnelProp !== undefined ? customPersonnelProp : localCustom
   const title = roleLabel === 'Согласующий' ? 'Выбор согласующего' : 'Выбор исполнителя'
 
   const allPersonnel = [...customPersonnel, ...PERSONNEL]
@@ -76,7 +77,8 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
   const handleAddCustom = () => {
     const name = customName.trim()
     if (!name || allPersonnel.some((p) => p === name)) return
-    setCustomPersonnel((prev) => [...prev, name])
+    if (onAddCustomPerson) onAddCustomPerson(name)
+    else setLocalCustom((prev) => [...prev, name])
     setCustomName('')
   }
 
@@ -113,6 +115,17 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+        <div className="bpm-right-panel-custom bpm-right-panel-custom-inline">
+          <input
+            type="text"
+            className="bpm-input"
+            placeholder="Ввести ФИО вручную"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
+          />
+          <button type="button" className="bpm-btn-sm" onClick={handleAddCustom}>Добавить сотрудника</button>
         </div>
         <div className="bpm-right-panel-list bpm-right-panel-users bpm-right-panel-users-full">
           {filtered.map((name) => {
@@ -199,17 +212,6 @@ function BPMRightPanelExecutor({ onClose, onSelect, roleLabel, currentValue, aiM
               </div>
             )
           })}
-        </div>
-        <div className="bpm-right-panel-custom">
-          <input
-            type="text"
-            className="bpm-input"
-            placeholder="Ввести ФИО вручную"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddCustom()}
-          />
-          <button type="button" className="bpm-btn-sm" onClick={handleAddCustom}>Добавить сотрудника</button>
         </div>
       </div>
     </div>
