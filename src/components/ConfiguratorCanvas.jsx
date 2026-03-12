@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
 import './N8nStyleCanvas.css'
 import './ConfiguratorCanvas.css'
 
@@ -78,11 +78,12 @@ function ConfiguratorCanvas({
     const scale = Math.max(0.45, Math.min(rect.width / contentW, rect.height / contentH, 1.2))
     const cx = (minX + maxX) / 2
     const cy = (minY + maxY) / 2
-    const CANVAS_HALF_W = 16384
-    const CANVAS_HALF_H = 16384
+    const CANVAS_ORIGIN = 16384
+    const vpCenterX = rect.width / 2
+    const vpCenterY = rect.height / 2
     setTransform({
-      x: (CANVAS_HALF_W - cx) * scale,
-      y: (CANVAS_HALF_H - cy) * scale,
+      x: (vpCenterX - CANVAS_ORIGIN) / scale - cx + CANVAS_ORIGIN,
+      y: (vpCenterY - CANVAS_ORIGIN) / scale - cy + CANVAS_ORIGIN,
       scale,
     })
   }, [nodes.length])
@@ -108,13 +109,17 @@ function ConfiguratorCanvas({
     }
   }, [])
 
-  // При добавлении нод (в т.ч. ИИ) держим схему по центру экрана
+  // Центрирование до отрисовки и при любом изменении нод — цепочка всегда по центру полотна
+  useLayoutEffect(() => {
+    if (!nodes.length) return
+    if (wrapRef.current) fitView()
+  }, [nodes.length, fitView])
+
   useEffect(() => {
     if (!nodes.length) return
-    const id = setTimeout(() => {
-      if (wrapRef.current) fitView()
-    }, 100)
-    return () => clearTimeout(id)
+    const t1 = setTimeout(() => { if (wrapRef.current) fitView() }, 150)
+    const t2 = setTimeout(() => { if (wrapRef.current) fitView() }, 500)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [nodes.length, fitView])
 
   const handleWheel = useCallback((e) => {
