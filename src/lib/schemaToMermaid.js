@@ -31,7 +31,7 @@ export function mermaidToSchema(code) {
   const lines = code.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
   for (const line of lines) {
     if (line.startsWith('flowchart') || line.startsWith('subgraph') || line === 'end') continue
-    const arrow = line.match(/^(\w+)\s*-->\s*(\w+)$/)
+    const arrow = line.match(/^([^\s]+)\s*-->\s*([^\s]+)$/)
     if (arrow) {
       const [, from, to] = arrow
       edges.push({ id: `e-${from}-${to}`, from, to })
@@ -45,7 +45,7 @@ export function mermaidToSchema(code) {
       }
       continue
     }
-    const nodeMatch = line.match(/^(\w+)\s*\["([^"]*)"\]$/) || line.match(/^(\w+)\s*\[([^\]]*)\]$/)
+    const nodeMatch = line.match(/^([^\s\[]+)\s*\["([^"]*)"\]$/) || line.match(/^([^\s\[]+)\s*\[([^\]]*)\]$/)
     if (nodeMatch) {
       const [, id, label] = nodeMatch
       if (!seenIds.has(id)) {

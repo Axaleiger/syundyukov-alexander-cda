@@ -25,6 +25,10 @@ function AIAssistantWidget({
   setResultsDashboardFocus,
   setHypercubeCaseIntro,
   setShowBpm,
+  setThinkingPhase,
+  setThinkingGraphNodes,
+  resetThinkingChain,
+  requestUserConfirm,
   onBpmCommandConsumedRef,
   onThinkingPanelOpen,
   isThinkingPanelOpen,
@@ -147,7 +151,9 @@ function AIAssistantWidget({
 
   const runExecutor = useCallback(
     async (scenarioId, topicOrMetric) => {
+      resetThinkingChain?.()
       setThinkingSteps?.([])
+      setThinkingGraphNodes?.([])
       setLocalThinkingSteps([])
       setCurrentMessage?.('')
       setIsPaused?.(false)
@@ -161,8 +167,11 @@ function AIAssistantWidget({
         setResultsDashboardFocus,
         setHypercubeCaseIntro,
         setShowBpm,
+        setThinkingPhase,
+        setThinkingGraphNodes,
         addThinkingStep: addStep,
         isPaused: () => isPausedRef.current,
+        waitForUserConfirm: typeof requestUserConfirm === 'function' ? requestUserConfirm : undefined,
       }
       try {
         await runScenario(scenarioId, ctx, topicOrMetric)
@@ -170,7 +179,7 @@ function AIAssistantWidget({
         addStep?.(`Ошибка: ${err?.message || 'неизвестная'}`)
       }
     },
-    [setActiveTab, setBpmCommand, setConfiguratorNodeCommand, setResultsDashboardFocus, setHypercubeCaseIntro, setShowBpm, addStep, setThinkingSteps, setCurrentMessage, setIsPaused, onThinkingPanelOpen]
+    [setActiveTab, setBpmCommand, setConfiguratorNodeCommand, setResultsDashboardFocus, setHypercubeCaseIntro, setShowBpm, setThinkingPhase, setThinkingGraphNodes, resetThinkingChain, addStep, setThinkingSteps, setCurrentMessage, setIsPaused, onThinkingPanelOpen, requestUserConfirm]
   )
 
   const handleSend = useCallback(() => {

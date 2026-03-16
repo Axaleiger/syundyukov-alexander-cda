@@ -1,0 +1,95 @@
+.brain-chain-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 320px;
+}
+
+.brain-chain-top {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brain-chain-brain-wrap {
+  width: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brain-chain-brain-wrap .brain-chain-brain-gif {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brain-chain-graph-wrap {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.brain-chain-under {
+  flex: 1;
+  min-width: 0;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+  visibility: visible;
+}
+
+.brain-chain-caption {
+  margin: 0 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e3a5f;
+}
+
+.brain-chain-placeholder {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0 8px 20px;
+  font-size: 13px;
+  color: #5a6c7d;
+  opacity: 1;
+  visibility: visible;
+}
+
+.brain-chain-checklist {
+  margin: 0 0 0 10px;
+  padding: 14px 18px 14px 22px;
+  border-left: 3px solid #5b8dc9;
+  list-style: none;
+  background: #fff;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  min-height: 60px;
+}
+
+.brain-chain-step-item {
+  opacity: 1;
+  transform: scale(1) translateX(0);
+}
+
+.brain-chain-step-item.brain-chain-step-visible {
+  animation: brain-chain-node-in 0.5s ease forwards;
+}
+
+@keyframes brain-chain-node-in {
+  from {
+    opacity: 0.3;
+    transform: scale(0.94) translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+.brain-chain-actions {
+  margin-top: 0.75rem;
+}

@@ -12,43 +12,91 @@ function delay(ms) {
 
 const STEP_DELAY = 650
 
-const CASE_INTRO_DURATION_MS = 2800
+const CASE_INTRO_DURATION_MS = 2500
+const PLANNING_MOUNT_DELAY_MS = 900
+
+const DEFAULT_STEPS = [
+  'Оценка объёмов', 'Планирование сроков', 'Назначение исполнителей', 'Согласование',
+  'Контроль выполнения', 'Отчётность', 'Корректировка плана', 'Итоговая приёмка',
+]
+
+const GRAPH_STAGES = ['Подготовка', 'Реализация', 'Контроль']
+const GRAPH_SERVICES = [
+  'СПЕКТР', 'Б6К', 'EXOIL', 'ЦД well', 'ГибрИМА', 'ЭРА ИСКРА', 'ЭраРемонты', 'ИПА',
+  'ЦДРБ', 'Бурение', 'ЦД этапов', 'ЦД объектов', 'Интеграция', 'Аналитика', 'Отчётность',
+  'Сервис согласования', 'Хранилище', 'API шлюз', 'Нотификации', 'Дашборд',
+]
+
+function getThinkingGraphNodes(topic) {
+  const topicLabel = topic || 'планирование'
+  return [
+    ...GRAPH_STAGES,
+    `Кейс: ${topicLabel}`,
+    ...DEFAULT_STEPS,
+    'Сбор данных', 'Утверждение плана', 'Идентификация рисков', 'Матрица рисков',
+    ...GRAPH_SERVICES,
+  ]
+}
 
 /**
  * Создание кейса планирования: сначала вкладка «Главная страница», гиперкуб раскрывает уровни и ярко подсвечивает древо этапов и точек; затем переход на Планирование и создание карточек.
  */
 export async function createPlanningCase(ctx, topic) {
-  const { setActiveTab, setBpmCommand, setHypercubeCaseIntro, setShowBpm, addThinkingStep, isPaused } = ctx
+  const { setActiveTab, setBpmCommand, setShowBpm, setThinkingPhase, setThinkingGraphNodes, addThinkingStep, isPaused, waitForUserConfirm } = ctx
   const topicLabel = topic || 'планирование'
 
   if (isPaused?.()) return
+  if (typeof setThinkingPhase === 'function') setThinkingPhase('brain')
+  if (typeof setThinkingGraphNodes === 'function') {
+    setThinkingGraphNodes(getThinkingGraphNodes(topicLabel).map((label, i) => ({ id: `g-${i}`, label })))
+  }
   addThinkingStep?.('Начинаю с главной страницы…')
-  setShowBpm?.(false)
-  setActiveTab?.('face')
-  await delay(300)
+  if (typeof setShowBpm === 'function') setShowBpm(false)
+  if (typeof setActiveTab === 'function') setActiveTab('face')
+  await delay(700)
   if (isPaused?.()) return
-  addThinkingStep?.('Раскрываю дерево этапов и связей в гиперкубе…')
-  setHypercubeCaseIntro?.(true)
-  await delay(CASE_INTRO_DURATION_MS)
+  addThinkingStep?.('Формирую цепочку сценария…')
+  await delay(900)
   if (isPaused?.()) return
-  setHypercubeCaseIntro?.(false)
+  addThinkingStep?.('Анализ контекста и этапов…')
+  await delay(850)
+  if (isPaused?.()) return
+  addThinkingStep?.('Связи между узлами цепочки…')
+  await delay(850)
+  if (isPaused?.()) return
+  addThinkingStep?.('Валидация цепочки…')
+  await delay(850)
+  if (isPaused?.()) return
+  addThinkingStep?.('Готово к планированию.')
+  await delay(500)
+  if (isPaused?.()) return
+  if (typeof waitForUserConfirm === 'function') {
+    await waitForUserConfirm('Проверьте цепочку и нажмите «Согласовать» для перехода к планированию.', { phase: 'brain' })
+  } else {
+    await delay(800)
+  }
+  if (isPaused?.()) return
   addThinkingStep?.('Переход к планированию…')
-  setActiveTab?.('planning')
-  await delay(400)
-  if (isPaused?.()) return
-  addThinkingStep?.('Анализирую запрос: «' + topicLabel + '»…')
 
-  const steps = await generateSmartSteps(topicLabel)
+  let steps = DEFAULT_STEPS
+  try {
+    const generated = await generateSmartSteps(topicLabel)
+    if (Array.isArray(generated) && generated.length > 0) steps = generated
+  } catch (_) {
+    steps = DEFAULT_STEPS
+  }
   if (isPaused?.()) return
   addThinkingStep?.('Создаю карточки по теме «' + topicLabel + '»…')
 
-  setBpmCommand?.({ scenarioId: 'createPlanningCase', params: { topic: topicLabel, steps } })
-
-  for (let i = 0; i < (steps?.length ?? 0); i++) {
-    if (isPaused?.()) return
-    addThinkingStep?.('Добавляю: ' + (steps[i] ?? ''))
-    await delay(STEP_DELAY)
+  if (typeof setBpmCommand === 'function') {
+    setBpmCommand({ scenarioId: 'createPlanningCase', params: { topic: topicLabel, steps } })
   }
+  if (typeof setActiveTab === 'function') setActiveTab('planning')
+  await delay(PLANNING_MOUNT_DELAY_MS)
+  if (isPaused?.()) return
+  addThinkingStep?.('Анализирую запрос: «' + topicLabel + '»…')
+
+  addThinkingStep?.('Карточки добавлены на доску.')
 }
 
 /**

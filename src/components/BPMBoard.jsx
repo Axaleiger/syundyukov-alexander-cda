@@ -624,8 +624,14 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
   // Обработка команд ИИ-помощника: создание кейса, риски, cashflow
   const stagesRef = React.useRef(stages)
   stagesRef.current = stages
+  const processedBpmCommandRef = React.useRef(null)
   useEffect(() => {
-    if (!bpmCommand?.scenarioId || typeof onBpmCommandConsumed !== 'function') return
+    if (!bpmCommand?.scenarioId || typeof onBpmCommandConsumed !== 'function') {
+      processedBpmCommandRef.current = null
+      return
+    }
+    if (processedBpmCommandRef.current === bpmCommand) return
+    processedBpmCommandRef.current = bpmCommand
     const scenarioId = bpmCommand.scenarioId
     const currentStages = stagesRef.current
     const d = new Date()
@@ -651,10 +657,9 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
             'Кейс: ' + topic,
             'Оценка объёмов', 'Планирование сроков', 'Назначение исполнителей', 'Согласование',
             'Контроль выполнения', 'Отчётность', 'Корректировка плана', 'Итоговая приёмка',
-            'Сбор данных', 'Утверждение плана',
           ]
-      const cardNames = [...new Set(rawNames)].slice(0, 12)
-      const cardDelayMs = 700
+      const cardNames = [...new Set(rawNames)].slice(0, 8)
+      const cardDelayMs = 400
       setAiCaseStageNames(new Set(stagesList))
       setStages(stagesList)
       const initialTasks = {}
@@ -665,9 +670,9 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
         setTimeout(() => {
           setTasks((prev) => {
             const stage = stagesList[i % stagesList.length]
-            const id = `AIC${10000 + i}`
-            idsToMark.add(id)
-            const task = { id, name, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) }
+            const taskId = `AIC${10000 + i}`
+            idsToMark.add(taskId)
+            const task = { id: taskId, name, ...baseTask, inputFiles: generateInputFiles(taskId), resultFiles: generateResultFiles(taskId) }
             return { ...prev, [stage]: [task, ...(prev[stage] || [])] }
           })
           if (i === cardNames.length - 1) {
@@ -676,15 +681,14 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
             stagesList.forEach((s) => { fullTasks[s] = [] })
             cardNames.forEach((nm, j) => {
               const st = stagesList[j % stagesList.length]
-              const id = `AIC${10000 + j}`
-              fullTasks[st].unshift({ id, name: nm, ...baseTask, inputFiles: generateInputFiles(id), resultFiles: generateResultFiles(id) })
+              const tid = `AIC${10000 + j}`
+              fullTasks[st].unshift({ id: tid, name: nm, ...baseTask, inputFiles: generateInputFiles(tid), resultFiles: generateResultFiles(tid) })
             })
             onBpmCommandConsumed?.({ flowCode: bpmToMermaid(stagesList, fullTasks) })
           }
         }, i * cardDelayMs)
       })
       if (cardNames.length === 0) { setAiCaseCardIds(new Set()); onBpmCommandConsumed?.({ flowCode: bpmToMermaid(stagesList, {}) }) }
-      return
     }
     if (scenarioId === 'analyzeRisks') {
       setStages((s) => (s.includes('Риски') ? s : ['Риски', ...s]))
@@ -785,6 +789,8 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
   useEffect(() => {
     const fileName = initialBoardId === 'do-burenie' ? 'Управление добычей с учетом ближайшего бурения.xlsx' : initialBoardId === 'hantos' ? 'hantos.xlsx' : null
     if (!fileName) return
+    // Если уже сформирован ИИ-кейс, не перезатираем доску данными из Excel
+    if (aiCaseStageNames && aiCaseStageNames.size > 0) return
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
     const delayMs = 400
     const t1 = setTimeout(() => {

@@ -1,9 +1,18 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import './AiThinkingUI.css'
+
+function uniqueStepsByLabel(steps) {
+  const seen = new Set()
+  return steps.filter((s) => {
+    const l = String(s?.label ?? '').trim()
+    if (!l || seen.has(l)) return false
+    seen.add(l)
+    return true
+  })
+}
 
 /**
  * Режим мышления: чеклист шагов, текущее сообщение. Стоп/Продолжить скрыты по завершении.
- * Заголовок «Режим мышления» только в панели drawer, здесь не дублируем.
  */
 function AiThinkingUI({
   steps = [],
@@ -12,12 +21,15 @@ function AiThinkingUI({
   isFinished = false,
   onStop,
   onResume,
+  awaitingConfirm = false,
+  onConfirm,
 }) {
+  const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
   return (
     <div className="ai-thinking-ui">
-      {steps.length > 0 && (
+      {stepsUnique.length > 0 && (
         <ul className="ai-thinking-ui-checklist" aria-label="Шаги выполнения">
-          {steps.map((item) => (
+          {stepsUnique.map((item) => (
             <li
               key={item.id}
               className={`ai-thinking-ui-step ai-thinking-ui-step--${item.status || 'pending'}`}
@@ -33,24 +45,36 @@ function AiThinkingUI({
       {currentMessage && (
         <p className="ai-thinking-ui-message">{currentMessage}</p>
       )}
-      {!isFinished && (
+      {(!isFinished || awaitingConfirm) && (
         <div className="ai-thinking-ui-actions">
-          {isPaused ? (
+          {awaitingConfirm && onConfirm ? (
             <button
               type="button"
-              className="ai-thinking-ui-btn ai-thinking-ui-btn--resume"
-              onClick={onResume}
+              className="ai-thinking-ui-btn ai-thinking-ui-btn--confirm"
+              onClick={onConfirm}
             >
-              Продолжить
+              Согласовать
             </button>
           ) : (
-            <button
-              type="button"
-              className="ai-thinking-ui-btn ai-thinking-ui-btn--stop"
-              onClick={onStop}
-            >
-              Стоп
-            </button>
+            <>
+              {isPaused ? (
+                <button
+                  type="button"
+                  className="ai-thinking-ui-btn ai-thinking-ui-btn--resume"
+                  onClick={onResume}
+                >
+                  Продолжить
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="ai-thinking-ui-btn ai-thinking-ui-btn--stop"
+                  onClick={onStop}
+                >
+                  Стоп
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

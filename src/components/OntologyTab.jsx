@@ -104,14 +104,79 @@ function centerNodesInField(nodes) {
   return nodes.map((n) => ({ ...n, x: n.x + dx, y: n.y + dy }))
 }
 
-function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, onOpenFromPlanningConsumed, configuratorNodeCommand, onConfiguratorNodeConsumed }) {
+/** Для App: парсит flowCode и возвращает { nodes, edges } с центрированием, или null */
+export function getSchemaFromFlowCode(code) {
+  if (!code || typeof code !== 'string') return null
+  try {
+    const parsed = mermaidToSchema(code)
+    const nodes = (parsed?.nodes || []).length ? centerNodesInField(parsed.nodes) : null
+    const edges = parsed?.edges || []
+    return nodes?.length ? { nodes, edges } : null
+  } catch {
+    return null
+  }
+}
+
+function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, onOpenFromPlanningConsumed, configuratorNodeCommand, onConfiguratorNodeConsumed, initialSchemaNodes, initialSchemaEdges, schemaFromPlanningRef }) {
   const [mode, setMode] = useState('schema')
-  const [schemaNodes, setSchemaNodes] = useState(() => centerNodesInField([...INITIAL_UBD_NODES]))
-  const [schemaEdges, setSchemaEdges] = useState(() => [...INITIAL_UBD_EDGES])
-  const [codeValue, setCodeValue] = useState('')
+  const [schemaNodes, setSchemaNodes] = useState(() => {
+    if (initialSchemaNodes?.length) return initialSchemaNodes
+    return centerNodesInField([...INITIAL_UBD_NODES])
+  })
+  const [schemaEdges, setSchemaEdges] = useState(() => initialSchemaEdges?.length ? initialSchemaEdges : [...INITIAL_UBD_EDGES])
+  const [codeValue, setCodeValue] = useState(() => flowCode || DEFAULT_FLOW_CODE)
   const fitViewRef = useRef(null)
+  const onOpenFromPlanningConsumedRef = useRef(onOpenFromPlanningConsumed)
+  onOpenFromPlanningConsumedRef.current = onOpenFromPlanningConsumed
+  const lastAppliedInitialRef = useRef(null)
 
   const syncedCode = schemaToMermaid(schemaNodes, schemaEdges)
+
+  // При открытии из планирования: схема из ref (nodes или парсинг flowCode). Реакция на openFromPlanning, чтобы схема применилась при переходе на вкладку.
+  useEffect(() => {
+    if (!openFromPlanning) return
+    const data = schemaFromPlanningRef?.current
+    if (!data) return
+    if (data.nodes?.length) {
+      setSchemaNodes(data.nodes)
+      setSchemaEdges(data.edges || [])
+      setCodeValue(schemaToMermaid(data.nodes, data.edges || []))
+      setMode('schema')
+      const t = setTimeout(() => fitViewRef.current?.(), 150)
+      const t2 = setTimeout(() => fitViewRef.current?.(), 500)
+      return () => { clearTimeout(t); clearTimeout(t2) }
+    }
+    if (data.flowCode) {
+      try {
+        const parsed = mermaidToSchema(data.flowCode)
+        if (parsed?.nodes?.length) {
+          const centered = centerNodesInField(parsed.nodes)
+          setSchemaNodes(centered)
+          setSchemaEdges(parsed.edges || [])
+          setCodeValue(data.flowCode)
+          setMode('schema')
+          const t = setTimeout(() => fitViewRef.current?.(), 150)
+          const t2 = setTimeout(() => fitViewRef.current?.(), 500)
+          return () => { clearTimeout(t); clearTimeout(t2) }
+        }
+      } catch (_) {}
+    }
+  }, [openFromPlanning, schemaFromPlanningRef])
+
+  useEffect(() => {
+    if (!openFromPlanning) {
+      lastAppliedInitialRef.current = null
+      return
+    }
+    if (!initialSchemaNodes?.length) return
+    if (lastAppliedInitialRef.current === initialSchemaNodes) return
+    lastAppliedInitialRef.current = initialSchemaNodes
+    setSchemaNodes(initialSchemaNodes)
+    setSchemaEdges(initialSchemaEdges || [])
+    setMode('schema')
+    const t = setTimeout(() => fitViewRef.current?.(), 100)
+    return () => clearTimeout(t)
+  }, [openFromPlanning, initialSchemaNodes, initialSchemaEdges])
 
   useEffect(() => {
     if (!configuratorNodeCommand?.label) return
@@ -148,26 +213,53 @@ function OntologyTab({ onOpenDoc, flowCode, onFlowCodeChange, openFromPlanning, 
     } catch (_) {}
   }, [codeValue])
 
+  const appliedFromPlanningRef = useRef(false)
   useEffect(() => {
-    if (!openFromPlanning || !flowCode) return
+    if (!openFromPlanning) {
+      appliedFromPlanningRef.current = false
+      return
+    }
+    if (initialSchemaNodes?.length) return
+    if (!flowCode) return
+    if (appliedFromPlanningRef.current) return
     setMode('schema')
     try {
-      const { nodes: parsed, edges: parsedEdges } = mermaidToSchema(flowCode)
-      if (!parsed.length) {
-        onOpenFromPlanningConsumed?.()
+      let sourceCode = flowCode || DEFAULT_FLOW_CODE
+      let parsedNodes = []
+      let parsedEdges = []
+      try {
+        const parsed = mermaidToSchema(sourceCode)
+        parsedNodes = parsed.nodes || []
+        parsedEdges = parsed.edges || []
+      } catch (_) {
+        parsedNodes = []
+        parsedEdges = []
+      }
+      if (!parsedNodes.length && DEFAULT_FLOW_CODE) {
+        const fallback = mermaidToSchema(DEFAULT_FLOW_CODE)
+        parsedNodes = fallback.nodes || []
+        parsedEdges = fallback.edges || []
+        sourceCode = DEFAULT_FLOW_CODE
+      }
+      if (!parsedNodes.length) {
+        onOpenFromPlanningConsumedRef.current?.()
         return
       }
-      const centered = centerNodesInField(parsed)
+      appliedFromPlanningRef.current = true
+      const centered = centerNodesInField(parsedNodes)
       setSchemaNodes(centered)
       setSchemaEdges(parsedEdges || [])
-      const t1 = setTimeout(() => { fitViewRef.current?.() }, 50)
-      const t2 = setTimeout(() => { fitViewRef.current?.() }, 200)
-      const t3 = setTimeout(() => { fitViewRef.current?.(); onOpenFromPlanningConsumed?.() }, 400)
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+      setCodeValue(sourceCode)
+      const t1 = setTimeout(() => fitViewRef.current?.(), 80)
+      const t2 = setTimeout(() => fitViewRef.current?.(), 350)
+      return () => {
+        clearTimeout(t1)
+        clearTimeout(t2)
+      }
     } catch (_) {
-      onOpenFromPlanningConsumed?.()
+      onOpenFromPlanningConsumedRef.current?.()
     }
-  }, [openFromPlanning, flowCode, onOpenFromPlanningConsumed])
+  }, [openFromPlanning, flowCode])
 
   return (
     <div className="ontology-tab ontology-tab-config">

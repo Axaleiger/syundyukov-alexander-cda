@@ -12,12 +12,14 @@ import RightPanel from './components/RightPanel'
 const BPMBoard = lazy(() => import('./components/BPMBoard'))
 import AIAssistantWidget from './components/AIAssistantWidget'
 import ScenariosList from './components/ScenariosList'
-import OntologyTab, { DEFAULT_FLOW_CODE } from './components/OntologyTab'
+import OntologyTab, { DEFAULT_FLOW_CODE, getSchemaFromFlowCode } from './components/OntologyTab'
 import { bpmToMermaid } from './lib/bpmToMermaid'
+import { getScenarioGraphNodesFromBoard } from './lib/planningGraphNodes'
 import ConfiguratorDocPage from './components/ConfiguratorDocPage'
 import ResultsTab from './components/ResultsTab'
 import AdminTab from './components/AdminTab'
 import AiThinkingUI from './components/AiThinkingUI'
+import BrainChainView from './components/BrainChainView'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
 import { SCENARIO_STAGE_FILTERS } from './data/scenariosData'
 import mapPointsData from './data/mapPoints.json'
@@ -103,8 +105,44 @@ function App() {
   const [thinkingPaused, setThinkingPaused] = useState(false)
   const [thinkingPanelOpen, setThinkingPanelOpen] = useState(false)
   const addThinkingStep = useCallback((label) => {
-    setThinkingSteps((s) => [...s, { id: `step-${Date.now()}-${s.length}`, label, status: 'done' }])
+    setThinkingSteps((s) => {
+      if (s.length && s[s.length - 1]?.label === label) return s
+      return [...s, { id: `step-${Date.now()}-${s.length}-${Math.random().toString(36).slice(2)}`, label, status: 'done' }]
+    })
     setThinkingCurrentMessage(label)
+  }, [])
+  const [thinkingGraphNodes, setThinkingGraphNodes] = useState([])
+  const thinkingChainRevealedRef = useRef(false)
+  const resetThinkingChain = useCallback(() => { thinkingChainRevealedRef.current = false }, [])
+  const [thinkingAwaitingConfirm, setThinkingAwaitingConfirm] = useState(false)
+  const [thinkingConfirmPhase, setThinkingConfirmPhase] = useState(null)
+  const thinkingConfirmPhaseRef = useRef(null)
+  thinkingConfirmPhaseRef.current = thinkingConfirmPhase
+  const setThinkingPhase = useCallback((phase) => setThinkingConfirmPhase(phase), [])
+  const thinkingConfirmResolverRef = useRef(null)
+  const requestUserConfirm = useCallback((label, options) => {
+    setThinkingPanelOpen(true)
+    setThinkingPaused(false)
+    setThinkingAwaitingConfirm(true)
+    const phase = options?.phase ?? 'planning'
+    setThinkingConfirmPhase(phase)
+    setThinkingCurrentMessage(label)
+    return new Promise((resolve) => {
+      thinkingConfirmResolverRef.current = () => {
+        setThinkingAwaitingConfirm(false)
+        if (thinkingConfirmPhaseRef.current !== 'brain') setThinkingConfirmPhase(null)
+        thinkingConfirmResolverRef.current = null
+        resolve()
+      }
+    })
+  }, [addThinkingStep])
+  const handleThinkingConfirm = useCallback(() => {
+    if (selectedDecisionPathIdRef.current) {
+      setAppliedDecisionPathId(selectedDecisionPathIdRef.current)
+    }
+    if (thinkingConfirmResolverRef.current) {
+      thinkingConfirmResolverRef.current()
+    }
   }, [])
   const [bpmStages, setBpmStages] = useState(null)
   const [bpmTasks, setBpmTasks] = useState(null)
@@ -114,16 +152,36 @@ function App() {
     setBpmTasks(tasks)
   }, [])
   const [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning] = useState(false)
+  const [configuratorInitialNodes, setConfiguratorInitialNodes] = useState(null)
+  const [configuratorInitialEdges, setConfiguratorInitialEdges] = useState(null)
+  const configuratorSchemaRef = useRef(null)
   const [hypercubeCaseIntro, setHypercubeCaseIntro] = useState(false)
+  const [selectedDecisionPathId, setSelectedDecisionPathId] = useState(null)
+  const [appliedDecisionPathId, setAppliedDecisionPathId] = useState(null)
+  const selectedDecisionPathIdRef = useRef(null)
+  selectedDecisionPathIdRef.current = selectedDecisionPathId
   const onBpmCommandConsumed = useCallback((opts) => {
     setBpmCommand(null)
     if (opts?.flowCode) setFlowCode(opts.flowCode)
     if (opts?.switchToOntology !== false) {
-      setActiveTab('ontology')
-      setOpenConfiguratorFromPlanning(true)
+      const codeForSchema = opts?.flowCode ?? flowCode
+      requestUserConfirm('Проверьте сквозной бизнес-сценарий на доске планирования и нажмите «Согласовать», чтобы построить схему в Конфигураторе систем.', { phase: 'brain' })
+        .then(() => {
+          const schema = getSchemaFromFlowCode(codeForSchema)
+          configuratorSchemaRef.current = schema?.nodes?.length
+            ? { nodes: schema.nodes, edges: schema.edges || [] }
+            : { flowCode: codeForSchema }
+          if (schema?.nodes?.length) {
+            setConfiguratorInitialNodes(schema.nodes)
+            setConfiguratorInitialEdges(schema.edges || [])
+          }
+          setShowBpm(false)
+          setActiveTab('ontology')
+          setOpenConfiguratorFromPlanning(true)
+        })
     }
     bpmCommandConsumedRef.current?.()
-  }, [])
+  }, [requestUserConfirm, flowCode])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -135,6 +193,26 @@ function App() {
       return
     }
   }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'ontology') {
+      setOpenConfiguratorFromPlanning(false)
+    }
+  }, [activeTab])
+
+  const graphNodesForThinking = useMemo(() => {
+    if (bpmStages?.length && bpmTasks) {
+      const fromBoard = getScenarioGraphNodesFromBoard(bpmStages, bpmTasks)
+      if (fromBoard.length) return fromBoard
+    }
+    return thinkingGraphNodes
+  }, [bpmStages, bpmTasks, thinkingGraphNodes])
+
+  const handleRecalculateDecision = useCallback(() => {
+    if (!selectedDecisionPathIdRef.current) return
+    setBpmCommand({ scenarioId: 'createPlanningCase', params: { topic: selectedDecisionPathIdRef.current } })
+  }, [setBpmCommand])
+
 
   useEffect(() => {
     if (showBpm) return
@@ -256,6 +334,10 @@ function App() {
           setResultsDashboardFocus={setResultsDashboardFocus}
           setHypercubeCaseIntro={setHypercubeCaseIntro}
           setShowBpm={setShowBpm}
+          setThinkingPhase={setThinkingPhase}
+          setThinkingGraphNodes={setThinkingGraphNodes}
+          resetThinkingChain={resetThinkingChain}
+          requestUserConfirm={requestUserConfirm}
           onBpmCommandConsumedRef={bpmCommandConsumedRef}
           onThinkingPanelOpen={setThinkingPanelOpen}
           isThinkingPanelOpen={thinkingPanelOpen}
@@ -276,8 +358,33 @@ function App() {
                 <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
               </div>
               <div className="app-thinking-drawer-body">
-                <AiThinkingUI steps={thinkingSteps} currentMessage={thinkingCurrentMessage} isPaused={thinkingPaused} isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))} onStop={() => setThinkingPaused(true)} onResume={() => setThinkingPaused(false)} />
-                <button type="button" className="app-thinking-drawer-exit" onClick={() => { setThinkingPanelOpen(false); setThinkingSteps([]); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>Закрыть панель</button>
+                {thinkingConfirmPhase === 'brain' ? (
+                  <BrainChainView
+                    steps={thinkingSteps}
+                    graphNodes={graphNodesForThinking}
+                    chainAlreadyRevealed={thinkingChainRevealedRef.current}
+                    selectedDecisionPathId={selectedDecisionPathId}
+                    appliedDecisionPathId={appliedDecisionPathId}
+                    onSelectDecisionPath={setSelectedDecisionPathId}
+                    onRecalculate={handleRecalculateDecision}
+                    awaitingConfirm={thinkingAwaitingConfirm}
+                    onConfirm={handleThinkingConfirm}
+                  />
+                ) : (
+                  <>
+                    <AiThinkingUI
+                      steps={thinkingSteps}
+                      currentMessage={thinkingCurrentMessage}
+                      isPaused={thinkingPaused}
+                      isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))}
+                      onStop={() => setThinkingPaused(true)}
+                      onResume={() => setThinkingPaused(false)}
+                      awaitingConfirm={thinkingAwaitingConfirm}
+                      onConfirm={handleThinkingConfirm}
+                    />
+                  </>
+                )}
+                <button type="button" className="app-thinking-drawer-exit" onClick={() => { thinkingChainRevealedRef.current = true; setThinkingPanelOpen(false); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>Закрыть панель</button>
               </div>
             </div>
           </>
@@ -491,6 +598,9 @@ function App() {
                 onOpenFromPlanningConsumed={() => setOpenConfiguratorFromPlanning(false)}
                 configuratorNodeCommand={configuratorNodeCommand}
                 onConfiguratorNodeConsumed={() => setConfiguratorNodeCommand(null)}
+                initialSchemaNodes={openConfiguratorFromPlanning ? configuratorInitialNodes : null}
+                initialSchemaEdges={openConfiguratorFromPlanning ? configuratorInitialEdges : null}
+                schemaFromPlanningRef={configuratorSchemaRef}
               />
             )}
           {activeTab === 'results' && (
@@ -516,6 +626,10 @@ function App() {
         setResultsDashboardFocus={setResultsDashboardFocus}
         setHypercubeCaseIntro={setHypercubeCaseIntro}
         setShowBpm={setShowBpm}
+        setThinkingPhase={setThinkingPhase}
+        setThinkingGraphNodes={setThinkingGraphNodes}
+        resetThinkingChain={resetThinkingChain}
+        requestUserConfirm={requestUserConfirm}
         onBpmCommandConsumedRef={bpmCommandConsumedRef}
         onThinkingPanelOpen={setThinkingPanelOpen}
         isThinkingPanelOpen={thinkingPanelOpen}
@@ -536,15 +650,31 @@ function App() {
               <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
             </div>
             <div className="app-thinking-drawer-body">
-              <AiThinkingUI
-                steps={thinkingSteps}
-                currentMessage={thinkingCurrentMessage}
-                isPaused={thinkingPaused}
-                isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))}
-                onStop={() => setThinkingPaused(true)}
-                onResume={() => setThinkingPaused(false)}
-              />
-              <button type="button" className="app-thinking-drawer-exit" onClick={() => { setThinkingPanelOpen(false); setThinkingSteps([]); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>
+              {thinkingConfirmPhase === 'brain' ? (
+                <BrainChainView
+                  steps={thinkingSteps}
+                  graphNodes={graphNodesForThinking}
+                  chainAlreadyRevealed={thinkingChainRevealedRef.current}
+                  selectedDecisionPathId={selectedDecisionPathId}
+                  appliedDecisionPathId={appliedDecisionPathId}
+                  onSelectDecisionPath={setSelectedDecisionPathId}
+                  onRecalculate={handleRecalculateDecision}
+                  awaitingConfirm={thinkingAwaitingConfirm}
+                  onConfirm={handleThinkingConfirm}
+                />
+              ) : (
+                <AiThinkingUI
+                  steps={thinkingSteps}
+                  currentMessage={thinkingCurrentMessage}
+                  isPaused={thinkingPaused}
+                  isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))}
+                  onStop={() => setThinkingPaused(true)}
+                  onResume={() => setThinkingPaused(false)}
+                  awaitingConfirm={thinkingAwaitingConfirm}
+                  onConfirm={handleThinkingConfirm}
+                />
+              )}
+              <button type="button" className="app-thinking-drawer-exit" onClick={() => { thinkingChainRevealedRef.current = true; setThinkingPanelOpen(false); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>
                 Закрыть панель
               </button>
             </div>

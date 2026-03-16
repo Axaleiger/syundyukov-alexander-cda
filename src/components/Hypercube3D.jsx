@@ -67,6 +67,15 @@ const WORMHOLE_LEVELS = [
   { title: 'Функции', items: Array.from({ length: 10 }, (_, i) => `Функция ${i + 1}`) },
 ]
 
+/** Сквозной сценарий: ЦДП=3, ЦДРБ=0, АВНМ=2, ЦД ПР=1 на плоскости 0 (ЦД программ). Сегменты по шагам для поэтапной анимации. */
+const CASE_TREE_STEPS = [
+  [{ from: 'cube', to: [0, 3] }],
+  [{ from: [0, 3], to: [0, 0] }, { from: [0, 3], to: [0, 2] }, { from: [0, 3], to: [0, 1] }],
+  [{ from: [0, 0], to: [0, 2] }, { from: [0, 2], to: [0, 3] }],
+  [{ from: [0, 0], to: [0, 1] }, { from: [0, 2], to: [0, 1] }, { from: [0, 3], to: [0, 1] }],
+]
+const CASE_TREE_BLUE = '#5b8dc9'
+
 function getPathForVariant(variantId) {
   const path = []
   let idx = variantId
@@ -615,8 +624,53 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
   )
 }
 
-function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50 }) {
+function getCaseTreePosition(key) {
+  if (key === 'cube') return getVariantBasePosition(0)
+  return getPlanePointPosition(key[0], key[1])
+}
+
+function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50, highlightCaseTree, caseTreeRevealStep }) {
   const n0 = POINTS_PER_LEVEL[0]
+  const fullCaseTreeSteps = useMemo(() => {
+    const steps = [...CASE_TREE_STEPS]
+    const n1 = POINTS_PER_LEVEL[1] || 10
+    const n2 = POINTS_PER_LEVEL[2] || 30
+    const toLevel1 = Array.from({ length: Math.min(6, n1) }, (_, k) => ({ from: [0, 1], to: [1, k] }))
+    steps.push(toLevel1)
+    const toLevel2 = []
+    for (let i = 0; i < Math.min(4, n1); i++) {
+      for (let j = 0; j < Math.min(4, n2); j++) toLevel2.push({ from: [1, i], to: [2, j] })
+    }
+    steps.push(toLevel2)
+    return steps
+  }, [])
+
+  const caseTreeSegments = useMemo(() => {
+    if (!highlightCaseTree || caseTreeRevealStep == null || caseTreeRevealStep < 0) return []
+    const out = []
+    for (let s = 0; s <= Math.min(caseTreeRevealStep, fullCaseTreeSteps.length - 1); s++) {
+      fullCaseTreeSteps[s].forEach((seg) => {
+        const start = getCaseTreePosition(seg.from)
+        const end = getCaseTreePosition(seg.to)
+        out.push({ start, end })
+      })
+    }
+    return out
+  }, [highlightCaseTree, caseTreeRevealStep, fullCaseTreeSteps])
+
+  const fullCaseTreeSegmentsAll = useMemo(() => {
+    const out = []
+    fullCaseTreeSteps.forEach((stepList) => {
+      stepList.forEach((seg) => {
+        out.push({
+          start: getCaseTreePosition(seg.from),
+          end: getCaseTreePosition(seg.to),
+        })
+      })
+    })
+    return out
+  }, [fullCaseTreeSteps])
+
   const fluxCurvesCubeToL0 = useMemo(() => {
     return Array.from({ length: Math.min(NUM_FLUX_CURVES, n0 * 7) }, (_, i) => {
       const idx = (i * 17) % NUM_POINTS
@@ -643,39 +697,46 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
   }, [])
 
   const selectedPathPoints = useMemo(() => {
-    if (selectedVariantId == null) return []
-    const pts = [getVariantBasePosition(selectedVariantId)]
+    if (selectedVariantId == null && !highlightCaseTree) return []
+    const pts = [getVariantBasePosition(selectedVariantId ?? 0)]
     for (let l = 0; l < FUNNEL_LEVELS.length; l++) {
-      const idx = selectedVariantId % POINTS_PER_LEVEL[l]
+      const idx = (selectedVariantId ?? 0) % POINTS_PER_LEVEL[l]
       pts.push(getPlanePointPosition(l, idx))
     }
     return pts
-  }, [selectedVariantId])
+  }, [selectedVariantId, highlightCaseTree])
 
-  if (selectedVariantId == null) return null
+  const showFunnel = selectedVariantId != null || highlightCaseTree
+  if (!showFunnel) return null
 
   return (
     <group position={[0, 0, 0]}>
       {fluxCurvesCubeToL0.map(({ start, end }, i) => (
-        <CurveLine key={`c-${i}`} start={start} end={end} color="#5b8dc9" opacity={0.2} seed={i} />
+        <CurveLine key={`c-${i}`} start={start} end={end} color="#5b8dc9" opacity={highlightCaseTree ? 0.08 : 0.2} seed={i} />
       ))}
       {fluxCurvesBetweenLevels.map(({ start, end }, i) => (
-        <CurveLine key={`l-${i}`} start={start} end={end} color="#5b8dc9" opacity={0.15} seed={i + 100} />
+        <CurveLine key={`l-${i}`} start={start} end={end} color="#5b8dc9" opacity={highlightCaseTree ? 0.06 : 0.15} seed={i + 100} />
       ))}
-      {selectedPathPoints.length >= 2 &&
-        selectedPathPoints.slice(0, -1).map((start, i) => {
-          const end = selectedPathPoints[i + 1]
-          return (
-            <CurveLine
-              key={`s-${i}`}
-              start={[start[0], start[1], start[2]]}
-              end={[end[0], end[1], end[2]]}
-              color="#2d5a87"
-              opacity={1}
-              seed={i + 200}
-            />
-          )
-        })}
+      {highlightCaseTree && caseTreeSegments.map(({ start, end }, i) => (
+        <CurveLine
+          key={`case-${i}`}
+          start={start}
+          end={end}
+          color={CASE_TREE_BLUE}
+          opacity={1}
+          seed={i + 300}
+        />
+      ))}
+      {!highlightCaseTree && selectedVariantId != null && fullCaseTreeSegmentsAll.map(({ start, end }, i) => (
+        <CurveLine
+          key={`full-${i}`}
+          start={start}
+          end={end}
+          color={CASE_TREE_BLUE}
+          opacity={1}
+          seed={i + 400}
+        />
+      ))}
       {FUNNEL_LEVELS.map((level, idx) => (
         <FunnelLevel
           key={level.title}
@@ -710,7 +771,7 @@ const axisLabelPositions = [
   { position: [AXIS_ORIGIN, AXIS_ORIGIN, AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
-function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType }) {
+function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
 
   return (
@@ -752,6 +813,8 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         npv={npv}
         reserves={reserves}
         extraction={extraction}
+        highlightCaseTree={highlightCaseTree}
+        caseTreeRevealStep={caseTreeRevealStep}
       />
 
 
@@ -812,9 +875,21 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
       .catch(() => {})
   }, [])
 
+  const [caseTreeRevealStep, setCaseTreeRevealStep] = useState(-1)
+
+  const maxCaseTreeStep = CASE_TREE_STEPS.length + 2 - 1
   useEffect(() => {
-    if (highlightCaseTree) setSelectedVariantId(0)
-  }, [highlightCaseTree])
+    if (highlightCaseTree) {
+      setSelectedVariantId(0)
+      setCaseTreeRevealStep(0)
+      const iv = setInterval(() => {
+        setCaseTreeRevealStep((s) => (s >= maxCaseTreeStep ? s : s + 1))
+      }, 550)
+      return () => clearInterval(iv)
+    } else {
+      setCaseTreeRevealStep(-1)
+    }
+  }, [highlightCaseTree, maxCaseTreeStep])
 
   useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
@@ -997,6 +1072,8 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
                 onOpenBpm={onOpenBpm}
                 getEntityLabel={getEntityLabel}
                 showRisks={showRisks}
+                highlightCaseTree={highlightCaseTree}
+                caseTreeRevealStep={caseTreeRevealStep}
               />
             </Canvas>
             </div>

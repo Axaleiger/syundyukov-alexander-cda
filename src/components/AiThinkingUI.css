@@ -88,3 +88,21 @@
 .ai-thinking-ui-btn--resume:hover {
   background: #d1fae5;
 }
+
+.ai-thinking-ui-btn--confirm {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.ai-thinking-ui-btn--confirm:hover {
+  background: #dbeafe;
+}
+
+.ai-thinking-ui-btn--confirm:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.85;
+}

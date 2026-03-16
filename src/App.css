@@ -445,10 +445,10 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 360px;
+  width: 720px;
   max-width: calc(100vw - 48px);
   height: 100vh;
-  background: #fff;
+  background: #f9fafb;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
   z-index: 9999;
   display: flex;
