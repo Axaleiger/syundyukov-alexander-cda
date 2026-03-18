@@ -5,6 +5,8 @@ import './ConfiguratorCanvas.css'
 const NODE_WIDTH = 200
 const NODE_HEIGHT = 56
 const HANDLE_OFFSET = 28
+const FALLBACK_VIEWPORT_WIDTH = 800
+const FALLBACK_VIEWPORT_HEIGHT = 600
 
 const NODE_TYPES = [
   { id: 'trigger', label: 'Триггер', barColor: '#22c55e' },
@@ -22,7 +24,6 @@ function ConfiguratorCanvas({
   onMounted,
   animateFromNodes,
 }) {
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
   const [isPanning, setIsPanning] = useState(false)
   const [startPan, setStartPan] = useState({ x: 0, y: 0 })
   const [draggingNodeId, setDraggingNodeId] = useState(null)
@@ -45,6 +46,37 @@ function ConfiguratorCanvas({
   const setNodes = onNodesChange || (() => {})
   const setEdges = onEdgesChange || (() => {})
 
+  const getInitialTransform = (nodeList, viewportWidth, viewportHeight) => {
+    if (!nodeList || !nodeList.length) {
+      return { x: 0, y: 0, scale: 1 }
+    }
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    nodeList.forEach((n) => {
+      minX = Math.min(minX, n.x)
+      minY = Math.min(minY, n.y)
+      maxX = Math.max(maxX, n.x + NODE_WIDTH)
+      maxY = Math.max(maxY, n.y + NODE_HEIGHT)
+    })
+    const padding = 80
+    const contentW = maxX - minX + padding * 2
+    const contentH = maxY - minY + padding * 2
+    const vw = viewportWidth || FALLBACK_VIEWPORT_WIDTH
+    const vh = viewportHeight || FALLBACK_VIEWPORT_HEIGHT
+    const scale = Math.max(0.45, Math.min(vw / contentW, vh / contentH, 1.2))
+    const cx = (minX + maxX) / 2
+    const cy = (minY + maxY) / 2
+    const offsetX = vw / 2 - cx * scale
+    const offsetY = vh / 2 - cy * scale
+    return { x: offsetX, y: offsetY, scale }
+  }
+
+  const [transform, setTransform] = useState(() =>
+    getInitialTransform(nodes, FALLBACK_VIEWPORT_WIDTH, FALLBACK_VIEWPORT_HEIGHT),
+  )
+
   const nodeMap = useCallback(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes])
 
   const getNodeCenter = useCallback((node) => ({
@@ -65,25 +97,9 @@ function ConfiguratorCanvas({
   const fitView = useCallback(() => {
     if (!wrapRef.current || !nodes.length) return
     const rect = wrapRef.current.getBoundingClientRect()
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-    nodes.forEach((n) => {
-      minX = Math.min(minX, n.x)
-      minY = Math.min(minY, n.y)
-      maxX = Math.max(maxX, n.x + NODE_WIDTH)
-      maxY = Math.max(maxY, n.y + NODE_HEIGHT)
-    })
-    const padding = 80
-    const contentW = maxX - minX + padding * 2
-    const contentH = maxY - minY + padding * 2
-    const scale = Math.max(0.45, Math.min(rect.width / contentW, rect.height / contentH, 1.2))
-    const cx = (minX + maxX) / 2
-    const cy = (minY + maxY) / 2
-    const CANVAS_HALF = 16384
-    setTransform({
-      x: CANVAS_HALF - cx * scale,
-      y: CANVAS_HALF - cy * scale,
-      scale,
-    })
+    if (rect.width < 50 || rect.height < 50) return
+    const next = getInitialTransform(nodes, rect.width, rect.height)
+    setTransform(next)
   }, [nodes.length])
 
   useEffect(() => {
@@ -106,6 +122,14 @@ function ConfiguratorCanvas({
       ro?.disconnect()
     }
   }, [])
+
+  useEffect(() => {
+    if (!wrapRef.current || !nodes.length || didFitViewRef.current) return
+    const rect = wrapRef.current.getBoundingClientRect()
+    if (rect.width < 50 || rect.height < 50) return
+    fitView()
+    didFitViewRef.current = true
+  }, [nodes.length, fitView])
 
   // При добавлении нод центрируем схему с небольшой задержкой
   useEffect(() => {

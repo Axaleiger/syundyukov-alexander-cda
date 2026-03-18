@@ -5,7 +5,6 @@ import WindRose from './components/WindRose'
 import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS } from './data/rosesData'
 import Hypercube3D from './components/Hypercube3D'
 import LifecycleChart from './components/LifecycleChart'
-import CashFlowChart from './components/CashFlowChart'
 import CDPage from './components/CDPage'
 import RightPanel from './components/RightPanel'
 
@@ -66,7 +65,71 @@ function parseTabFromHash() {
   return { tab: valid ? hash : 'face', adminSub: 'roles', servicePageName: null }
 }
 
+const EXPECTED_LOGIN = 'guest'
+const EXPECTED_PASSWORD = 'user102'
+
+function timingSafeEqual(a, b) {
+  const lenA = a.length
+  const lenB = b.length
+  let diff = lenA ^ lenB
+  const maxLen = Math.max(lenA, lenB)
+  for (let i = 0; i < maxLen; i += 1) {
+    const codeA = i < lenA ? a.charCodeAt(i) : 0
+    const codeB = i < lenB ? b.charCodeAt(i) : 0
+    diff |= codeA ^ codeB
+  }
+  return diff === 0
+}
+
 function App() {
+  const [login, setLogin] = useState('')
+  const [password, setPassword] = useState('')
+  const [revealInput, setRevealInput] = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const [authPassed, setAuthPassed] = useState(false)
+  const [attemptsLeft, setAttemptsLeft] = useState(3)
+  const [lockedUntil, setLockedUntil] = useState(null)
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault()
+    setLoginError('')
+
+    const now = Date.now()
+    if (lockedUntil && now < lockedUntil) {
+      setLoginError('Вход временно заблокирован. Повторите попытку позже.')
+      return
+    }
+
+    if (!attemptsLeft) {
+      setLockedUntil(now + 15 * 60 * 1000)
+      setLoginError('Вход временно заблокирован из‑за неверных попыток.')
+      return
+    }
+
+    const okLogin = timingSafeEqual(login.trim(), EXPECTED_LOGIN)
+    const okPassword = timingSafeEqual(password, EXPECTED_PASSWORD)
+
+    if (okLogin && okPassword) {
+      setAuthPassed(true)
+      setLogin('')
+      setPassword('')
+      setRevealInput(false)
+      setLoginError('')
+      setAttemptsLeft(3)
+      setLockedUntil(null)
+      return
+    }
+
+    const remaining = attemptsLeft - 1
+    setAttemptsLeft(remaining)
+    if (remaining <= 0) {
+      setLockedUntil(Date.now() + 15 * 60 * 1000)
+      setLoginError('Вход временно заблокирован из‑за неверных попыток.')
+    } else {
+      setLoginError('Неверный логин или пароль.')
+    }
+  }
+
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'face'
     return parseTabFromHash().tab
@@ -113,6 +176,15 @@ function App() {
   }, [])
   const [thinkingGraphNodes, setThinkingGraphNodes] = useState([])
   const thinkingChainRevealedRef = useRef(false)
+  const [brainPanelOpenKey, setBrainPanelOpenKey] = useState(0)
+  const prevThinkingPanelOpenRef = useRef(thinkingPanelOpen)
+  useEffect(() => {
+    if (thinkingPanelOpen && !prevThinkingPanelOpenRef.current) {
+      setBrainPanelOpenKey((k) => k + 1)
+      thinkingChainRevealedRef.current = false
+    }
+    prevThinkingPanelOpenRef.current = thinkingPanelOpen
+  }, [thinkingPanelOpen])
   const resetThinkingChain = useCallback(() => { thinkingChainRevealedRef.current = false }, [])
   const [thinkingAwaitingConfirm, setThinkingAwaitingConfirm] = useState(false)
   const [thinkingConfirmPhase, setThinkingConfirmPhase] = useState(null)
@@ -122,6 +194,7 @@ function App() {
   const thinkingConfirmResolverRef = useRef(null)
   const requestUserConfirm = useCallback((label, options) => {
     setThinkingPanelOpen(true)
+    thinkingChainRevealedRef.current = false
     setThinkingPaused(false)
     setThinkingAwaitingConfirm(true)
     const phase = options?.phase ?? 'planning'
@@ -227,7 +300,9 @@ function App() {
     const onHashChange = () => {
       if (window.location.search.includes('bpm=1')) return
       const { tab, adminSub, servicePageName: svc } = parseTabFromHash()
-      setActiveTab(tab)
+      // Если пользователь уже находится в конфигураторе систем,
+      // не даём внешним изменениям hash самопроизвольно переключать вкладку.
+      setActiveTab((prev) => (prev === 'ontology' ? prev : tab))
       setAdminSubTab(adminSub)
       setServicePageName(svc ?? null)
     }
@@ -298,6 +373,103 @@ function App() {
   const assetStatusLabel = assetStatus ? getAssetStatusLabel(assetStatus) : null
   const assetStatusIcon = assetStatus ? getAssetStatusIcon(assetStatus) : null
 
+  if (!authPassed) {
+    const canTry = !lockedUntil || Date.now() >= lockedUntil
+    const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+    const fieldType = revealInput ? 'text' : 'password'
+
+    return (
+      <div className="app-login-wrapper">
+        <div className="app-login-card">
+          <div className="app-login-header">
+            <div className="app-login-emblem">
+              <img
+                className="app-login-emblem-img"
+                src={`${baseUrl}/emblem.png`}
+                alt="cda"
+                draggable="false"
+              />
+            </div>
+            <div className="app-login-title">
+              <div className="app-login-title-main">Вход в систему</div>
+              <div className="app-login-title-sub">Оркестратор актива</div>
+            </div>
+          </div>
+          <form className="app-login-form" onSubmit={handleLoginSubmit} autoComplete="off">
+            <label className="app-login-label" htmlFor="login-input">
+              Пользователь
+            </label>
+            <div className="app-login-input-wrap">
+              <input
+                id="login-input"
+                className={`app-login-input ${loginError ? 'app-login-input-error' : ''}`}
+                type={fieldType}
+                autoComplete="off"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                disabled={!canTry}
+                spellCheck="false"
+              />
+            </div>
+
+            <label className="app-login-label" htmlFor="password-input">
+              Пароль
+            </label>
+            <div className="app-login-input-wrap">
+              <input
+                id="password-input"
+                className={`app-login-input ${loginError ? 'app-login-input-error' : ''}`}
+                type={fieldType}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={!canTry}
+              />
+            </div>
+
+            <label className="app-login-checkbox">
+              <input
+                type="checkbox"
+                checked={revealInput}
+                onChange={(e) => setRevealInput(e.target.checked)}
+                disabled={!canTry}
+              />
+              <span>Показывать при вводе</span>
+            </label>
+
+            {loginError && <div className="app-login-error">{loginError}</div>}
+
+            <div className="app-login-meta">
+              <span className="app-login-attempts">
+                Попыток: <strong>{attemptsLeft}</strong>
+              </span>
+              <span className="app-login-request">
+                <span className="app-login-request-title">Запрос доступа:</span>
+                <span className="app-login-request-email">Syundyukov.AV@gazprom-neft.ru</span>
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              className="app-login-button"
+              disabled={!canTry || !login || !password}
+            >
+              <span>Войти</span>
+              <span className="app-login-button-glow" aria-hidden />
+            </button>
+          </form>
+          <div className="app-login-footer">
+            <span>{baseUrl}</span>
+            <span className="app-login-lock">
+              <span className="app-login-lock-icon" aria-hidden />
+              <span className="app-login-lock-text">Защищённый доступ</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (cdPageNode) {
     return (
       <div className="app">
@@ -352,7 +524,7 @@ function App() {
         {thinkingPanelOpen && (
           <>
             <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
-            <div className="app-thinking-drawer">
+            <div className={`app-thinking-drawer ${(activeTab === 'planning' || activeTab === 'ontology') ? 'app-thinking-drawer--collapsed' : ''}`}>
               <div className="app-thinking-drawer-head">
                 <h3 className="app-thinking-drawer-title">Режим мышления</h3>
                 <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
@@ -360,6 +532,7 @@ function App() {
               <div className="app-thinking-drawer-body">
                 {thinkingConfirmPhase === 'brain' ? (
                   <BrainChainView
+                    key={`brain-${brainPanelOpenKey}`}
                     steps={thinkingSteps}
                     graphNodes={graphNodesForThinking}
                     chainAlreadyRevealed={thinkingChainRevealedRef.current}
@@ -541,10 +714,12 @@ function App() {
                 />
               </section>
 
+              {/*
               <section className="section cashflow-section">
                 <h2>Динамика Cash flow и добычи</h2>
                 <CashFlowChart faceSeed={faceSeed} />
               </section>
+              */}
 
               <section className="section lifecycle-section">
                 <h2>Этап выбранного жизненного цикла актива</h2>
@@ -573,8 +748,8 @@ function App() {
                         ? 'hantos'
                         : (selectedAssetId ? getBoardIdForAsset(selectedAssetId) : 'hantos')
                   }
-                  initialStages={bpmStages}
-                  initialTasks={bpmTasks}
+                  initialStages={bpmCommand?.scenarioId === 'createPlanningCase' ? undefined : bpmStages}
+                  initialTasks={bpmCommand?.scenarioId === 'createPlanningCase' ? undefined : bpmTasks}
                   selectedAssetName={selectedAssetPoint?.name}
                   highlightCardName={bpmHighlight}
                   onClose={() => setActiveTab('scenarios')}
@@ -589,20 +764,22 @@ function App() {
             </div>
           )}
 
-          {activeTab === 'ontology' && (
-              <OntologyTab
-                onOpenDoc={() => setShowConfiguratorDoc(true)}
-                flowCode={flowCode}
-                onFlowCodeChange={setFlowCode}
-                openFromPlanning={openConfiguratorFromPlanning}
-                onOpenFromPlanningConsumed={() => setOpenConfiguratorFromPlanning(false)}
-                configuratorNodeCommand={configuratorNodeCommand}
-                onConfiguratorNodeConsumed={() => setConfiguratorNodeCommand(null)}
-                initialSchemaNodes={openConfiguratorFromPlanning ? configuratorInitialNodes : null}
-                initialSchemaEdges={openConfiguratorFromPlanning ? configuratorInitialEdges : null}
-                schemaFromPlanningRef={configuratorSchemaRef}
-              />
-            )}
+          {/* Конфигуратор систем: всегда смонтирован при основном layout, видимость по activeTab — избегаем unmount/remount и исчезновения схемы */}
+          <div className="app-content app-content-ontology" style={{ display: activeTab === 'ontology' ? 'flex' : 'none' }}>
+            <OntologyTab
+              isVisible={activeTab === 'ontology'}
+              onOpenDoc={() => setShowConfiguratorDoc(true)}
+              flowCode={flowCode}
+              onFlowCodeChange={setFlowCode}
+              openFromPlanning={openConfiguratorFromPlanning}
+              onOpenFromPlanningConsumed={() => setOpenConfiguratorFromPlanning(false)}
+              configuratorNodeCommand={configuratorNodeCommand}
+              onConfiguratorNodeConsumed={() => setConfiguratorNodeCommand(null)}
+              initialSchemaNodes={configuratorInitialNodes}
+              initialSchemaEdges={configuratorInitialEdges}
+              schemaFromPlanningRef={configuratorSchemaRef}
+            />
+          </div>
           {activeTab === 'results' && (
             <ResultsTab
               dashboardFocus={resultsDashboardFocus?.metric ?? null}
@@ -644,7 +821,7 @@ function App() {
       {thinkingPanelOpen && (
         <>
           <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
-          <div className="app-thinking-drawer">
+          <div className={`app-thinking-drawer ${(activeTab === 'planning' || activeTab === 'ontology') ? 'app-thinking-drawer--collapsed' : ''}`}>
             <div className="app-thinking-drawer-head">
               <h3 className="app-thinking-drawer-title">Режим мышления</h3>
               <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
@@ -652,6 +829,7 @@ function App() {
             <div className="app-thinking-drawer-body">
               {thinkingConfirmPhase === 'brain' ? (
                 <BrainChainView
+                  key={`brain-${brainPanelOpenKey}`}
                   steps={thinkingSteps}
                   graphNodes={graphNodesForThinking}
                   chainAlreadyRevealed={thinkingChainRevealedRef.current}

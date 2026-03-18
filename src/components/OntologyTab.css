@@ -3,8 +3,8 @@
 .ontology-tab {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 500px;
+  flex: 1;
+  min-height: 0;
   background: #fff;
 }
 
@@ -394,7 +394,7 @@
 
 .ontology-config-wrap {
   flex: 1;
-  min-height: 400px;
+  min-height: 0;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -409,7 +409,7 @@
 
 .ontology-n8n-canvas {
   flex: 1;
-  min-height: 420px;
+  min-height: 0;
   border-radius: 8px;
   overflow: hidden;
 }

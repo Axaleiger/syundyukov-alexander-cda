@@ -413,8 +413,18 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
     if (data) return data
     return { stages: [], tasks: {} }
   }, [initialBoardId])
-  const [stages, setStages] = useState(() => (initialStages != null && initialStages.length >= 0) ? initialStages : (boardData.stages || []))
-  const [tasks, setTasks] = useState(() => initialTasks != null ? initialTasks : (boardData.tasks || {}))
+  const isCreatePlanningCase = bpmCommand?.scenarioId === 'createPlanningCase'
+  const [stages, setStages] = useState(() => {
+    if (isCreatePlanningCase) {
+      const preset = getInitialBoard('hantos') || { stages: ['Подготовка', 'Реализация', 'Контроль'] }
+      return preset.stages || ['Подготовка', 'Реализация', 'Контроль']
+    }
+    return (initialStages != null && initialStages.length >= 0) ? initialStages : (boardData.stages || [])
+  })
+  const [tasks, setTasks] = useState(() => {
+    if (isCreatePlanningCase) return {}
+    return initialTasks != null ? initialTasks : (boardData.tasks || {})
+  })
   const [viewMode, setViewMode] = useState('Подробный вид')
   const [expanded, setExpanded] = useState({}) // key: task.id — сохраняется при перетаскивании между этапами
   const [expandedSections, setExpandedSections] = useState({}) // key: task.id, value: { systems, input, results }

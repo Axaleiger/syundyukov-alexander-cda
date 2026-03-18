@@ -1,15 +1,18 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import './DecisionTreeView.css'
-import ScenarioSankeyNivo from './ScenarioSankeyNivo'
+import ScenarioSankeyNivo, { getVariantScores } from './ScenarioSankeyNivo'
 
-function DecisionTreeView({ selectedPathId, onSelect }) {
+function DecisionTreeView({ selectedPathId, onSelect, growthProgress = 1, stepsVisibleCount }) {
   const [hoverPathId, setHoverPathId] = useState(null)
 
-  const variants = [
-    { id: 'variant-1', label: 'Вариант 1', prob: '94.2' },
-    { id: 'variant-2', label: 'Вариант 2', prob: '92.5' },
-    { id: 'variant-3', label: 'Вариант 3', prob: '90.3' },
-  ]
+  const variants = useMemo(() => {
+    const scores = getVariantScores()
+    return [
+      { id: 'variant-1', label: 'Вариант 1', prob: Number(scores['variant-1']).toFixed(1) },
+      { id: 'variant-2', label: 'Вариант 2', prob: Number(scores['variant-2']).toFixed(1) },
+      { id: 'variant-3', label: 'Вариант 3', prob: Number(scores['variant-3']).toFixed(1) },
+    ]
+  }, [])
 
   const activeVariantId = hoverPathId || selectedPathId || null
 
@@ -21,6 +24,8 @@ function DecisionTreeView({ selectedPathId, onSelect }) {
           activePathId={activeVariantId}
           onVariantSelect={onSelect}
           onVariantHover={setHoverPathId}
+          growthProgress={growthProgress}
+          stepsVisibleCount={stepsVisibleCount}
         />
       </div>
       <div className="decision-tree-buttons">
@@ -33,7 +38,10 @@ function DecisionTreeView({ selectedPathId, onSelect }) {
             }`}
             onMouseEnter={() => setHoverPathId(v.id)}
             onMouseLeave={() => setHoverPathId(null)}
-            onClick={() => onSelect?.(v.id)}
+            onClick={() => {
+              const next = selectedPathId === v.id ? null : v.id
+              onSelect?.(next)
+            }}
           >
             <span className="decision-tree-btn-label">{v.label}</span>
             <span className="decision-tree-btn-pct">{v.prob}%</span>

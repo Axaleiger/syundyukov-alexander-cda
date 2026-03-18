@@ -6,6 +6,8 @@ import './AiThinkingUI.css'
 const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
 
 const BRAIN_MID_DURATION_MS = 2200
+/** Задержка появления слоя дерева после галочки (создание сверху вниз вместе с «Действия») */
+const TREE_LAYER_DELAY_MS = 180
 
 /** Убираем дубликаты по label (оставляем первое вхождение) */
 function uniqueStepsByLabel(steps) {
@@ -36,14 +38,16 @@ function BrainChainView({
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
   const fullCount = stepsUnique.length
   const [visibleCount, setVisibleCount] = useState(() => (chainAlreadyRevealed ? fullCount : 0))
+  const [treeRevealCount, setTreeRevealCount] = useState(() => (chainAlreadyRevealed ? fullCount : 0))
   const chainComplete = stepsUnique.some((s) => s?.label && String(s.label).includes('Готово к планированию'))
   const [brainPhase, setBrainPhase] = useState(chainAlreadyRevealed ? 'after' : 'before')
-  const midShownRef = useRef(false)
+  const mudShownRef = useRef(false)
   const progress = fullCount ? Math.min(1, visibleCount / fullCount) : 0
 
   useEffect(() => {
     if (chainAlreadyRevealed) {
       setVisibleCount(fullCount)
+      setTreeRevealCount(fullCount)
       return
     }
     if (stepsUnique.length <= visibleCount) return
@@ -52,9 +56,15 @@ function BrainChainView({
   }, [chainAlreadyRevealed, stepsUnique.length, visibleCount, fullCount])
 
   useEffect(() => {
+    if (chainAlreadyRevealed || treeRevealCount >= visibleCount) return
+    const t = setTimeout(() => setTreeRevealCount(visibleCount), TREE_LAYER_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [chainAlreadyRevealed, visibleCount, treeRevealCount])
+
+  useEffect(() => {
     if (!chainComplete) return
-    if (!midShownRef.current) {
-      midShownRef.current = true
+    if (!mudShownRef.current) {
+      mudShownRef.current = true
       setBrainPhase('mid')
       const t = setTimeout(() => setBrainPhase('after'), BRAIN_MID_DURATION_MS)
       return () => clearTimeout(t)
@@ -75,6 +85,7 @@ function BrainChainView({
           selectedPathId={selectedDecisionPathId}
           onSelect={onSelectDecisionPath}
           growthProgress={progress}
+          stepsVisibleCount={treeRevealCount}
         />
       </div>
       <div className="brain-chain-under" aria-label="Список действий">

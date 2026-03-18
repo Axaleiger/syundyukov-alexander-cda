@@ -1,39 +1,39 @@
 /* n8n-style: dotted canvas, nodes with colored bar, spinning trigger */
 
+/* Бесконечная сетка точек на viewport — без видимого края */
 .n8n-canvas-wrap {
   width: 100%;
   height: 100%;
   min-height: 420px;
   overflow: hidden;
   position: relative;
-  background: #1e293b;
+  background-color: #1e293b;
+  background-image: radial-gradient(circle at center, #64748b 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-repeat: repeat;
+  background-position: 0 0;
   border-radius: 8px;
   touch-action: none;
 }
 
-/* Размер в пределах лимита браузера (~32k), сетка 20px повторяется — визуально бесконечное поле */
+/* Холст: (0,0) в левом верхнем углу обёртки; позиция и масштаб через transform; фон прозрачный — сетка на wrap */
 .n8n-canvas {
   position: absolute;
   width: 32768px;
   height: 32768px;
-  left: 50%;
-  top: 50%;
-  margin-left: -16384px;
-  margin-top: -16384px;
-  transform-origin: center center;
-  background-color: #1e293b;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  background-color: transparent;
 }
 
-/* Точечная сетка как в n8n */
+/* Слой без своего фона — сетка рисуется только на .n8n-canvas-wrap (бесконечная по viewport) */
 .n8n-canvas-dots {
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  background-image: radial-gradient(circle at center, #64748b 1px, transparent 1px);
-  background-size: 20px 20px;
-  background-position: 0 0;
   pointer-events: none;
 }
 
