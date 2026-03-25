@@ -19,23 +19,23 @@ const russiaRegionsUrl = 'https://raw.githubusercontent.com/Hubbitus/RussiaRegio
 const worldCountriesUrl50m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson'
 const worldCountriesUrl110m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson'
 
-const DEFAULT_POV = { lat: 62, lng: 100, altitude: 1.4 }
+/** Фиксированная широта центра кадра: без «наклона» вверх/вниз, только листание по долготе. */
+const POV_LAT_FIXED = 62
+/** Стартовый зум: Россия крупно; дальше отодвинуть нельзя (только приближать). */
+const DEFAULT_POV = { lat: POV_LAT_FIXED, lng: 100, altitude: 0.6 }
 const STARFIELD_URL = 'https://unpkg.com/three-globe@2.45.1/example/img/night-sky.png'
 // (texture-only) EARTH_DAY intentionally not used for monochrome rendering
 // const EARTH_DAY = 'https://unpkg.com/three-globe@2.45.1/example/img/earth-day.jpg'
 
-// Hard bounds for camera point-of-view focused around Russia.
-// Для UX: видим только РФ, без возможности «докрутить» до других материков.
+// Жёсткий коридор центра кадра по долготе (только «полоса» России).
+// lngMin выше: при листании на запад левый край кадра не уезжает в ЕС/Прибалтику (как барьер справа для ДВ).
 const POV_BOUNDS = {
-  // Разрешаем наклон по Y (север/юг) в пределах РФ.
-  latMin: 42,
-  latMax: 82,
-  // Окно по долготе: только сектор РФ и ближайшие моря,
-  // без захода на Америку/Океанию.
-  lngMinA: 45,
-  lngMaxA: 135,
-  altMin: 0.55,
-  altMax: 1.65,
+  latFixed: POV_LAT_FIXED,
+  lngMin: 67,
+  lngMax: 106,
+  /** Только приближение: не выше стартовой altitude. */
+  altMin: 0.38,
+  altMax: DEFAULT_POV.altitude,
 }
 
 function pointInRing([x, y], ring) {
@@ -65,35 +65,13 @@ function pointInGeometry(point, geometry) {
   return false
 }
 
-function clamp01(v, min, max) {
-  return Math.max(min, Math.min(max, v))
-}
-
-function isLngAllowed(lng) {
-  return (lng >= POV_BOUNDS.lngMinA && lng <= POV_BOUNDS.lngMaxA)
-}
-
-function clampLngToAllowed(lng, fallbackLng) {
-  if (isLngAllowed(lng)) return lng
-  // Snap to closest edge within allowed window.
-  const candidates = [POV_BOUNDS.lngMinA, POV_BOUNDS.lngMaxA]
-  let best = candidates[0]
-  let bestDist = Infinity
-  for (const c of candidates) {
-    const d = Math.abs(lng - c)
-    if (d < bestDist) {
-      bestDist = d
-      best = c
-    }
-  }
-  // If for some reason we get NaN (bad input), use fallback.
-  return Number.isFinite(best) ? best : fallbackLng
-}
-
-function samePov(a, b) {
-  if (!a || !b) return false
-  const eps = 1e-4
-  return Math.abs(a.lat - b.lat) < eps && Math.abs(a.lng - b.lng) < eps && Math.abs(a.altitude - b.altitude) < eps
+/** Долгота в градусах [-180, 180] для сравнения с коридором РФ. */
+function normalizeLngDeg(lng) {
+  if (!Number.isFinite(lng)) return DEFAULT_POV.lng
+  let x = lng
+  while (x > 180) x -= 360
+  while (x < -180) x += 360
+  return x
 }
 
 function canCreateWebGLContext() {
@@ -135,13 +113,15 @@ export default function RussiaGlobe({ onAssetSelect }) {
 
   const [selectedAssetId, setSelectedAssetId] = useState(null)
   const [hoveredAssetId, setHoveredAssetId] = useState(null)
-  const [hoveredRegion, setHoveredRegion] = useState(null)
   const [hoveredArcIndex, setHoveredArcIndex] = useState(null)
 
   const keyAssetIds = useMemo(() => new Set(['do-yamal', 'do-noyabrsk', 'do-megion']), [])
 
-  const lastAppliedPovRef = useRef(DEFAULT_POV)
-  const clampInProgressRef = useRef(false)
+  /** Рекурсия change → pointOfView → change (не отключать кламп целиком). */
+  const applyingPovClampRef = useRef(false)
+  const controlsCleanupRef = useRef(null)
+  /** Чтобы не вызывать install до первого onGlobeReady и не сбивать POV. */
+  const povBarriersArmedRef = useRef(false)
 
   const applyLowPixelRatio = useCallback(() => {
     try {
@@ -192,12 +172,6 @@ export default function RussiaGlobe({ onAssetSelect }) {
         if (cancelled) return
         const feats = Array.isArray(json?.features) ? json.features : []
         const simplified = simplifyFeatures(feats, POLYGON_RING_MAX)
-        // Diagnose: check hasAsset count on original geometry vs simplified geometry.
-        const hasAssetCountOriginal = feats.filter((f) => {
-          const geom = f?.geometry
-          if (!geom) return false
-          return mapPointsData.some((p) => pointInGeometry([p.lon, p.lat], geom))
-        }).length
         // Подсвечиваем только те регионы, где есть активы.
         const withAssets = simplified.map((f) => {
           const geom = f?.geometry
@@ -234,8 +208,6 @@ export default function RussiaGlobe({ onAssetSelect }) {
           const json = await r.json()
           if (cancelled) return
           const feats = Array.isArray(json?.features) ? json.features : []
-          // User wants all world country borders (digital outlines).
-          // Keep it reasonably light; our geojson->paths does extra downsample too.
           const simplified = simplifyFeatures(feats, 32)
           setCountryPaths(
             geojsonFeaturesToPaths(simplified, { alt: 0.0026, maxPointsPerRing: 110, datelineJumpDeg: 180 }, 'country')
@@ -252,42 +224,117 @@ export default function RussiaGlobe({ onAssetSelect }) {
     return () => { cancelled = true }
   }, [])
 
-  useEffect(() => {
+  const installPovBarriers = useCallback((options = { resetPov: true }) => {
+    applyLowPixelRatio()
     const globe = globeRef.current
     if (!globe) return
 
-    // Initial point-of-view.
-    globe.pointOfView(DEFAULT_POV, 0)
-    lastAppliedPovRef.current = DEFAULT_POV
+    const controls = typeof globe.controls === 'function' ? globe.controls() : null
+    if (!controls) return
 
-    const controls = globe.controls?.()
-    if (controls) {
-      controls.enablePan = false
-      controls.enableDamping = true
-      controls.dampingFactor = 0.085
-      controls.rotateSpeed = 0.55
-      controls.zoomSpeed = 0.75
-      // Наклон по Y ограничиваем небольшой дугой (только в пределах РФ).
-      const basePolar = ((90 - DEFAULT_POV.lat) * Math.PI) / 180
-      const polarWindow = Math.PI * 0.14 // ~25°
-      controls.minPolarAngle = Math.max(0.01, basePolar - polarWindow)
-      controls.maxPolarAngle = Math.min(Math.PI - 0.01, basePolar + polarWindow)
-      // Только Россия: симметричное окно по азимуту (без Европы и лишнего востока).
-      controls.minAzimuthAngle = -Math.PI * 0.32
-      controls.maxAzimuthAngle = Math.PI * 0.32
+    controlsCleanupRef.current?.()
+    controlsCleanupRef.current = null
 
-      // Zoom limits (avoid bounce by constraining controls instead of forcing POV).
-      try {
-        const cam = globe.camera?.()
-        if (cam?.position) {
-          const dist = cam.position.length()
-          if (Number.isFinite(dist) && dist > 0) {
-            controls.minDistance = dist * 0.55
-            controls.maxDistance = dist * 1.05
-          }
-        }
-      } catch (_) { /* ignore */ }
+    if (options.resetPov) {
+      globe.pointOfView(DEFAULT_POV, 0)
     }
+
+    controls.enablePan = false
+    controls.enableDamping = false
+    controls.rotateSpeed = 0.5
+    controls.zoomSpeed = 0.65
+    const basePolar = ((90 - POV_BOUNDS.latFixed) * Math.PI) / 180
+    const polar = Math.max(0.01, Math.min(Math.PI - 0.01, basePolar))
+    controls.minPolarAngle = polar
+    controls.maxPolarAngle = polar
+    controls.minAzimuthAngle = -Infinity
+    controls.maxAzimuthAngle = Infinity
+
+    try {
+      const cam = globe.camera?.()
+      if (cam?.position) {
+        const dist = cam.position.length()
+        if (Number.isFinite(dist) && dist > 0) {
+          controls.maxDistance = dist
+          controls.minDistance = dist * 0.38
+        }
+      }
+    } catch (_) { /* ignore */ }
+
+    const applyPovClamp = () => {
+      if (applyingPovClampRef.current) return
+      let pov
+      try {
+        pov = globe.pointOfView()
+      } catch (_) {
+        return
+      }
+      if (!pov || !Number.isFinite(pov.lng)) return
+
+      const lat = POV_BOUNDS.latFixed
+      const rawLng = normalizeLngDeg(pov.lng)
+      const lng = Math.max(POV_BOUNDS.lngMin, Math.min(POV_BOUNDS.lngMax, rawLng))
+      const altRaw = pov.altitude
+      const alt = Number.isFinite(altRaw)
+        ? Math.max(POV_BOUNDS.altMin, Math.min(POV_BOUNDS.altMax, altRaw))
+        : DEFAULT_POV.altitude
+      const rawLat = pov.lat
+
+      const eps = 1e-6
+      const needLat = !Number.isFinite(rawLat) || Math.abs(rawLat - lat) > eps
+      const needLng = Math.abs(rawLng - lng) > eps
+      const needAlt = !Number.isFinite(altRaw) || Math.abs(altRaw - alt) > eps
+
+      if (!needLat && !needLng && !needAlt) return
+
+      applyingPovClampRef.current = true
+      try {
+        globe.pointOfView({ lat, lng, alt }, 0)
+        controls.update?.()
+      } finally {
+        applyingPovClampRef.current = false
+      }
+    }
+
+    applyPovClamp()
+
+    const onControlsChange = () => applyPovClamp()
+
+    let rafId = 0
+    const povGuardLoop = () => {
+      rafId = requestAnimationFrame(povGuardLoop)
+      applyPovClamp()
+    }
+    rafId = requestAnimationFrame(povGuardLoop)
+
+    controls.addEventListener('change', onControlsChange)
+    controlsCleanupRef.current = () => {
+      cancelAnimationFrame(rafId)
+      controls.removeEventListener('change', onControlsChange)
+      povBarriersArmedRef.current = false
+    }
+    povBarriersArmedRef.current = true
+  }, [applyLowPixelRatio])
+
+  const handleGlobeReady = useCallback(() => {
+    installPovBarriers({ resetPov: true })
+  }, [installPovBarriers])
+
+  // После смены размера canvas контролы могут сброситься — снова вешаем барьеры (центр кадра не трогаем).
+  useEffect(() => {
+    if (!webglOk || !povBarriersArmedRef.current) return
+    const id = requestAnimationFrame(() => {
+      const g = globeRef.current
+      if (!g) return
+      const c = typeof g.controls === 'function' ? g.controls() : null
+      if (c) installPovBarriers({ resetPov: false })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [size.width, size.height, webglOk, installPovBarriers])
+
+  useEffect(() => () => {
+    controlsCleanupRef.current?.()
+    controlsCleanupRef.current = null
   }, [])
 
   const handlePointClick = useCallback((p) => {
@@ -313,7 +360,6 @@ export default function RussiaGlobe({ onAssetSelect }) {
     }).filter(Boolean)
   }, [])
 
-  // NOTE: we avoid forcing pointOfView on every zoom/change (it causes jerks).
   // Arrowheads for CF arcs (3D cones placed at arc end).
   const arrowHeadsData = useMemo(() => {
     return arcsData.map((a, idx) => ({
@@ -479,7 +525,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
               globeMaterial={globeMaterial}
               showAtmosphere={false}
               showGraticules={false}
-              onGlobeReady={applyLowPixelRatio}
+              onGlobeReady={handleGlobeReady}
               waitForGlobeReady
               lineHoverPrecision={0.35}
               enablePointerInteraction
@@ -519,7 +565,6 @@ export default function RussiaGlobe({ onAssetSelect }) {
               polygonStrokeColor={() => null}
               polygonAltitude={() => (showBudgetFill ? 0.012 : 0.01)}
               polygonLabel={polygonLabel}
-              onPolygonHover={(feat) => setHoveredRegion(feat || null)}
               pointsData={mapPointsData}
               pointLat={(d) => d.lat}
               pointLng={(d) => d.lon}
