@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import './App.css'
-import RussiaMap from './components/RussiaMap'
+import RussiaGlobe from './components/RussiaGlobe'
 import WindRose from './components/WindRose'
 import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS } from './data/rosesData'
 import Hypercube3D from './components/Hypercube3D'
@@ -674,7 +674,7 @@ function App() {
             <div className="app-content app-content-face">
               <section className="section map-section">
                 <h2>Карта объектов Оркестратора актива</h2>
-                <RussiaMap onAssetSelect={handleMapAssetSelect} />
+                <RussiaGlobe onAssetSelect={handleMapAssetSelect} />
               </section>
 
               <section className="section wind-rose-section">
