@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
-import DecisionTreeView from './DecisionTreeView'
+import React, { useState, useEffect, useMemo } from 'react'
+import ScenarioGraph from './ScenarioGraph'
+import DigitalBrain from './DigitalBrain'
+import ScenarioAnalysisDashboard from './ScenarioAnalysisDashboard'
 import './BrainChainView.css'
 import './AiThinkingUI.css'
-
-const BASE_URL = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
-
-const BRAIN_MID_DURATION_MS = 2200
-/** Задержка появления слоя дерева после галочки (создание сверху вниз вместе с «Действия») */
-const TREE_LAYER_DELAY_MS = 180
+import { scenarioMaxRevealWave } from '../lib/scenarioGraphData'
 
 /** Убираем дубликаты по label (оставляем первое вхождение) */
 function uniqueStepsByLabel(steps) {
@@ -26,28 +23,24 @@ function uniqueStepsByLabel(steps) {
  */
 function BrainChainView({
   steps = [],
-  graphNodes = [],
   chainAlreadyRevealed = false,
   selectedDecisionPathId,
   appliedDecisionPathId,
-  onSelectDecisionPath,
   onRecalculate,
   awaitingConfirm,
   onConfirm,
 }) {
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
+  const chainComplete = stepsUnique.some((s) => s?.label && String(s.label).includes('Готово к планированию'))
   const fullCount = stepsUnique.length
   const [visibleCount, setVisibleCount] = useState(() => (chainAlreadyRevealed ? fullCount : 0))
-  const [treeRevealCount, setTreeRevealCount] = useState(() => (chainAlreadyRevealed ? fullCount : 0))
-  const chainComplete = stepsUnique.some((s) => s?.label && String(s.label).includes('Готово к планированию'))
-  const [brainPhase, setBrainPhase] = useState(chainAlreadyRevealed ? 'after' : 'before')
-  const mudShownRef = useRef(false)
-  const progress = fullCount ? Math.min(1, visibleCount / fullCount) : 0
+  const [graphWave, setGraphWave] = useState(() => (chainAlreadyRevealed ? scenarioMaxRevealWave : 0))
+  const graphBuildComplete = graphWave >= scenarioMaxRevealWave
+  const activeActionStep = Math.max(0, visibleCount - 1)
 
   useEffect(() => {
     if (chainAlreadyRevealed) {
       setVisibleCount(fullCount)
-      setTreeRevealCount(fullCount)
       return
     }
     if (stepsUnique.length <= visibleCount) return
@@ -56,37 +49,30 @@ function BrainChainView({
   }, [chainAlreadyRevealed, stepsUnique.length, visibleCount, fullCount])
 
   useEffect(() => {
-    if (chainAlreadyRevealed || treeRevealCount >= visibleCount) return
-    const t = setTimeout(() => setTreeRevealCount(visibleCount), TREE_LAYER_DELAY_MS)
-    return () => clearTimeout(t)
-  }, [chainAlreadyRevealed, visibleCount, treeRevealCount])
+    if (chainAlreadyRevealed) {
+      setGraphWave(scenarioMaxRevealWave)
+    }
+  }, [chainAlreadyRevealed])
 
   useEffect(() => {
-    if (!chainComplete) return
-    if (!mudShownRef.current) {
-      mudShownRef.current = true
-      setBrainPhase('mid')
-      const t = setTimeout(() => setBrainPhase('after'), BRAIN_MID_DURATION_MS)
-      return () => clearTimeout(t)
-    }
-  }, [chainComplete])
-
-  const brainSrc = `${BASE_URL}brain_${brainPhase}.gif`
+    if (chainAlreadyRevealed) return
+    if (graphWave >= scenarioMaxRevealWave) return
+    const t = setTimeout(() => {
+      setGraphWave((w) => Math.min(w + 1, scenarioMaxRevealWave))
+    }, 500)
+    return () => clearTimeout(t)
+  }, [chainAlreadyRevealed, graphWave])
 
   return (
     <div className="brain-chain-view">
       <div className="brain-chain-top">
         <div className="brain-chain-brain-wrap">
-          <img src={brainSrc} alt="" className="brain-chain-brain-gif" />
+          <DigitalBrain isThinking={!graphBuildComplete} />
         </div>
       </div>
       <div className="brain-chain-graph-wrap">
-        <DecisionTreeView
-          selectedPathId={selectedDecisionPathId}
-          onSelect={onSelectDecisionPath}
-          growthProgress={progress}
-          stepsVisibleCount={treeRevealCount}
-        />
+        {/* Старый блок оставлен на будущее: <DecisionTreeView ... /> */}
+        <ScenarioGraph revealWave={graphWave} graphComplete={graphBuildComplete} />
       </div>
       <div className="brain-chain-under" aria-label="Список действий">
         <p className="brain-chain-caption">Действия</p>
@@ -97,7 +83,7 @@ function BrainChainView({
             stepsUnique.map((item, i) => (
               <li
                 key={item?.id ?? i}
-                className={`ai-thinking-ui-step ai-thinking-ui-step--done brain-chain-step-item ${i < visibleCount ? 'brain-chain-step-visible' : ''}`}
+                className={`ai-thinking-ui-step ai-thinking-ui-step--done brain-chain-step-item ${i < visibleCount ? 'brain-chain-step-visible' : ''} ${i === activeActionStep && !graphBuildComplete ? 'brain-chain-step-active' : ''}`}
                 style={{ opacity: 1, visibility: 'visible', ...(i < visibleCount ? { animationDelay: `${i * 0.08}s` } : {}) }}
               >
                 <span className="ai-thinking-ui-step-icon">✓</span>
@@ -106,6 +92,7 @@ function BrainChainView({
             ))
           )}
         </ul>
+        <ScenarioAnalysisDashboard visible={graphBuildComplete} />
         {stepsUnique.length > 0 && (
           <div className="brain-chain-actions">
             {awaitingConfirm && onConfirm && (
@@ -113,7 +100,7 @@ function BrainChainView({
                 type="button"
                 className="ai-thinking-ui-btn ai-thinking-ui-btn--confirm"
                 onClick={onConfirm}
-                disabled={!selectedDecisionPathId}
+                  disabled={!graphBuildComplete}
               >
                 Согласовать
               </button>

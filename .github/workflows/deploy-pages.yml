@@ -30,6 +30,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Groq secret presence (safe)
+        env:
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+        run: |
+          if [ -n "$VITE_GROQ_API_KEY" ]; then
+            echo "VITE_GROQ_API_KEY is present (len=${#VITE_GROQ_API_KEY})"
+          else
+            echo "VITE_GROQ_API_KEY is missing (AI step generation will fallback)"
+          fi
+
       - name: Build
         env:
           # Для https://axaleiger.github.io/syundyukov-alexander-cda/

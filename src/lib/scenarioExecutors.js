@@ -4,7 +4,7 @@
  * Третий аргумент: topic (для createPlanningCase) или metric (для focusMetric).
  */
 
-import { generateSmartSteps } from './llmStepGenerator.js'
+import { generateSmartStepsDetailed } from './llmStepGenerator.js'
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -80,10 +80,15 @@ export async function createPlanningCase(ctx, topic) {
 
   let steps = DEFAULT_STEPS
   try {
-    const generated = await generateSmartSteps(topicLabel)
-    if (Array.isArray(generated) && generated.length > 0) steps = generated
+    const generated = await generateSmartStepsDetailed(topicLabel)
+    if (Array.isArray(generated?.steps) && generated.steps.length > 0) steps = generated.steps
+    if (generated?.source === 'fallback') {
+      const reason = generated?.reason ? ` (${generated.reason})` : ''
+      addThinkingStep?.(`ИИ-шаги недоступны${reason}. Использую статический список.`)
+    }
   } catch (_) {
     steps = DEFAULT_STEPS
+    addThinkingStep?.('ИИ-шаги недоступны (exception). Использую статический список.')
   }
   if (isPaused?.()) return
   addThinkingStep?.('Создаю карточки по теме «' + topicLabel + '»…')

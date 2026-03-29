@@ -13,16 +13,18 @@ import { geojsonFeaturesToPaths } from '../lib/geojsonToPaths'
 const POLYGON_RING_MAX = 56
 /** Макс. размер canvas (пиксели) — снижает нагрузку на GPU */
 const MAX_GLOBE_W = 1200
-const MAX_GLOBE_H = 760
+const MAX_GLOBE_H = 860
 
 const russiaRegionsUrl = 'https://raw.githubusercontent.com/Hubbitus/RussiaRegions.geojson/master/RussiaRegions.geojson'
 const worldCountriesUrl50m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson'
 const worldCountriesUrl110m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson'
 
-/** Фиксированная широта центра кадра: без «наклона» вверх/вниз, только листание по долготе. */
-const POV_LAT_FIXED = 62
+/** Стартовая широта центра кадра. Tilt пользователем запрещён. */
+const POV_LAT_DEFAULT = 62
 /** Стартовый зум: Россия крупно; дальше отодвинуть нельзя (только приближать). */
-const DEFAULT_POV = { lat: POV_LAT_FIXED, lng: 100, altitude: 0.6 }
+// Slightly more zoomed out by default (to reveal the top cap).
+// Russia face-on by default (center of RF), slightly zoomed out to see the cap.
+const DEFAULT_POV = { lat: POV_LAT_DEFAULT, lng: 90, altitude: 0.72 }
 const STARFIELD_URL = 'https://unpkg.com/three-globe@2.45.1/example/img/night-sky.png'
 // (texture-only) EARTH_DAY intentionally not used for monochrome rendering
 // const EARTH_DAY = 'https://unpkg.com/three-globe@2.45.1/example/img/earth-day.jpg'
@@ -30,12 +32,21 @@ const STARFIELD_URL = 'https://unpkg.com/three-globe@2.45.1/example/img/night-sk
 // Жёсткий коридор центра кадра по долготе (только «полоса» России).
 // lngMin выше: при листании на запад левый край кадра не уезжает в ЕС/Прибалтику (как барьер справа для ДВ).
 const POV_BOUNDS = {
-  latFixed: POV_LAT_FIXED,
-  lngMin: 67,
-  lngMax: 106,
-  /** Только приближение: не выше стартовой altitude. */
-  altMin: 0.38,
+  // Lat is fixed for user interaction. We may shift it automatically on asset focus.
+  latMin: 52,
+  latMax: 68,
+  // Narrower RF-only longitude window (no Europe far west, no far east beyond RF).
+  lngMin: 60,
+  lngMax: 120,
+  /** Only zooming in: do not allow zooming out beyond default. */
+  altMin: 0.32,
   altMax: DEFAULT_POV.altitude,
+}
+
+const TOP_SPACE_PX = 18
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v))
 }
 
 function pointInRing([x, y], ring) {
@@ -116,6 +127,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
   const [hoveredArcIndex, setHoveredArcIndex] = useState(null)
 
   const keyAssetIds = useMemo(() => new Set(['do-yamal', 'do-noyabrsk', 'do-megion']), [])
+  const latFixedRef = useRef(DEFAULT_POV.lat)
 
   /** Рекурсия change → pointOfView → change (не отключать кламп целиком). */
   const applyingPovClampRef = useRef(false)
@@ -152,7 +164,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
         resizeRaf = 0
         const { width, height } = entry.contentRect
         const w = Math.min(MAX_GLOBE_W, Math.max(320, Math.floor(width)))
-        const h = Math.min(MAX_GLOBE_H, Math.max(380, Math.floor((height || 480) * 0.88)))
+        const h = Math.min(MAX_GLOBE_H, Math.max(380, Math.floor((height || 480) * 0.96)))
         setSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
       })
     })
@@ -243,18 +255,22 @@ export default function RussiaGlobe({ onAssetSelect }) {
     controls.enableDamping = false
     controls.rotateSpeed = 0.5
     controls.zoomSpeed = 0.65
-    const basePolar = ((90 - POV_BOUNDS.latFixed) * Math.PI) / 180
+    // Tilt is forbidden: lock polar. We allow auto-shift of lat via latFixedRef.
+    const basePolar = ((90 - (latFixedRef.current ?? DEFAULT_POV.lat)) * Math.PI) / 180
     const polar = Math.max(0.01, Math.min(Math.PI - 0.01, basePolar))
     controls.minPolarAngle = polar
     controls.maxPolarAngle = polar
-    controls.minAzimuthAngle = -Infinity
-    controls.maxAzimuthAngle = Infinity
+
+    // Hard azimuth bounds to keep user within RF longitudes (reduce jerk vs snap-back).
+    controls.minAzimuthAngle = -Math.PI * 0.32
+    controls.maxAzimuthAngle = Math.PI * 0.32
 
     try {
       const cam = globe.camera?.()
       if (cam?.position) {
         const dist = cam.position.length()
         if (Number.isFinite(dist) && dist > 0) {
+          // Do not allow zooming out beyond the initial distance.
           controls.maxDistance = dist
           controls.minDistance = dist * 0.38
         }
@@ -271,14 +287,16 @@ export default function RussiaGlobe({ onAssetSelect }) {
       }
       if (!pov || !Number.isFinite(pov.lng)) return
 
-      const lat = POV_BOUNDS.latFixed
+      const rawLat = pov.lat
+      const latTarget = Number.isFinite(latFixedRef.current) ? latFixedRef.current : DEFAULT_POV.lat
+      const lat = clamp(latTarget, POV_BOUNDS.latMin, POV_BOUNDS.latMax)
       const rawLng = normalizeLngDeg(pov.lng)
       const lng = Math.max(POV_BOUNDS.lngMin, Math.min(POV_BOUNDS.lngMax, rawLng))
       const altRaw = pov.altitude
       const alt = Number.isFinite(altRaw)
         ? Math.max(POV_BOUNDS.altMin, Math.min(POV_BOUNDS.altMax, altRaw))
         : DEFAULT_POV.altitude
-      const rawLat = pov.lat
+      // rawLat already read above
 
       const eps = 1e-6
       const needLat = !Number.isFinite(rawLat) || Math.abs(rawLat - lat) > eps
@@ -341,6 +359,26 @@ export default function RussiaGlobe({ onAssetSelect }) {
     const next = selectedAssetId === p.id ? null : p.id
     setSelectedAssetId(next)
     onAssetSelect?.(next)
+
+    // Auto-recenter so southern assets remain clickable when zoomed (tilt is forbidden for user).
+    const globe = globeRef.current
+    if (!globe || !p) return
+
+    // Move focus a bit north so the clicked point is not at the very bottom edge.
+    const desiredLat = clamp((p.lat ?? DEFAULT_POV.lat) + 2.2, POV_BOUNDS.latMin, POV_BOUNDS.latMax)
+    latFixedRef.current = desiredLat
+
+    let cur = null
+    try { cur = globe.pointOfView() } catch (_) { /* ignore */ }
+    const curAlt = Number.isFinite(cur?.altitude) ? cur.altitude : DEFAULT_POV.altitude
+    const curLng = Number.isFinite(cur?.lng) ? normalizeLngDeg(cur.lng) : DEFAULT_POV.lng
+
+    const targetLng = clamp(normalizeLngDeg(p.lon ?? curLng), POV_BOUNDS.lngMin, POV_BOUNDS.lngMax)
+    const targetAlt = clamp(curAlt, POV_BOUNDS.altMin, POV_BOUNDS.altMax)
+
+    try {
+      globe.pointOfView({ lat: desiredLat, lng: targetLng, altitude: targetAlt }, 350)
+    } catch (_) { /* ignore */ }
   }, [onAssetSelect, selectedAssetId])
 
   const arcsData = useMemo(() => {
@@ -513,11 +551,12 @@ export default function RussiaGlobe({ onAssetSelect }) {
             WebGL недоступен (или заблокирован) — 3D-глобус не может быть показан на этом устройстве/в этом браузере.
           </div>
         ) : (
-          <div className="globe-viewport-clip" aria-hidden="false">
+          <div className="globe-viewport-clip" aria-hidden="false" style={{ height: size.height }}>
+            <div style={{ height: TOP_SPACE_PX }} aria-hidden="true" />
             <Globe
               ref={globeRef}
               width={size.width}
-              height={size.height}
+              height={Math.max(240, size.height - TOP_SPACE_PX)}
               backgroundColor="#020617"
               backgroundImageUrl={STARFIELD_URL}
               globeImageUrl={null}

@@ -163,17 +163,19 @@
 /* Обрезаем нижнюю часть глобуса (южное полушарие / «подошва») */
 .globe-viewport-clip {
   overflow: hidden;
-  /* Заполняем карточку: высоту берём от canvas, низ обрезаем clip-path */
-  clip-path: inset(0 0 12% 0);
+  /* Keep bands away without transforming canvas (preserves click accuracy) */
+  clip-path: inset(0 0 0 0);
   border-radius: 12px;
   margin: 0 auto;
   width: 100%;
+  height: 100%;
 }
 
 .globe-viewport-clip canvas {
   display: block;
   width: 100% !important;
-  height: auto !important;
+  height: 100% !important;
+  /* IMPORTANT: do not transform canvas - it breaks raycasting/picking */
 }
 
 .globe-wrapper--perf .globe-hint {
