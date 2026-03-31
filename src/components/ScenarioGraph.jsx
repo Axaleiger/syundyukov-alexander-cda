@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   optimalScenarioEdgeKeys,
   optimalScenarioNodeIds,
@@ -14,6 +14,13 @@ const ZOOM_MIN = 0.12
 const ZOOM_MAX = 2.8
 const FIT_PAD = 72
 const FIT_ANIM_MS = 520
+const FIT_DEBOUNCE_MS = 220
+
+/** Визуальный акцент лучшего сценария: ~×3 толще/ярче базовых значений */
+const OPT_EDGE_GLOW_W = 18
+const OPT_EDGE_FORE_W = 7.2
+const OPT_NODE_STROKE_W = 8.5
+const OPT_PORT_STROKE_W = 6.6
 
 function maxCharsForWidth(innerWidthPx, fontSize) {
   return Math.max(8, Math.floor(innerWidthPx / (fontSize * 0.52)))
@@ -139,7 +146,7 @@ function createSmoothBezierPath(from, to, fb, tb, edge) {
   return `M ${s.x} ${s.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${t.x} ${t.y}`
 }
 
-function NodeIcon({ type }) {
+const NodeIcon = memo(function NodeIcon({ type }) {
   const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }
   if (type === 'start') {
     return (
@@ -169,7 +176,7 @@ function NodeIcon({ type }) {
       <path {...common} d="M12 8 L12 16 M8 12 L16 12" />
     </g>
   )
-}
+})
 
 function computeBBoxForNodeIds(ids, nodesById, boxById) {
   let minX = Infinity
@@ -208,21 +215,161 @@ function viewFromBBox(bbox) {
   }
 }
 
-function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
+const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEntering }) {
+  const {
+    bw,
+    rectH,
+    box,
+    left,
+    top,
+    textStartX,
+    linesClamped,
+    textStartY,
+    strokeColor,
+    strokeW,
+    fillCol,
+    portStroke,
+    portStrokeW,
+    isOptimal,
+    nodeType,
+  } = layout
+  const showDualIn = nodeType === 'milestone' && inc >= 2
+  const enterClass = visible && isEntering ? 'sg-node-entering' : ''
+  const glowClass = visible && isEntering ? 'sg-node-glow-rect' : ''
+
+  return (
+    <g>
+      <g transform={`translate(${left}, ${top})`}>
+        <g
+          className={enterClass}
+          style={{
+            opacity: visible ? (isEntering ? undefined : 1) : 0,
+            transition: visible && !isEntering ? 'opacity 0.35s ease-out' : undefined,
+            transformBox: 'fill-box',
+            transformOrigin: 'center center',
+          }}
+        >
+          <defs>
+            <clipPath id={`sg-clip-${node.id}`}>
+              <rect x="0" y="0" width={bw} height={rectH} rx="12" ry="12" />
+            </clipPath>
+          </defs>
+          <rect
+            width={bw}
+            height={rectH}
+            rx="12"
+            ry="12"
+            fill={fillCol}
+            stroke={strokeColor}
+            strokeWidth={strokeW}
+            className={glowClass}
+          />
+          <g transform={`translate(8, ${rectH / 2 - 12})`}>
+            <NodeIcon type={nodeType} />
+          </g>
+          <text
+            x={textStartX}
+            y={textStartY}
+            textAnchor="start"
+            fontSize={box.fontSize}
+            fill="#e2e8f0"
+            style={{ pointerEvents: 'none', fontWeight: 600 }}
+            clipPath={`url(#sg-clip-${node.id})`}
+          >
+            {linesClamped.map((line, i) => (
+              <tspan key={i} x={textStartX} dy={i === 0 ? 0 : LINE_HEIGHT}>
+                {line}
+              </tspan>
+            ))}
+          </text>
+        </g>
+      </g>
+
+      {visible && (
+        <g className="pointer-events-none">
+          {showDualIn ? (
+            <>
+              <circle
+                cx={node.x - 16}
+                cy={node.y - rectH / 2}
+                r={4.5}
+                fill="#0a0e14"
+                stroke={portStroke}
+                strokeWidth={portStrokeW}
+              />
+              <circle
+                cx={node.x + 16}
+                cy={node.y - rectH / 2}
+                r={4.5}
+                fill="#0a0e14"
+                stroke={portStroke}
+                strokeWidth={portStrokeW}
+              />
+            </>
+          ) : (
+            <circle
+              cx={node.x}
+              cy={node.y - rectH / 2}
+              r={4.5}
+              fill="#0a0e14"
+              stroke={portStroke}
+              strokeWidth={portStrokeW}
+            />
+          )}
+          <circle
+            cx={node.x}
+            cy={node.y + rectH / 2}
+            r={4.5}
+            fill="#0a0e14"
+            stroke={portStroke}
+            strokeWidth={portStrokeW}
+          />
+        </g>
+      )}
+    </g>
+  )
+})
+
+function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
   const containerRef = useRef(null)
+  const viewRef = useRef(null)
   const animRef = useRef(null)
   const zoomRef = useRef(0.5)
   const panRef = useRef({ x: 0, y: 0 })
+  const dragRef = useRef(null)
+  const prevVisibleRef = useRef(new Set(visibleNodeIds))
+  const fitDebounceRef = useRef(null)
 
-  const [zoom, setZoom] = useState(0.5)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [dragStart, setDragStart] = useState(null)
+  const enteringNodeIds = useMemo(() => {
+    const added = new Set()
+    for (const id of visibleNodeIds) {
+      if (!prevVisibleRef.current.has(id)) added.add(id)
+    }
+    return added
+  }, [visibleNodeIds])
+
+  useLayoutEffect(() => {
+    prevVisibleRef.current = new Set(visibleNodeIds)
+  }, [visibleNodeIds])
+
+  const applyViewTransform = useCallback(() => {
+    const g = viewRef.current
+    if (!g) return
+    const { x, y } = panRef.current
+    const z = zoomRef.current
+    g.setAttribute('transform', `translate(${x},${y}) scale(${z})`)
+  }, [])
+
+  /** После любого ре-рендера синхронизируем pan/zoom в DOM (React не должен затирать transform). */
+  useLayoutEffect(() => {
+    applyViewTransform()
+  })
 
   const visibleNodes = useMemo(
-    () => scenarioGraphNodes.filter((node) => node.revealWave <= revealWave),
-    [revealWave]
+    () => scenarioGraphNodes.filter((node) => visibleNodeIds.has(node.id)),
+    [visibleNodeIds]
   )
-  const visibleIds = useMemo(() => new Set(visibleNodes.map((n) => n.id)), [visibleNodes])
+  const visibleIds = visibleNodeIds
   const visibleEdges = useMemo(
     () => scenarioGraphEdges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to)),
     [visibleIds]
@@ -251,29 +398,95 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
     return m
   }, [])
 
-  const animateToView = useCallback((targetZoom, targetPan) => {
-    if (animRef.current) cancelAnimationFrame(animRef.current)
-    const z0 = zoomRef.current
-    const p0 = { ...panRef.current }
-    const z1 = targetZoom
-    const p1 = { ...targetPan }
-    const t0 = performance.now()
+  const edgeLayouts = useMemo(() => {
+    return visibleEdges.map((edge, idx) => {
+      const from = nodesById.get(edge.from)
+      const to = nodesById.get(edge.to)
+      if (!from || !to) return null
+      const fb = boxById.get(edge.from)
+      const tb = boxById.get(edge.to)
+      if (!fb || !tb) return null
+      const d = createSmoothBezierPath(from, to, fb, tb, edge)
+      const ekey = `${edge.from}|${edge.to}`
+      const isOptimalEdge = graphComplete && optimalScenarioEdgeKeys.has(ekey)
+      const baseW = Math.max(2.2, idx % 7 === 0 ? 2.8 : 2.2)
+      const isNewEdge = enteringNodeIds.has(edge.to) && visibleNodeIds.has(edge.from)
+      return {
+        d,
+        key: `${edge.from}-${edge.to}-${idx}`,
+        isOptimalEdge,
+        baseW,
+        isNewEdge,
+      }
+    })
+  }, [visibleEdges, graphComplete, nodesById, boxById, enteringNodeIds, visibleNodeIds])
 
-    const step = (now) => {
-      const t = Math.min(1, (now - t0) / FIT_ANIM_MS)
-      const e = 1 - (1 - t) ** 3
-      const z = z0 + (z1 - z0) * e
-      const px = p0.x + (p1.x - p0.x) * e
-      const py = p0.y + (p1.y - p0.y) * e
-      zoomRef.current = z
-      panRef.current = { x: px, y: py }
-      setZoom(z)
-      setPan({ x: px, y: py })
-      if (t < 1) animRef.current = requestAnimationFrame(step)
-      else animRef.current = null
+  const nodeLayouts = useMemo(() => {
+    const m = new Map()
+    for (const node of scenarioGraphNodes) {
+      const { w: bw, h: rectH, box } = estimateRenderedBox(node)
+      const left = node.x - bw / 2
+      const top = node.y - rectH / 2
+      const iconPad = box.iconPad ?? 26
+      const textStartX = iconPad + 6
+      const textInnerW = bw - textStartX - 8
+      const maxChars = maxCharsForWidth(textInnerW, box.fontSize)
+      const linesClamped = wrapLabelToLines(node.label, maxChars, box.maxLines)
+      const textBlockH = linesClamped.length * LINE_HEIGHT
+      const textStartY = rectH / 2 - textBlockH / 2 + LINE_HEIGHT * 0.72
+      const styles = nodeStyleByType(node.type)
+      const isOptimal = graphComplete && optimalScenarioNodeIds.has(node.id)
+      const strokeColor = isOptimal ? '#bbf7d0' : styles.stroke
+      const strokeW = isOptimal ? OPT_NODE_STROKE_W : 1.2
+      const fillCol = isOptimal ? '#071c12' : styles.fill
+      const portStroke = isOptimal ? '#ecfdf5' : styles.port
+      const portStrokeW = isOptimal ? OPT_PORT_STROKE_W : 1.8
+      m.set(node.id, {
+        bw,
+        rectH,
+        box,
+        left,
+        top,
+        textStartX,
+        linesClamped,
+        textStartY,
+        strokeColor,
+        strokeW,
+        fillCol,
+        portStroke,
+        portStrokeW,
+        isOptimal,
+        nodeType: node.type,
+      })
     }
-    animRef.current = requestAnimationFrame(step)
-  }, [])
+    return m
+  }, [graphComplete])
+
+  const animateToView = useCallback(
+    (targetZoom, targetPan) => {
+      if (animRef.current) cancelAnimationFrame(animRef.current)
+      const z0 = zoomRef.current
+      const p0 = { ...panRef.current }
+      const z1 = targetZoom
+      const p1 = { ...targetPan }
+      const t0 = performance.now()
+
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / FIT_ANIM_MS)
+        const e = 1 - (1 - t) ** 3
+        const z = z0 + (z1 - z0) * e
+        const px = p0.x + (p1.x - p0.x) * e
+        const py = p0.y + (p1.y - p0.y) * e
+        zoomRef.current = z
+        panRef.current = { x: px, y: py }
+        applyViewTransform()
+        if (t < 1) animRef.current = requestAnimationFrame(step)
+        else animRef.current = null
+      }
+      animRef.current = requestAnimationFrame(step)
+    },
+    [applyViewTransform]
+  )
 
   const fitAllVisible = useCallback(() => {
     const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById)
@@ -289,16 +502,18 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
   }, [visibleIds, nodesById, boxById, animateToView])
 
   useEffect(() => {
-    zoomRef.current = zoom
-    panRef.current = pan
-  }, [zoom, pan])
-
-  useEffect(() => {
     if (visibleIds.size === 0) return
-    const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById)
-    const v = viewFromBBox(bbox)
-    animateToView(v.zoom, v.pan)
-  }, [revealWave, graphComplete, visibleIds, nodesById, boxById, animateToView])
+    if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
+    fitDebounceRef.current = setTimeout(() => {
+      fitDebounceRef.current = null
+      const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById)
+      const v = viewFromBBox(bbox)
+      animateToView(v.zoom, v.pan)
+    }, FIT_DEBOUNCE_MS)
+    return () => {
+      if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
+    }
+  }, [visibleIds, graphComplete, nodesById, boxById, animateToView])
 
   useEffect(() => {
     const el = containerRef.current
@@ -315,16 +530,13 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
       const p0 = panRef.current
       const wx = (sx - p0.x) / z0
       const wy = (sy - p0.y) / z0
-      const p1x = sx - wx * nz
-      const p1y = sy - wy * nz
       zoomRef.current = nz
-      panRef.current = { x: p1x, y: p1y }
-      setZoom(nz)
-      setPan({ x: p1x, y: p1y })
+      panRef.current = { x: sx - wx * nz, y: sy - wy * nz }
+      applyViewTransform()
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [])
+  }, [applyViewTransform])
 
   const zoomIn = () => {
     const nz = Math.min(ZOOM_MAX, zoomRef.current * 1.18)
@@ -337,10 +549,10 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
 
   return (
     <div className="w-full">
-      <h4 className="mb-3 text-sm font-semibold text-slate-200">Граф сценария</h4>
+      <h3 className="app-thinking-drawer-title mb-4">Граф сценария</h3>
       <div
         ref={containerRef}
-        className="relative h-[560px] w-full cursor-grab overflow-hidden rounded-2xl border border-slate-700/50 bg-[#0a0e14] shadow-[0_20px_60px_rgba(2,6,23,0.65)] active:cursor-grabbing"
+        className="relative h-[560px] w-full cursor-grab overflow-hidden rounded-2xl border border-slate-700/50 bg-[#0a0e14] active:cursor-grabbing"
         style={{
           touchAction: 'none',
           backgroundImage:
@@ -351,27 +563,37 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
           if (e.button !== 0) return
           if (e.target.closest('[data-sg-control]')) return
           e.currentTarget.setPointerCapture(e.pointerId)
-          setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y })
+          dragRef.current = {
+            sx: e.clientX,
+            sy: e.clientY,
+            px: panRef.current.x,
+            py: panRef.current.y,
+          }
         }}
         onPointerMove={(e) => {
-          if (!dragStart) return
-          const nx = e.clientX - dragStart.x
-          const ny = e.clientY - dragStart.y
-          zoomRef.current = zoom
-          panRef.current = { x: nx, y: ny }
-          setPan({ x: nx, y: ny })
+          if (!dragRef.current) return
+          panRef.current = {
+            x: e.clientX - dragRef.current.sx + dragRef.current.px,
+            y: e.clientY - dragRef.current.sy + dragRef.current.py,
+          }
+          applyViewTransform()
         }}
         onPointerUp={(e) => {
           if (e.currentTarget.hasPointerCapture(e.pointerId)) {
             e.currentTarget.releasePointerCapture(e.pointerId)
           }
-          setDragStart(null)
+          dragRef.current = null
         }}
-        onPointerCancel={() => setDragStart(null)}
+        onPointerCancel={() => {
+          dragRef.current = null
+        }}
       >
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-full w-full select-none" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <filter id="sg-node-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <filter id="sg-node-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="3" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.45" />
+            </filter>
+            <filter id="sg-node-shadow-opt" x="-40%" y="-40%" width="180%" height="180%">
               <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000000" floodOpacity="0.5" />
             </filter>
             <style>
@@ -382,44 +604,84 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
                 .sg-flow-line {
                   animation: sg-flow 2.4s linear infinite;
                 }
+                @keyframes sg-flow-opt {
+                  to { stroke-dashoffset: -132; }
+                }
+                .sg-opt-flow {
+                  animation: sg-flow-opt 0.62s linear infinite;
+                  filter: drop-shadow(0 0 4px rgba(240, 253, 244, 1))
+                    drop-shadow(0 0 12px rgba(134, 239, 172, 0.95))
+                    drop-shadow(0 0 22px rgba(34, 197, 94, 0.65));
+                }
+                @keyframes sg-node-enter {
+                  from {
+                    opacity: 0;
+                    transform: scale(0.88);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: scale(1);
+                  }
+                }
+                .sg-node-entering {
+                  animation: sg-node-enter 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+                }
+                @keyframes sg-node-glow-fade {
+                  from {
+                    filter: drop-shadow(0 0 10px rgba(125, 211, 252, 0.55));
+                  }
+                  to {
+                    filter: drop-shadow(0 0 0 rgba(125, 211, 252, 0));
+                  }
+                }
+                .sg-node-glow-rect {
+                  animation: sg-node-glow-fade 0.65s ease-out forwards;
+                }
+                @keyframes sg-edge-draw {
+                  to {
+                    stroke-dashoffset: 0;
+                  }
+                }
+                .sg-edge-draw-in {
+                  stroke-dasharray: 1;
+                  stroke-dashoffset: 1;
+                  animation: sg-edge-draw 0.48s ease-out forwards;
+                }
               `}
             </style>
           </defs>
-          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+          <g ref={viewRef}>
             <g className="pointer-events-none">
-              {visibleEdges.map((edge, idx) => {
-                const from = nodesById.get(edge.from)
-                const to = nodesById.get(edge.to)
-                if (!from || !to) return null
-                const fb = boxById.get(edge.from)
-                const tb = boxById.get(edge.to)
-                if (!fb || !tb) return null
-                const d = createSmoothBezierPath(from, to, fb, tb, edge)
-                const ekey = `${edge.from}|${edge.to}`
-                const isOptimalEdge = graphComplete && optimalScenarioEdgeKeys.has(ekey)
-                const baseW = Math.max(2.2, idx % 7 === 0 ? 2.8 : 2.2)
+              {edgeLayouts.map((item) => {
+                if (!item) return null
+                const { d, key, isOptimalEdge, baseW, isNewEdge } = item
+                const useDraw = isNewEdge && !isOptimalEdge
                 return (
-                  <g key={`${edge.from}-${edge.to}-${idx}`}>
+                  <g key={key}>
                     <path
                       d={d}
                       fill="none"
                       stroke={
-                        isOptimalEdge ? 'rgba(34, 197, 94, 0.22)' : 'rgba(56, 189, 248, 0.35)'
+                        isOptimalEdge ? 'rgba(134, 239, 172, 0.72)' : 'rgba(56, 189, 248, 0.35)'
                       }
-                      strokeWidth={isOptimalEdge ? Math.max(5, baseW + 2.5) : baseW}
+                      strokeWidth={isOptimalEdge ? Math.max(OPT_EDGE_GLOW_W, baseW * 3 + 9) : baseW}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="transition-opacity duration-500"
+                      pathLength={useDraw ? 1 : undefined}
+                      className={useDraw ? 'sg-edge-draw-in' : undefined}
                     />
                     <path
                       d={d}
                       fill="none"
-                      stroke={isOptimalEdge ? 'rgba(74, 222, 128, 0.95)' : 'rgba(56, 189, 248, 0.42)'}
-                      strokeWidth={isOptimalEdge ? 2.4 : baseW * 0.55}
+                      stroke={
+                        isOptimalEdge ? 'rgba(240, 253, 244, 0.98)' : 'rgba(56, 189, 248, 0.42)'
+                      }
+                      strokeWidth={isOptimalEdge ? OPT_EDGE_FORE_W : baseW * 0.55}
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeDasharray={isOptimalEdge ? '5 14' : undefined}
-                      className={isOptimalEdge ? 'sg-flow-line' : 'transition-opacity duration-500'}
+                      pathLength={useDraw ? 1 : undefined}
+                      strokeDasharray={isOptimalEdge ? '18 42' : undefined}
+                      className={isOptimalEdge ? 'sg-opt-flow' : useDraw ? 'sg-edge-draw-in' : undefined}
                     />
                   </g>
                 )
@@ -428,168 +690,83 @@ function ScenarioGraph({ revealWave = 0, graphComplete = false }) {
 
             {scenarioGraphNodes.map((node) => {
               const visible = visibleIds.has(node.id)
-              const styles = nodeStyleByType(node.type)
-              const isOptimal = graphComplete && optimalScenarioNodeIds.has(node.id)
-              const { w: bw, h: rectH, box } = estimateRenderedBox(node)
-              const left = node.x - bw / 2
-              const top = node.y - rectH / 2
-              const iconPad = box.iconPad ?? 26
-              const textStartX = iconPad + 6
-              const textInnerW = bw - textStartX - 8
-              const maxChars = maxCharsForWidth(textInnerW, box.fontSize)
-              const linesClamped = wrapLabelToLines(node.label, maxChars, box.maxLines)
-              const textBlockH = linesClamped.length * LINE_HEIGHT
-              const textStartY = rectH / 2 - textBlockH / 2 + LINE_HEIGHT * 0.72
-
-              const strokeColor = isOptimal ? '#4ade80' : styles.stroke
-              const strokeW = isOptimal ? 2.85 : 1.2
-              const fillCol = isOptimal ? '#0f1f14' : styles.fill
-              const portStroke = isOptimal ? '#4ade80' : styles.port
+              const layout = nodeLayouts.get(node.id)
+              if (!layout) return null
               const inc = incomingCount.get(node.id) || 0
-              const showDualIn = node.type === 'milestone' && inc >= 2
-
               return (
-                <g key={node.id}>
-                  <g transform={`translate(${left}, ${top})`}>
-                    <g
-                      className="transition-all duration-500 ease-out"
-                      style={{
-                        opacity: visible ? 1 : 0,
-                        transform: visible ? 'translateY(0)' : 'translateY(6px)',
-                      }}
-                    >
-                      <defs>
-                        <clipPath id={`sg-clip-${node.id}`}>
-                          <rect x="0" y="0" width={bw} height={rectH} rx="12" ry="12" />
-                        </clipPath>
-                      </defs>
-                      <rect
-                        width={bw}
-                        height={rectH}
-                        rx="12"
-                        ry="12"
-                        fill={fillCol}
-                        stroke={strokeColor}
-                        strokeWidth={strokeW}
-                        filter="url(#sg-node-shadow)"
-                        className={isOptimal ? 'drop-shadow-[0_0_12px_rgba(74,222,128,0.45)]' : ''}
-                      />
-                      <g transform={`translate(8, ${rectH / 2 - 12})`}>
-                        <NodeIcon type={node.type} />
-                      </g>
-                      <text
-                        x={textStartX}
-                        y={textStartY}
-                        textAnchor="start"
-                        fontSize={box.fontSize}
-                        fill="#e2e8f0"
-                        style={{ pointerEvents: 'none', fontWeight: 600 }}
-                        clipPath={`url(#sg-clip-${node.id})`}
-                      >
-                        {linesClamped.map((line, i) => (
-                          <tspan key={i} x={textStartX} dy={i === 0 ? 0 : LINE_HEIGHT}>
-                            {line}
-                          </tspan>
-                        ))}
-                      </text>
-                    </g>
-                  </g>
-
-                  {visible && (
-                    <g className="pointer-events-none">
-                      {showDualIn ? (
-                        <>
-                          <circle
-                            cx={node.x - 16}
-                            cy={node.y - rectH / 2}
-                            r={4.5}
-                            fill="#0a0e14"
-                            stroke={portStroke}
-                            strokeWidth={isOptimal ? 2.2 : 1.8}
-                          />
-                          <circle
-                            cx={node.x + 16}
-                            cy={node.y - rectH / 2}
-                            r={4.5}
-                            fill="#0a0e14"
-                            stroke={portStroke}
-                            strokeWidth={isOptimal ? 2.2 : 1.8}
-                          />
-                        </>
-                      ) : (
-                        <circle
-                          cx={node.x}
-                          cy={node.y - rectH / 2}
-                          r={4.5}
-                          fill="#0a0e14"
-                          stroke={portStroke}
-                          strokeWidth={isOptimal ? 2.2 : 1.8}
-                        />
-                      )}
-                      <circle
-                        cx={node.x}
-                        cy={node.y + rectH / 2}
-                        r={4.5}
-                        fill="#0a0e14"
-                        stroke={portStroke}
-                        strokeWidth={isOptimal ? 2.2 : 1.8}
-                      />
-                    </g>
-                  )}
-                </g>
+                <GraphNode
+                  key={node.id}
+                  node={node}
+                  visible={visible}
+                  layout={layout}
+                  inc={inc}
+                  isEntering={enteringNodeIds.has(node.id)}
+                />
               )
             })}
           </g>
         </svg>
 
-        <div
-          className="absolute bottom-3 right-3 z-10 flex flex-col gap-1 rounded-xl border border-slate-700/80 bg-slate-900/92 p-1 shadow-lg"
-          data-sg-control
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="flex gap-1">
-            <button
-              type="button"
-              data-sg-control
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-lg font-medium text-slate-200 hover:bg-slate-700"
-              aria-label="Приблизить"
-              onClick={zoomIn}
-            >
-              +
-            </button>
-            <button
-              type="button"
-              data-sg-control
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-lg font-medium text-slate-200 hover:bg-slate-700"
-              aria-label="Отдалить"
-              onClick={zoomOut}
-            >
-              −
-            </button>
-          </div>
+        <div className="absolute bottom-3 right-3 z-10 grid grid-cols-2 gap-2" onPointerDown={(e) => e.stopPropagation()}>
           <button
             type="button"
             data-sg-control
-            className="rounded-lg bg-slate-800 px-2 py-1.5 text-[11px] font-medium text-slate-200 hover:bg-slate-700"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0a0e14] text-slate-100 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            aria-label="Zoom in"
+            onClick={zoomIn}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            data-sg-control
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0a0e14] text-slate-100 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            aria-label="Zoom out"
+            onClick={zoomOut}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            data-sg-control
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0a0e14] text-slate-100 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            aria-label="Center graph"
             onClick={fitAllVisible}
           >
-            Весь граф
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.1" />
+              <path d="M12 2v4" />
+              <path d="M12 18v4" />
+              <path d="M2 12h4" />
+              <path d="M18 12h4" />
+              <path d="M4.6 4.6l2.8 2.8" />
+              <path d="M16.6 16.6l2.8 2.8" />
+            </svg>
           </button>
           <button
             type="button"
             data-sg-control
-            className="rounded-lg bg-emerald-950/80 px-2 py-1.5 text-[11px] font-medium text-emerald-200 hover:bg-emerald-900/80"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-700/50 bg-[#0a0e14] text-emerald-300 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            aria-label="Fit best scenario"
             onClick={fitOptimalOnly}
           >
-            Лучший сценарий
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+              <path d="M7 4h10v4a5 5 0 0 1-10 0V4z" />
+              <path d="M7 6H5a2 2 0 0 0 2 2" />
+              <path d="M17 6h2a2 2 0 0 1-2 2" />
+            </svg>
           </button>
-          <div className="pointer-events-none px-1 pb-0.5 text-center text-[10px] text-slate-500">
-            {Math.round(zoom * 100)}%
-          </div>
         </div>
       </div>
     </div>
   )
 }
 
-export default ScenarioGraph
+export default memo(ScenarioGraph)

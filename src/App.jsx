@@ -65,71 +65,7 @@ function parseTabFromHash() {
   return { tab: valid ? hash : 'face', adminSub: 'roles', servicePageName: null }
 }
 
-const EXPECTED_LOGIN = 'guest'
-const EXPECTED_PASSWORD = 'user102'
-
-function timingSafeEqual(a, b) {
-  const lenA = a.length
-  const lenB = b.length
-  let diff = lenA ^ lenB
-  const maxLen = Math.max(lenA, lenB)
-  for (let i = 0; i < maxLen; i += 1) {
-    const codeA = i < lenA ? a.charCodeAt(i) : 0
-    const codeB = i < lenB ? b.charCodeAt(i) : 0
-    diff |= codeA ^ codeB
-  }
-  return diff === 0
-}
-
 function App() {
-  const [login, setLogin] = useState('')
-  const [password, setPassword] = useState('')
-  const [revealInput, setRevealInput] = useState(false)
-  const [loginError, setLoginError] = useState('')
-  const [authPassed, setAuthPassed] = useState(false)
-  const [attemptsLeft, setAttemptsLeft] = useState(3)
-  const [lockedUntil, setLockedUntil] = useState(null)
-
-  const handleLoginSubmit = (e) => {
-    e.preventDefault()
-    setLoginError('')
-
-    const now = Date.now()
-    if (lockedUntil && now < lockedUntil) {
-      setLoginError('Вход временно заблокирован. Повторите попытку позже.')
-      return
-    }
-
-    if (!attemptsLeft) {
-      setLockedUntil(now + 15 * 60 * 1000)
-      setLoginError('Вход временно заблокирован из‑за неверных попыток.')
-      return
-    }
-
-    const okLogin = timingSafeEqual(login.trim(), EXPECTED_LOGIN)
-    const okPassword = timingSafeEqual(password, EXPECTED_PASSWORD)
-
-    if (okLogin && okPassword) {
-      setAuthPassed(true)
-      setLogin('')
-      setPassword('')
-      setRevealInput(false)
-      setLoginError('')
-      setAttemptsLeft(3)
-      setLockedUntil(null)
-      return
-    }
-
-    const remaining = attemptsLeft - 1
-    setAttemptsLeft(remaining)
-    if (remaining <= 0) {
-      setLockedUntil(Date.now() + 15 * 60 * 1000)
-      setLoginError('Вход временно заблокирован из‑за неверных попыток.')
-    } else {
-      setLoginError('Неверный логин или пароль.')
-    }
-  }
-
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'face'
     return parseTabFromHash().tab
@@ -150,7 +86,7 @@ function App() {
   const [scenarioStageFilters, setScenarioStageFilters] = useState(() =>
     SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {})
   )
-  const [rightPanelCardColors, setRightPanelCardColors] = useState([null, null, null])
+  const [scenarioComparisonRevision, setScenarioComparisonRevision] = useState(0)
   const [adminSubTab, setAdminSubTab] = useState(() => {
     if (typeof window === 'undefined') return 'roles'
     return parseTabFromHash().adminSub
@@ -167,6 +103,12 @@ function App() {
   const [thinkingCurrentMessage, setThinkingCurrentMessage] = useState('')
   const [thinkingPaused, setThinkingPaused] = useState(false)
   const [thinkingPanelOpen, setThinkingPanelOpen] = useState(false)
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const prev = document.body.style.overflow
+    if (thinkingPanelOpen) document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [thinkingPanelOpen])
   const addThinkingStep = useCallback((label) => {
     setThinkingSteps((s) => {
       if (s.length && s[s.length - 1]?.label === label) return s
@@ -198,17 +140,21 @@ function App() {
     setThinkingPaused(false)
     setThinkingAwaitingConfirm(true)
     const phase = options?.phase ?? 'planning'
+    const refreshScenarioPanel = !!options?.refreshScenarioPanel
     setThinkingConfirmPhase(phase)
     setThinkingCurrentMessage(label)
     return new Promise((resolve) => {
       thinkingConfirmResolverRef.current = () => {
         setThinkingAwaitingConfirm(false)
+        if (refreshScenarioPanel) {
+          setScenarioComparisonRevision((n) => n + 1)
+        }
         if (thinkingConfirmPhaseRef.current !== 'brain') setThinkingConfirmPhase(null)
         thinkingConfirmResolverRef.current = null
         resolve()
       }
     })
-  }, [addThinkingStep])
+  }, [])
   const handleThinkingConfirm = useCallback(() => {
     if (selectedDecisionPathIdRef.current) {
       setAppliedDecisionPathId(selectedDecisionPathIdRef.current)
@@ -216,6 +162,10 @@ function App() {
     if (thinkingConfirmResolverRef.current) {
       thinkingConfirmResolverRef.current()
     }
+    setThinkingPanelOpen(false)
+    setThinkingCurrentMessage('')
+    setThinkingPaused(false)
+    setThinkingConfirmPhase(null)
   }, [])
   const [bpmStages, setBpmStages] = useState(null)
   const [bpmTasks, setBpmTasks] = useState(null)
@@ -280,6 +230,8 @@ function App() {
     }
     return thinkingGraphNodes
   }, [bpmStages, bpmTasks, thinkingGraphNodes])
+  const isThinkingDrawerCollapsed = activeTab === 'planning' || activeTab === 'ontology'
+  const showCollapsedBrainMinimal = isThinkingDrawerCollapsed && thinkingConfirmPhase === 'brain'
 
   const handleRecalculateDecision = useCallback(() => {
     if (!selectedDecisionPathIdRef.current) return
@@ -356,10 +308,7 @@ function App() {
   const handleMapAssetSelect = (pointId) => {
     setSelectedAssetId(pointId || null)
     setActiveTab('face')
-    if (pointId) {
-      const palette = ['green', 'yellow', 'orange', 'blue', 'teal']
-      setRightPanelCardColors([palette[Math.floor(Math.random() * palette.length)], palette[Math.floor(Math.random() * palette.length)], palette[Math.floor(Math.random() * palette.length)]])
-    }
+    setScenarioComparisonRevision(0)
   }
 
   const handleLifecycleStageClick = (stageName) => {
@@ -372,103 +321,6 @@ function App() {
   const assetStatus = selectedAssetId ? getAssetStatus(selectedAssetId) : null
   const assetStatusLabel = assetStatus ? getAssetStatusLabel(assetStatus) : null
   const assetStatusIcon = assetStatus ? getAssetStatusIcon(assetStatus) : null
-
-  if (!authPassed) {
-    const canTry = !lockedUntil || Date.now() >= lockedUntil
-    const baseUrl = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-    const fieldType = revealInput ? 'text' : 'password'
-
-    return (
-      <div className="app-login-wrapper">
-        <div className="app-login-card">
-          <div className="app-login-header">
-            <div className="app-login-emblem">
-              <img
-                className="app-login-emblem-img"
-                src={`${baseUrl}/emblem.png`}
-                alt="cda"
-                draggable="false"
-              />
-            </div>
-            <div className="app-login-title">
-              <div className="app-login-title-main">Вход в систему</div>
-              <div className="app-login-title-sub">Оркестратор актива</div>
-            </div>
-          </div>
-          <form className="app-login-form" onSubmit={handleLoginSubmit} autoComplete="off">
-            <label className="app-login-label" htmlFor="login-input">
-              Пользователь
-            </label>
-            <div className="app-login-input-wrap">
-              <input
-                id="login-input"
-                className={`app-login-input ${loginError ? 'app-login-input-error' : ''}`}
-                type={fieldType}
-                autoComplete="off"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                disabled={!canTry}
-                spellCheck="false"
-              />
-            </div>
-
-            <label className="app-login-label" htmlFor="password-input">
-              Пароль
-            </label>
-            <div className="app-login-input-wrap">
-              <input
-                id="password-input"
-                className={`app-login-input ${loginError ? 'app-login-input-error' : ''}`}
-                type={fieldType}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={!canTry}
-              />
-            </div>
-
-            <label className="app-login-checkbox">
-              <input
-                type="checkbox"
-                checked={revealInput}
-                onChange={(e) => setRevealInput(e.target.checked)}
-                disabled={!canTry}
-              />
-              <span>Показывать при вводе</span>
-            </label>
-
-            {loginError && <div className="app-login-error">{loginError}</div>}
-
-            <div className="app-login-meta">
-              <span className="app-login-attempts">
-                Попыток: <strong>{attemptsLeft}</strong>
-              </span>
-              <span className="app-login-request">
-                <span className="app-login-request-title">Запрос доступа:</span>
-                <span className="app-login-request-email">Syundyukov.AV@gazprom-neft.ru</span>
-              </span>
-            </div>
-
-            <button
-              type="submit"
-              className="app-login-button"
-              disabled={!canTry || !login || !password}
-            >
-              <span>Войти</span>
-              <span className="app-login-button-glow" aria-hidden />
-            </button>
-          </form>
-          <div className="app-login-footer">
-            <span>{baseUrl}</span>
-            <span className="app-login-lock">
-              <span className="app-login-lock-icon" aria-hidden />
-              <span className="app-login-lock-text">Защищённый доступ</span>
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   if (cdPageNode) {
     return (
@@ -524,13 +376,24 @@ function App() {
         {thinkingPanelOpen && (
           <>
             <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
-            <div className={`app-thinking-drawer ${(activeTab === 'planning' || activeTab === 'ontology') ? 'app-thinking-drawer--collapsed' : ''}`}>
+            <div className={`app-thinking-drawer ${isThinkingDrawerCollapsed ? 'app-thinking-drawer--collapsed' : ''}`}>
               <div className="app-thinking-drawer-head">
                 <h3 className="app-thinking-drawer-title">Режим мышления</h3>
                 <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
               </div>
               <div className="app-thinking-drawer-body">
-                {thinkingConfirmPhase === 'brain' ? (
+                {showCollapsedBrainMinimal ? (
+                  <div className="app-thinking-drawer-minimal">
+                    <h3 className="app-thinking-drawer-title">Цепочка размышлений</h3>
+                    <button
+                      type="button"
+                      className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
+                      onClick={handleThinkingConfirm}
+                    >
+                      Согласовать предлагаемый сценарий
+                    </button>
+                  </div>
+                ) : thinkingConfirmPhase === 'brain' ? (
                   <BrainChainView
                     key={`brain-${brainPanelOpenKey}`}
                     steps={thinkingSteps}
@@ -791,7 +654,10 @@ function App() {
 
         {activeTab === 'face' && selectedAssetId && (
           <aside className="app-right-panel">
-            <RightPanel scenarioCardColors={rightPanelCardColors} assetId={selectedAssetId} />
+            <RightPanel
+              assetId={selectedAssetId}
+              scenarioComparisonRevision={scenarioComparisonRevision}
+            />
           </aside>
         )}
       </div>
@@ -821,13 +687,24 @@ function App() {
       {thinkingPanelOpen && (
         <>
           <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
-          <div className={`app-thinking-drawer ${(activeTab === 'planning' || activeTab === 'ontology') ? 'app-thinking-drawer--collapsed' : ''}`}>
+          <div className={`app-thinking-drawer ${isThinkingDrawerCollapsed ? 'app-thinking-drawer--collapsed' : ''}`}>
             <div className="app-thinking-drawer-head">
               <h3 className="app-thinking-drawer-title">Режим мышления</h3>
               <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
             </div>
             <div className="app-thinking-drawer-body">
-              {thinkingConfirmPhase === 'brain' ? (
+              {showCollapsedBrainMinimal ? (
+                <div className="app-thinking-drawer-minimal">
+                  <h3 className="app-thinking-drawer-title">Цепочка размышлений</h3>
+                  <button
+                    type="button"
+                    className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
+                    onClick={handleThinkingConfirm}
+                  >
+                    Согласовать предлагаемый сценарий
+                  </button>
+                </div>
+              ) : thinkingConfirmPhase === 'brain' ? (
                 <BrainChainView
                   key={`brain-${brainPanelOpenKey}`}
                   steps={thinkingSteps}

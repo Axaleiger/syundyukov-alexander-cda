@@ -25,10 +25,30 @@ export function simplifyPolygonGeometry(geometry, maxPerRing = 80) {
   return clone
 }
 
+/**
+ * Упрощает геометрию полигона или линии (для контуров стран / границ).
+ */
+export function simplifyGeometry(geometry, maxPerRing = 80) {
+  if (!geometry?.type) return geometry
+  if (geometry.type === 'Polygon' || geometry.type === 'MultiPolygon') {
+    return simplifyPolygonGeometry(geometry, maxPerRing)
+  }
+  if (geometry.type === 'LineString') {
+    return { type: 'LineString', coordinates: simplifyRing(geometry.coordinates, maxPerRing) }
+  }
+  if (geometry.type === 'MultiLineString') {
+    return {
+      type: 'MultiLineString',
+      coordinates: geometry.coordinates.map((line) => simplifyRing(line, maxPerRing)),
+    }
+  }
+  return geometry
+}
+
 export function simplifyFeatures(features, maxPerRing = 80) {
   if (!Array.isArray(features)) return []
   return features.map((f) => ({
     ...f,
-    geometry: simplifyPolygonGeometry(f.geometry, maxPerRing),
+    geometry: simplifyGeometry(f.geometry, maxPerRing),
   }))
 }

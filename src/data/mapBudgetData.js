@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Бюджет по активам Газпромнефть: только регионы, в которых есть активы.
  * Ключи — названия регионов из GeoJSON (RussiaRegions).
  */
@@ -33,6 +33,29 @@ export const BUDGET_BY_ASSET = {
   'Ленинградская область': 0.5,
   'Московская область': 0.8,
   'Москва': 0.8,
+}
+
+
+
+export function getBudgetForAssetId(assetId) {
+  if (!assetId) return null
+  const v = {
+    "do-orenburg": -0.2,
+    "do-yamal": 0.7,
+    "do-zapolyarye": 0.6,
+    "do-messoyakha": 0.6,
+    "do-meretoyakha": 0.7,
+    "do-noyabrsk": 0.6,
+    "do-megion": 0.4,
+    "prirazlomnoe": 0.2,
+    "novy-port": 0.7,
+    "messoyakha-m": 0.7,
+    "chayandinskoe": -0.3,
+    "do-tomsk": 0.3,
+    "spb": 0.5,
+    "moscow": 0.8
+  }[assetId]
+  return typeof v === "number" && Number.isFinite(v) ? v : null
 }
 
 /** Цвет по нормированному значению бюджета: красный = недостаток, зелёный = избыток */

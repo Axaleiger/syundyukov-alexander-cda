@@ -50,10 +50,10 @@ function AiThinkingUI({
           {awaitingConfirm && onConfirm ? (
             <button
               type="button"
-              className="ai-thinking-ui-btn ai-thinking-ui-btn--confirm"
+              className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
               onClick={onConfirm}
             >
-              Согласовать
+              Согласовать предлагаемый сценарий
             </button>
           ) : (
             <>

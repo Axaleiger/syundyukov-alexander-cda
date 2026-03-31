@@ -62,6 +62,16 @@ function ringToPathItems(ring, opts, kind) {
 
 function geometryToPaths(geometry, opts, kind) {
   if (!geometry?.type || !geometry.coordinates) return []
+  if (geometry.type === 'LineString') {
+    return ringToPathItems(geometry.coordinates, opts, kind)
+  }
+  if (geometry.type === 'MultiLineString') {
+    const out = []
+    for (const line of geometry.coordinates) {
+      out.push(...ringToPathItems(line, opts, kind))
+    }
+    return out
+  }
   if (geometry.type === 'Polygon') {
     const [outer] = geometry.coordinates
     if (!outer) return []

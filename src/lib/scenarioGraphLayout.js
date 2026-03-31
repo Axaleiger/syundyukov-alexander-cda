@@ -1,8 +1,25 @@
 /**
  * Раскладка workflow: основной поток слева направо, веер с отклонением по Y, merge и коллизии.
+ * Анизотропия: вытягивание по X, сжатие вертикального разброса (эллипс вместо «шара»).
  */
 
 import { forceSimulation, forceCollide, forceManyBody } from 'd3-force'
+
+/** Множители смещения веера: сильнее вправо, слабее по Y */
+const FAN_RADIUS = 138
+const FAN_KX = 1.72
+const FAN_KY = 0.48
+const FAN_SPREAD_FACTOR = 0.72
+
+/** Сценарии от generation: большой радиус по X, малый по Y, уже угол веера */
+const SCENARIO_RX = 700
+const SCENARIO_RY = 178
+const SCENARIO_SPREAD_SCALE = 0.55
+
+const MERGE_STEP_X = 198
+const CHAIN_STEP_X = 228
+
+const POST_Y_DAMP = 0.74
 
 function approxRadius(node) {
   const t = node.type
@@ -29,21 +46,21 @@ function buildMaps(nodes, edges) {
   return { byId, outs, preds }
 }
 
-/** Веер в сторону +X (угол 0 — вправо), разброс по вертикали */
+/** Веер в сторону +X (угол 0 — вправо), эллиптический разброс */
 function placeFan(parent, childIds, byId, placed, spreadFactor = 1) {
-  const R = 128
   const ch = childIds.filter((id) => !placed.has(id))
   if (!ch.length || !parent) return
   const n = ch.length
-  const spread = Math.min(Math.PI * 0.72, Math.PI * 0.2 * Math.max(n, 2) * spreadFactor)
+  const spread =
+    Math.min(Math.PI * 0.72, Math.PI * 0.2 * Math.max(n, 2) * spreadFactor) * FAN_SPREAD_FACTOR
   const mid = 0
   ch.sort((a, b) => a.localeCompare(b))
   for (let i = 0; i < n; i++) {
     const t = n === 1 ? 0.5 : i / (n - 1)
     const ang = mid - spread / 2 + t * spread
     const node = byId.get(ch[i])
-    node.x = parent.x + R * Math.cos(ang)
-    node.y = parent.y + R * Math.sin(ang)
+    node.x = parent.x + FAN_RADIUS * Math.cos(ang) * FAN_KX
+    node.y = parent.y + FAN_RADIUS * Math.sin(ang) * FAN_KY
     placed.add(ch[i])
   }
 }
@@ -56,7 +73,7 @@ function sweepMerges(nodes, preds, byId, placed) {
     if (ps.length !== 2) continue
     if (!ps.every((p) => placed.has(p))) continue
     const parents = ps.map((p) => byId.get(p))
-    const cx = Math.max(...parents.map((p) => p.x)) + 118
+    const cx = Math.max(...parents.map((p) => p.x)) + MERGE_STEP_X
     const cy = parents.reduce((s, p) => s + p.y, 0) / 2
     n.x = cx
     n.y = cy
@@ -92,12 +109,12 @@ export function applyWorkflowLayout(nodes, edges) {
   const uq = byId.get('userQuery')
   const gen = byId.get('generation')
   if (uq) {
-    uq.x = 140
+    uq.x = 120
     uq.y = 320
     placed.add('userQuery')
   }
   if (gen) {
-    gen.x = 420
+    gen.x = 520
     gen.y = 320
     placed.add('generation')
   }
@@ -109,15 +126,14 @@ export function applyWorkflowLayout(nodes, edges) {
 
   if (gen && scenarios.length) {
     const n = scenarios.length
-    const R = 400
-    const spread = Math.min(Math.PI * 0.78, 0.16 * Math.PI * n)
+    const spread = Math.min(Math.PI * 0.78, 0.16 * Math.PI * n) * SCENARIO_SPREAD_SCALE
     const mid = 0
     for (let i = 0; i < n; i++) {
       const t = n === 1 ? 0.5 : i / (n - 1)
       const ang = mid - spread / 2 + t * spread
       const sn = byId.get(scenarios[i])
-      sn.x = gen.x + R * Math.cos(ang)
-      sn.y = gen.y + R * Math.sin(ang)
+      sn.x = gen.x + SCENARIO_RX * Math.cos(ang)
+      sn.y = gen.y + SCENARIO_RY * Math.sin(ang)
       placed.add(scenarios[i])
     }
   }
@@ -136,7 +152,7 @@ export function applyWorkflowLayout(nodes, edges) {
       const ps = preds.get(n.id) || []
       if (ps.length === 1 && placed.has(ps[0])) {
         const p = byId.get(ps[0])
-        n.x = p.x + 130
+        n.x = p.x + CHAIN_STEP_X
         n.y = p.y
         placed.add(n.id)
       } else {
@@ -163,7 +179,7 @@ export function applyWorkflowLayout(nodes, edges) {
   const idToSim = new Map(simNodes.map((s) => [s.id, s]))
   const sim = forceSimulation(simNodes)
     .force('collide', forceCollide((d) => d.r).strength(1))
-    .force('charge', forceManyBody().strength(-22).distanceMax(520))
+    .force('charge', forceManyBody().strength(-18).distanceMax(560))
     .alphaDecay(0.18)
     .velocityDecay(0.72)
 
@@ -176,6 +192,20 @@ export function applyWorkflowLayout(nodes, edges) {
       n.x = Math.round(s.x)
       n.y = Math.round(s.y)
     }
+  }
+
+  const pinned = new Set(['userQuery', 'generation'])
+  let sumY = 0
+  let cntY = 0
+  for (const n of nodes) {
+    if (pinned.has(n.id)) continue
+    sumY += n.y
+    cntY += 1
+  }
+  const meanY = cntY > 0 ? sumY / cntY : 0
+  for (const n of nodes) {
+    if (pinned.has(n.id)) continue
+    n.y = Math.round(meanY + (n.y - meanY) * POST_Y_DAMP)
   }
 
   assignMergeInputPorts(edges, preds)

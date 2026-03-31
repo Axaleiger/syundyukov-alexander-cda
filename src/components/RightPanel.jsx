@@ -1,59 +1,7 @@
 import React, { useMemo } from 'react'
+import { getAssetScenarioComparisonDemo, SCENARIO_METRIC_DEFS } from '../data/assetScenarioComparison.demo'
+import { ScenarioMetricRow } from './ScenarioMetricRow'
 import './RightPanel.css'
-
-const TITLE_OPTIONS = ['Поддержание добычи', 'Рост добычи', 'Сценарий развития', 'CAPEX-оптимизация', 'Баланс рисков', 'Консервативный сценарий']
-const LIMITS_OPTIONS = ['Запасы', 'Умеренные ограничения', 'Фонд скважин', 'Инфраструктура', 'Бюджет']
-const ARROWS = ['up', 'down', 'up-right', 'neutral']
-const ICONS = [null, 'warning', 'check']
-
-function seedFromId(id) {
-  let h = 0
-  for (let i = 0; i < (id || '').length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return h
-}
-
-function seededChoice(seed, arr) {
-  return arr[(seed >>> 0) % arr.length]
-}
-
-function getScenariosForAsset(assetId) {
-  const s = seedFromId(assetId)
-  return [
-    {
-      id: 'A',
-      title: seededChoice(s + 1, TITLE_OPTIONS),
-      effects: [
-        { text: 'Добыча', arrow: seededChoice(s + 2, ARROWS), color: seededChoice(s + 3, ['green', 'yellow']) },
-        { text: 'Запасы / RF', arrow: seededChoice(s + 4, ARROWS), color: seededChoice(s + 5, ['green', 'yellow']) },
-        { text: 'CAPEX', arrow: seededChoice(s + 6, ARROWS), color: seededChoice(s + 7, ['green', 'yellow']) },
-      ],
-      limits: seededChoice(s + 8, LIMITS_OPTIONS),
-      icon: seededChoice(s + 9, ICONS),
-    },
-    {
-      id: 'B',
-      title: seededChoice(s + 10, TITLE_OPTIONS),
-      effects: [
-        { text: 'Добыча', arrow: seededChoice(s + 11, ARROWS), color: seededChoice(s + 12, ['green', 'yellow', 'orange']) },
-        { text: 'Запасы', arrow: seededChoice(s + 13, ARROWS), color: seededChoice(s + 14, ['green', 'yellow', 'orange']) },
-        { text: 'CAPEX', arrow: seededChoice(s + 15, ARROWS), color: seededChoice(s + 16, ['green', 'yellow', 'orange']) },
-      ],
-      limits: seededChoice(s + 17, LIMITS_OPTIONS),
-      icon: seededChoice(s + 18, ICONS),
-    },
-    {
-      id: 'C',
-      title: seededChoice(s + 19, TITLE_OPTIONS),
-      effects: [
-        { text: 'Добыча', arrow: seededChoice(s + 20, ARROWS), color: seededChoice(s + 21, ['orange', 'yellow']) },
-        { text: 'Запасы', arrow: seededChoice(s + 22, ARROWS), color: seededChoice(s + 23, ['orange', 'yellow']) },
-        { text: 'CAPEX', arrow: seededChoice(s + 24, ARROWS), color: seededChoice(s + 25, ['orange', 'yellow']) },
-      ],
-      limits: seededChoice(s + 26, LIMITS_OPTIONS),
-      icon: seededChoice(s + 27, ICONS),
-    },
-  ]
-}
 
 const DECISIONS = [
   {
@@ -81,45 +29,36 @@ const DECISIONS = [
   },
 ]
 
-function ArrowIcon({ type }) {
-  if (type === 'up') return <span className="right-panel-arrow right-panel-arrow-up">↑</span>
-  if (type === 'up-right') return <span className="right-panel-arrow right-panel-arrow-up">↗</span>
-  if (type === 'down') return <span className="right-panel-arrow right-panel-arrow-down">↓</span>
-  return <span className="right-panel-arrow">—</span>
-}
+function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
+  const comparison = useMemo(() => getAssetScenarioComparisonDemo(assetId), [assetId])
+  const showAiDeltas = scenarioComparisonRevision > 0
 
-function RightPanel({ scenarioCardColors = [], assetId }) {
-  const scenarios = useMemo(() => getScenariosForAsset(assetId), [assetId])
-  const colorList = scenarioCardColors.length ? scenarioCardColors : ['green', 'yellow', 'orange']
   return (
     <aside className="right-panel">
       <section className="right-panel-section">
         <h3 className="right-panel-heading">Сравнение сценариев развития актива</h3>
         <p className="right-panel-note">Альтернативные управленческие логики при единых допущениях</p>
         <div className="right-panel-scenarios">
-          {scenarios.map((s, i) => (
-            <div key={s.id} className={`right-panel-scenario right-panel-scenario-${colorList[i] || 'green'}`}>
-              <h4 className="right-panel-scenario-title">Сценарий {s.id}: {s.title}</h4>
-              <div className="right-panel-effects">
-                <span className="right-panel-effects-label">Ключевые эффекты</span>
-                <ul>
-                  {s.effects.map((e, j) => (
-                    <li key={j}>
-                      <ArrowIcon type={e.arrow} />
-                      <span className={`right-panel-effect-${e.color}`}>{e.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="right-panel-limits">
-                <span className="right-panel-limits-label">Основные ограничения</span>
-                <span>{s.limits}</span>
-                {s.icon === 'warning' && (
-                  <span className="right-panel-icon right-panel-icon-warning" title="Ограничение">⚠</span>
-                )}
-                {s.icon === 'check' && (
-                  <span className="right-panel-icon right-panel-icon-ok" title="Норма">✓</span>
-                )}
+          {comparison.scenarios.map((sc, si) => (
+            <div
+              key={sc.id}
+              className={`right-panel-scenario right-panel-scenario--${sc.role} ${sc.isBest ? 'right-panel-scenario--best' : ''}`}
+            >
+              {sc.isBest && <span className="right-panel-scenario-badge">Рекомендуемый</span>}
+              <h4 className="right-panel-scenario-title">{sc.title}</h4>
+              <div className="right-panel-metrics">
+                {SCENARIO_METRIC_DEFS.map((def, ri) => (
+                  <ScenarioMetricRow
+                    key={def.key}
+                    metricDef={def}
+                    base={sc.metrics[def.key]}
+                    delta={sc.deltas[def.key]}
+                    showAiDeltas={showAiDeltas}
+                    rowIndex={ri}
+                    scenarioStaggerMs={si * 115}
+                    revision={scenarioComparisonRevision}
+                  />
+                ))}
               </div>
             </div>
           ))}

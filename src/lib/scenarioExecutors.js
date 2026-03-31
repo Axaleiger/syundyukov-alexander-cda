@@ -13,8 +13,6 @@ function delay(ms) {
 const STEP_DELAY = 650
 
 const CASE_INTRO_DURATION_MS = 2500
-const PLANNING_MOUNT_DELAY_MS = 900
-
 const DEFAULT_STEPS = [
   'Оценка объёмов', 'Планирование сроков', 'Назначение исполнителей', 'Согласование',
   'Контроль выполнения', 'Отчётность', 'Корректировка плана', 'Итоговая приёмка',
@@ -42,7 +40,7 @@ function getThinkingGraphNodes(topic) {
  * Создание кейса планирования: сначала вкладка «Главная страница», гиперкуб раскрывает уровни и ярко подсвечивает древо этапов и точек; затем переход на Планирование и создание карточек.
  */
 export async function createPlanningCase(ctx, topic) {
-  const { setActiveTab, setBpmCommand, setShowBpm, setThinkingPhase, setThinkingGraphNodes, addThinkingStep, isPaused, waitForUserConfirm } = ctx
+  const { setActiveTab, setShowBpm, setThinkingPhase, setThinkingGraphNodes, addThinkingStep, isPaused, waitForUserConfirm } = ctx
   const topicLabel = topic || 'планирование'
 
   if (isPaused?.()) return
@@ -67,16 +65,18 @@ export async function createPlanningCase(ctx, topic) {
   addThinkingStep?.('Валидация цепочки…')
   await delay(850)
   if (isPaused?.()) return
-  addThinkingStep?.('Готово к планированию.')
+  addThinkingStep?.('Готово к согласованию цепочки.')
   await delay(500)
   if (isPaused?.()) return
   if (typeof waitForUserConfirm === 'function') {
-    await waitForUserConfirm('Проверьте цепочку и нажмите «Согласовать» для перехода к планированию.', { phase: 'brain' })
+    await waitForUserConfirm(
+      'Проверьте цепочку размышлений и нажмите «Согласовать предлагаемый сценарий» — обновится панель «Сравнение сценариев развития актива» справа.',
+      { phase: 'brain', refreshScenarioPanel: true }
+    )
   } else {
     await delay(800)
   }
   if (isPaused?.()) return
-  addThinkingStep?.('Переход к планированию…')
 
   let steps = DEFAULT_STEPS
   try {
@@ -91,17 +91,15 @@ export async function createPlanningCase(ctx, topic) {
     addThinkingStep?.('ИИ-шаги недоступны (exception). Использую статический список.')
   }
   if (isPaused?.()) return
-  addThinkingStep?.('Создаю карточки по теме «' + topicLabel + '»…')
-
-  if (typeof setBpmCommand === 'function') {
-    setBpmCommand({ scenarioId: 'createPlanningCase', params: { topic: topicLabel, steps } })
-  }
-  if (typeof setActiveTab === 'function') setActiveTab('planning')
-  await delay(PLANNING_MOUNT_DELAY_MS)
+  addThinkingStep?.('Пересчитываю экономику сценариев для выбранного актива…')
+  await delay(600)
   if (isPaused?.()) return
-  addThinkingStep?.('Анализирую запрос: «' + topicLabel + '»…')
-
-  addThinkingStep?.('Карточки добавлены на доску.')
+  for (let i = 0; i < Math.min(4, steps.length); i += 1) {
+    addThinkingStep?.(`Учитываю: ${steps[i]}…`)
+    await delay(420)
+    if (isPaused?.()) return
+  }
+  addThinkingStep?.('Сценарии обновлены в панели сравнения справа.')
 }
 
 /**

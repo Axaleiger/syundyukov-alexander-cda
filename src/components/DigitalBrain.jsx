@@ -1,10 +1,12 @@
-import React, { useMemo, useRef } from 'react'
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react'
+import './DigitalBrain.css'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Bloom, EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
-const ROWS = 54
-const COLS = 96
+/** Плотность облака точек: меньше вершин = меньше нагрузка на CPU в useFrame */
+const ROWS = 44
+const COLS = 72
 
 function buildBlobSurface() {
   const points = []
@@ -91,7 +93,7 @@ function lerpColorHSLShort(out, cFrom, cTo, t) {
   out.setHSL(h, s, l)
 }
 
-function BrightBlob({ isThinking }) {
+const BrightBlob = memo(function BrightBlob({ isThinking }) {
   const pointsRef = useRef(null)
   const pointsBaseRef = useRef(null)
   const glowRef = useRef(null)
@@ -116,6 +118,8 @@ function BrightBlob({ isThinking }) {
   const fillDone = useMemo(() => new THREE.Color().setHSL(0.44, 0.72, 0.62), [])
   const scratchKey = useMemo(() => new THREE.Color(), [])
   const scratchFill = useMemo(() => new THREE.Color(), [])
+  /** Обновляем сетку вершин не каждый кадр — основная стоимость CPU */
+  const vertexFrameRef = useRef(0)
 
   const state = useRef(null)
   if (state.current === null) {
@@ -162,20 +166,20 @@ function BrightBlob({ isThinking }) {
     }
 
     if (pointsRef.current) {
-      const arr = pointsRef.current.geometry.attributes.position.array
-      for (let i = 0; i < pts.length; i += 1) {
-        const p = pts[i]
-        const noise = Math.sin(t * 1.75 + p.phase + p.base.x * 0.8 + p.base.z * 0.6)
-        const n = 1 + noise * state.current.wobble
-        const idx = i * 3
-        arr[idx] = p.base.x * n
-        arr[idx + 1] = p.base.y * n
-        arr[idx + 2] = p.base.z * n
-      }
-      pointsRef.current.geometry.attributes.position.needsUpdate = true
-      const baseGeom = pointsBaseRef.current?.geometry
-      if (baseGeom?.attributes?.position) {
-        baseGeom.attributes.position.needsUpdate = true
+      vertexFrameRef.current += 1
+      if (vertexFrameRef.current % 2 === 0) {
+        const arr = pointsRef.current.geometry.attributes.position.array
+        const wob = state.current.wobble
+        for (let i = 0; i < pts.length; i += 1) {
+          const p = pts[i]
+          const noise = Math.sin(t * 1.75 + p.phase + p.base.x * 0.8 + p.base.z * 0.6)
+          const n = 1 + noise * wob
+          const idx = i * 3
+          arr[idx] = p.base.x * n
+          arr[idx + 1] = p.base.y * n
+          arr[idx + 2] = p.base.z * n
+        }
+        pointsRef.current.geometry.attributes.position.needsUpdate = true
       }
     }
 
@@ -225,32 +229,73 @@ function BrightBlob({ isThinking }) {
           />
         </points>
         <mesh ref={glowRef}>
-          <sphereGeometry args={[1.74, 56, 56]} />
+          <sphereGeometry args={[1.74, 28, 28]} />
           <meshBasicMaterial transparent opacity={0.62} color="#9ce7ff" side={THREE.BackSide} />
         </mesh>
       </group>
     </>
   )
-}
+})
 
-function DigitalBrain({ isThinking = true }) {
+const PROGRESS_SMOOTH = 0.11
+
+function DigitalBrainProgressLabel({ targetPercent }) {
+  const target = Math.max(0, Math.min(100, Number(targetPercent)))
+  const targetRef = useRef(target)
+  const displayRef = useRef(target)
+  const [display, setDisplay] = useState(target)
+  targetRef.current = target
+
+  useEffect(() => {
+    let raf = 0
+    const loop = () => {
+      const t = targetRef.current
+      let d = displayRef.current
+      if (Math.abs(t - d) < 0.02) {
+        if (d !== t) {
+          d = t
+          displayRef.current = d
+          setDisplay(d)
+        }
+      } else {
+        d += (t - d) * PROGRESS_SMOOTH
+        displayRef.current = d
+        setDisplay(d)
+      }
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
   return (
-    <div style={{ width: '100%', height: '100%', minHeight: 0, background: 'transparent' }}>
-      <Canvas
-        dpr={[1.5, 2.5]}
-        style={{ display: 'block', width: '100%', height: '100%' }}
-        camera={{ position: [0, 0, 4.8], fov: 30 }}
-        gl={{ alpha: true, antialias: true }}
-      >
-        <ambientLight intensity={0.75} />
-        <BrightBlob isThinking={isThinking} />
-        <EffectComposer multisampling={0}>
-          <Bloom intensity={4.45} luminanceThreshold={0.08} luminanceSmoothing={0.65} mipmapBlur />
-          <ToneMapping />
-        </EffectComposer>
-      </Canvas>
+    <div className="digital-brain-progress-overlay" aria-live="polite">
+      <span className="digital-brain-progress-value">{Math.round(display)}%</span>
     </div>
   )
 }
 
-export default DigitalBrain
+function DigitalBrain({ isThinking = true, graphProgressPercent = null }) {
+  const showProgress = graphProgressPercent != null && Number.isFinite(graphProgressPercent)
+  return (
+    <div className="digital-brain-root">
+      <Canvas
+        className="digital-brain-canvas"
+        dpr={[1, 1.35]}
+        style={{ display: 'block', width: '100%', height: '100%' }}
+        camera={{ position: [0, 0, 4.8], fov: 30 }}
+        gl={{ alpha: true, antialias: false, powerPreference: 'high-performance', stencil: false, depth: true }}
+      >
+        <ambientLight intensity={0.75} />
+        <BrightBlob isThinking={isThinking} />
+        <EffectComposer multisampling={0}>
+          <Bloom intensity={2.6} luminanceThreshold={0.12} luminanceSmoothing={0.55} mipmapBlur={false} />
+          <ToneMapping />
+        </EffectComposer>
+      </Canvas>
+      {showProgress && <DigitalBrainProgressLabel targetPercent={graphProgressPercent} />}
+    </div>
+  )
+}
+
+export default React.memo(DigitalBrain)

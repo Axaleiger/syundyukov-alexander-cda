@@ -46,32 +46,101 @@
 .right-panel-scenario {
   padding: 0.85rem;
   border-radius: 10px;
-  border-left: 4px solid #94a3b8;
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+  border-left-style: solid;
 }
 
-.right-panel-scenario-green {
-  border-left-color: #22c55e;
-  background: rgba(34, 197, 94, 0.06);
+.right-panel-scenario--aggressive {
+  border-left-color: #dc2626;
+  background: rgba(220, 38, 38, 0.055);
 }
 
-.right-panel-scenario-yellow {
-  border-left-color: #eab308;
-  background: rgba(234, 179, 8, 0.08);
+.right-panel-scenario--risky {
+  border-left-color: #ea580c;
+  background: rgba(234, 88, 12, 0.07);
 }
 
-.right-panel-scenario-orange {
-  border-left-color: #f97316;
-  background: rgba(249, 115, 22, 0.08);
+.right-panel-scenario--consensus {
+  border-left-color: #16a34a;
+  background: rgba(22, 163, 74, 0.06);
 }
 
-.right-panel-scenario-blue {
-  border-left-color: #2d5a87;
-  background: rgba(45, 90, 135, 0.08);
+.right-panel-scenario--best {
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.28);
 }
 
-.right-panel-scenario-teal {
-  border-left-color: #0d9488;
-  background: rgba(13, 148, 136, 0.08);
+.right-panel-scenario-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.14);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.4rem;
+}
+
+.right-panel-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rp-metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.rp-metric-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rp-metric-value-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+}
+
+.rp-metric-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.rp-metric-unit {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.rp-metric-delta {
+  font-size: 0.76rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(8px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  white-space: nowrap;
+}
+
+.rp-metric-delta--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.rp-metric-delta--good {
+  color: #15803d;
+}
+
+.rp-metric-delta--bad {
+  color: #dc2626;
 }
 
 .right-panel-scenario-title {

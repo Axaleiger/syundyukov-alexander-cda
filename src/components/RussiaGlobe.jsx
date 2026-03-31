@@ -3,21 +3,23 @@ import Globe from 'react-globe.gl'
 import * as THREE from 'three'
 import mapPointsData from '../data/mapPoints.json'
 import { CF_ARROWS } from '../data/cfArrows'
-import { BUDGET_BY_ASSET, getAssetRegionKey } from '../data/mapBudgetData'
+import { getBudgetForAssetId } from '../data/mapBudgetData'
 import chainsData from '../data/chains.json'
 import './RussiaGlobe.css'
 import { simplifyFeatures } from '../lib/simplifyGeoJsonRing'
 import { geojsonFeaturesToPaths } from '../lib/geojsonToPaths'
+import { buildAssetVoronoiFeatures } from '../lib/assetVoronoiZones'
 
-/** Макс. вершин на кольце полигона — меньше = быстрее отрисовка */
-const POLYGON_RING_MAX = 56
 /** Макс. размер canvas (пиксели) — снижает нагрузку на GPU */
 const MAX_GLOBE_W = 1200
 const MAX_GLOBE_H = 860
 
-const russiaRegionsUrl = 'https://raw.githubusercontent.com/Hubbitus/RussiaRegions.geojson/master/RussiaRegions.geojson'
-const worldCountriesUrl50m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson'
-const worldCountriesUrl110m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson'
+/** Береговая линия материков и крупных островов (без политических границ). Natural Earth 50m / 110m. */
+const worldCoastlineUrl50m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_coastline.geojson'
+const worldCoastlineUrl110m = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_coastline.geojson'
+
+/** Прямоугольник для Voronoi зон вокруг активов (РФ + запас по краям). */
+const ASSET_VORONOI_BBOX = { lngMin: 18, lngMax: 138, latMin: 39, latMax: 76 }
 
 /** Стартовая широта центра кадра. Tilt пользователем запрещён. */
 const POV_LAT_DEFAULT = 62
@@ -47,33 +49,6 @@ const TOP_SPACE_PX = 18
 
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v))
-}
-
-function pointInRing([x, y], ring) {
-  // Ray casting, ring: [lng,lat][]
-  let inside = false
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0], yi = ring[i][1]
-    const xj = ring[j][0], yj = ring[j][1]
-    const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-12) + xi)
-    if (intersect) inside = !inside
-  }
-  return inside
-}
-
-function pointInGeometry(point, geometry) {
-  if (!geometry) return false
-  const { type, coordinates } = geometry
-  if (!type || !coordinates) return false
-  if (type === 'Polygon') {
-    const [outer, ...holes] = coordinates
-    if (!outer || !pointInRing(point, outer)) return false
-    return !holes.some((h) => h && pointInRing(point, h))
-  }
-  if (type === 'MultiPolygon') {
-    return coordinates.some((poly) => pointInGeometry(point, { type: 'Polygon', coordinates: poly }))
-  }
-  return false
 }
 
 /** Долгота в градусах [-180, 180] для сравнения с коридором РФ. */
@@ -113,14 +88,11 @@ export default function RussiaGlobe({ onAssetSelect }) {
   }, [])
 
   const [size, setSize] = useState({ width: 800, height: 620 })
-  const [regions, setRegions] = useState(null)
-  const [countryPaths, setCountryPaths] = useState([])
-  const [regionPaths, setRegionPaths] = useState([])
-  const [regionsError, setRegionsError] = useState(null)
+  const [coastlinePaths, setCoastlinePaths] = useState([])
   const [webglOk, setWebglOk] = useState(true)
 
-  const [showBudgetFill, setShowBudgetFill] = useState(true)
-  const [showCFArrows, setShowCFArrows] = useState(true)
+  const [showBudgetFill, setShowBudgetFill] = useState(false)
+  const [showCFArrows, setShowCFArrows] = useState(false)
 
   const [selectedAssetId, setSelectedAssetId] = useState(null)
   const [hoveredAssetId, setHoveredAssetId] = useState(null)
@@ -174,45 +146,8 @@ export default function RussiaGlobe({ onAssetSelect }) {
 
   useEffect(() => {
     let cancelled = false
-    setRegionsError(null)
-    fetch(russiaRegionsUrl)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json()
-      })
-      .then((json) => {
-        if (cancelled) return
-        const feats = Array.isArray(json?.features) ? json.features : []
-        const simplified = simplifyFeatures(feats, POLYGON_RING_MAX)
-        // Подсвечиваем только те регионы, где есть активы.
-        const withAssets = simplified.map((f) => {
-          const geom = f?.geometry
-          const hasAsset = mapPointsData.some((p) => pointInGeometry([p.lon, p.lat], geom))
-          return { ...f, __hasAsset: hasAsset }
-        })
-        setRegions(withAssets)
-        // Render region contours as “conditional/approximate” outlines:
-        // aggressively simplify ONLY the paths layer (polygons remain for interactivity + budget fill).
-        // NOTE: too-aggressive simplification can drop rings/segments -> “missing regions” effect.
-        const regionPathFeatures = simplifyFeatures(withAssets, 32)
-        setRegionPaths(
-          geojsonFeaturesToPaths(regionPathFeatures, { alt: 0.0032, maxPointsPerRing: 100, datelineJumpDeg: 180 }, 'region')
-        )
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setRegions(null)
-        setRegionsError(err?.message || 'Не удалось загрузить геоданные РФ')
-      })
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    async function loadCountries() {
-      // Prefer lighter world borders; RF regions are the priority.
-      // Try 110m first, then optionally 50m.
-      const tryUrls = [worldCountriesUrl110m, worldCountriesUrl50m]
+    async function loadCoastlines() {
+      const tryUrls = [worldCoastlineUrl50m, worldCoastlineUrl110m]
       for (const url of tryUrls) {
         try {
           const r = await fetch(url)
@@ -220,19 +155,18 @@ export default function RussiaGlobe({ onAssetSelect }) {
           const json = await r.json()
           if (cancelled) return
           const feats = Array.isArray(json?.features) ? json.features : []
-          const simplified = simplifyFeatures(feats, 32)
-          setCountryPaths(
-            geojsonFeaturesToPaths(simplified, { alt: 0.0026, maxPointsPerRing: 110, datelineJumpDeg: 180 }, 'country')
+          const simplified = simplifyFeatures(feats, 200)
+          setCoastlinePaths(
+            geojsonFeaturesToPaths(simplified, { alt: 0.0026, maxPointsPerRing: 260, datelineJumpDeg: 180 }, 'coast')
           )
           return
         } catch (_) {
           // try next url
         }
       }
-      if (!cancelled) setCountryPaths([])
+      if (!cancelled) setCoastlinePaths([])
     }
-    // Defer world borders a bit to avoid blocking initial render.
-    const t = window.setTimeout(() => { loadCountries() }, 600)
+    const t = window.setTimeout(() => { loadCoastlines() }, 600)
     return () => { cancelled = true }
   }, [])
 
@@ -437,15 +371,15 @@ export default function RussiaGlobe({ onAssetSelect }) {
     return obj
   }, [])
 
+  const budgetZoneFeatures = useMemo(
+    () => buildAssetVoronoiFeatures(mapPointsData, ASSET_VORONOI_BBOX, getBudgetForAssetId),
+    [],
+  )
+
   const polygonCapColor = useCallback((feat) => {
-    // Polygon fills only (contours are rendered via paths).
     if (!showBudgetFill) return 'rgba(0,0,0,0)'
-    // Neutral subtle fill for non-asset regions (keeps map readable without noise).
-    if (!feat?.__hasAsset) return 'rgba(0,220,255,0.14)'
-    const name = feat?.properties?.name ?? feat?.properties?.NAME ?? feat?.properties?.region
-    const key = getAssetRegionKey(name)
-    const v = key ? BUDGET_BY_ASSET[key] : null
-    if (v == null) return 'rgba(34,211,238,0.22)'
+    const v = feat?.properties?.__budget
+    if (v == null || !Number.isFinite(v)) return 'rgba(34,211,238,0.12)'
     const t = Math.max(-1, Math.min(1, v))
     const s = (t + 1) / 2
     const from = { r: 25, g: 118, b: 210 }
@@ -468,10 +402,9 @@ export default function RussiaGlobe({ onAssetSelect }) {
   }, [])
 
   const polygonLabel = useCallback((feat) => {
-    const name = feat?.properties?.name ?? feat?.properties?.NAME ?? feat?.properties?.region ?? 'Регион'
-    const key = getAssetRegionKey(name)
-    const v = key ? BUDGET_BY_ASSET[key] : null
-    if (!showBudgetFill || v == null) {
+    const name = feat?.properties?.name ?? 'Актив'
+    const v = feat?.properties?.__budget
+    if (!showBudgetFill || v == null || !Number.isFinite(v)) {
       return `<div style="font-weight:700">${name}</div>`
     }
     const pct = Math.round(((v + 1) / 2) * 100)
@@ -485,23 +418,15 @@ export default function RussiaGlobe({ onAssetSelect }) {
     return `<div style="font-weight:700">${p.name}</div>${isSelected ? '<div style="opacity:.85">Выбрано</div>' : ''}`
   }, [selectedAssetId])
 
-  const visibleRegions = useMemo(() => {
-    // User wants all RF region contours (not only asset regions).
-    return regions || []
-  }, [regions])
-
-  const allPathsData = useMemo(() => {
-    return [...(countryPaths || []), ...(regionPaths || [])]
-  }, [countryPaths, regionPaths])
+  const allPathsData = useMemo(() => [...(coastlinePaths || [])], [coastlinePaths])
 
   useEffect(() => {
     if (!import.meta?.env?.DEV) return
-    const regionCount = Array.isArray(regions) ? regions.length : 0
-    const regionPathCount = Array.isArray(regionPaths) ? regionPaths.length : 0
-    const countryPathCount = Array.isArray(countryPaths) ? countryPaths.length : 0
+    const zoneCount = Array.isArray(budgetZoneFeatures) ? budgetZoneFeatures.length : 0
+    const coastSegCount = Array.isArray(coastlinePaths) ? coastlinePaths.length : 0
     // eslint-disable-next-line no-console
-    console.log('[RussiaGlobe] counts', { regionCount, regionPathCount, countryPathCount, showBudgetFill })
-  }, [regions, regionPaths, countryPaths, showBudgetFill])
+    console.log('[RussiaGlobe] counts', { zoneCount, coastSegCount, showBudgetFill })
+  }, [budgetZoneFeatures, coastlinePaths, showBudgetFill])
 
   const chain = selectedAssetId ? chainsData[selectedAssetId] : null
   function getCdPageUrl(nodeName) {
@@ -541,11 +466,6 @@ export default function RussiaGlobe({ onAssetSelect }) {
 
       <div className="globe-layout">
         <div className="globe-wrapper globe-wrapper--perf" ref={containerRef}>
-        {regionsError && (
-          <div className="globe-error">
-            {regionsError}
-          </div>
-        )}
         {!webglOk ? (
           <div className="globe-error">
             WebGL недоступен (или заблокирован) — 3D-глобус не может быть показан на этом устройстве/в этом браузере.
@@ -569,29 +489,26 @@ export default function RussiaGlobe({ onAssetSelect }) {
               lineHoverPrecision={0.35}
               enablePointerInteraction
               rendererConfig={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
-              // Contours are rendered via pathsData; polygons remain for fill + hover label.
+              // Береговая линия материков; заливка — зоны ближайшего актива (Voronoi).
               pathsData={allPathsData}
               pathPoints={(d) => d.points}
               pathPointLat={(p) => p.lat}
               pathPointLng={(p) => p.lng}
               pathPointAlt={(p) => p.alt}
-              pathColor={(d) => (d?.kind === 'region' ? 'rgba(0,220,255,0.85)' : 'rgba(0,220,255,0.32)')}
-              pathStroke={(d) => (d?.kind === 'region' ? 0.95 : 0.55)}
+              pathColor={() => 'rgba(0,220,255,0.78)'}
+              pathStroke={() => 1.05}
               pathResolution={1}
               pathsTransitionDuration={0}
 
-              polygonsData={visibleRegions}
+              polygonsData={budgetZoneFeatures}
               polygonsTransitionDuration={0}
               polygonCapColor={polygonCapColor}
               polygonCapCurvatureResolution={10}
               // Subtle side fill to make strokes visible on WebGL.
               polygonSideColor={(d) => {
                 if (!showBudgetFill) return 'rgba(0,0,0,0)'
-                if (!d?.__hasAsset) return 'rgba(0,220,255,0.08)'
-                const name = d?.properties?.name ?? d?.properties?.NAME ?? d?.properties?.region
-                const key = getAssetRegionKey(name)
-                const v = key ? BUDGET_BY_ASSET[key] : null
-                if (v == null) return 'rgba(34,211,238,0.16)'
+                const v = d?.properties?.__budget
+                if (v == null || !Number.isFinite(v)) return 'rgba(34,211,238,0.08)'
                 const t = Math.max(-1, Math.min(1, v))
                 const s = (t + 1) / 2
                 const from = { r: 25, g: 118, b: 210 }
