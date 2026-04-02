@@ -33,7 +33,7 @@ function WindRose({
       const baseLen = baseline[index]
       const xBase = CENTER_X + Math.cos(midAngle) * baseLen
       const yBase = CENTER_Y + Math.sin(midAngle) * baseLen
-      const petalColor = petalColorFromCoverage(item.coverage)
+      const petalColor = petalColorFromCoverage(item.coverage, index)
       return {
         ...item,
         midAngle,
@@ -73,7 +73,7 @@ function WindRose({
             cy={CENTER_Y}
             r={RADIUS * scale}
             fill="none"
-            stroke="rgba(45, 90, 135, 0.12)"
+            stroke="rgba(0, 64, 119, 0.18)"
             strokeWidth="0.8"
           />
         ))}
@@ -104,7 +104,7 @@ function WindRose({
                 y1={CENTER_Y}
                 x2={s.xBase}
                 y2={s.yBase}
-                stroke="#b85a4a"
+                stroke="#E65907"
                 strokeWidth={1.8}
                 strokeOpacity={0.7}
               />
@@ -134,7 +134,7 @@ function WindRose({
         <path
           d={contourPath}
           fill="none"
-          stroke="rgba(45, 90, 135, 0.38)"
+          stroke="rgba(0, 64, 119, 0.45)"
           strokeWidth={1.4}
           strokeLinejoin="round"
           className="wind-rose-contour"
@@ -184,7 +184,7 @@ function WindRose({
               >
                 <span
                   className="legend-dot"
-                  style={{ background: petalColorFromCoverage(item.coverage) }}
+                  style={{ background: petalColorFromCoverage(item.coverage, index) }}
                 />
                 <span className="legend-name">{item.name}</span>
                 <span className="legend-value">{item.value}%</span>

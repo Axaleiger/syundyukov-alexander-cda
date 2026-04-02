@@ -60,8 +60,10 @@
 
 .lifecycle-toggle-btn {
   padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: 0;
   cursor: pointer;
   font-size: 0.9rem;
@@ -79,14 +81,14 @@
 }
 
 .lifecycle-toggle-btn:hover {
-  background: #f1f5f9;
+  background: rgba(241, 245, 249, 0.65);
   border-color: #cbd5e1;
 }
 
 .lifecycle-toggle-btn.active {
-  background: #2d5a87;
+  background: #004077;
   color: #fff;
-  border-color: #2d5a87;
+  border-color: #004077;
 }
 
 .lifecycle-legend-underline {
@@ -113,12 +115,12 @@
 }
 
 .lifecycle-legend-item:hover .lifecycle-legend-label {
-  color: #2d5a87;
+  color: #004077;
 }
 
 .lifecycle-legend-item.solo .lifecycle-legend-label {
   font-weight: 600;
-  color: #2d5a87;
+  color: #004077;
 }
 
 .lifecycle-legend-dot {
@@ -129,10 +131,26 @@
 }
 
 .lifecycle-chart {
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(0, 64, 119, 0.35);
+}
+
+.lifecycle-hud-expanded-desc {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.45rem;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 64, 119, 0.4);
+  background: rgba(0, 64, 119, 0.12);
+  flex-shrink: 0;
+}
+
+.lifecycle-hud-expanded-desc p {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .lifecycle-period-legend {
@@ -144,8 +162,8 @@
   margin-top: 0.5rem;
 }
 
-.lifecycle-legend-history { color: #3b82f6; }
-.lifecycle-legend-forecast { color: #22c55e; }
+.lifecycle-legend-history { color: #004077; }
+.lifecycle-legend-forecast { color: #E65907; }
 
 .lifecycle-redline-hint {
   margin-top: 0.5rem;
@@ -172,28 +190,30 @@
 }
 
 .stage-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 12px;
   padding: 1.5rem;
-  border-left: 4px solid #2d5a87;
+  border-left: 4px solid #004077;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #2d5a87;
+  border: 1px solid rgba(0, 64, 119, 0.25);
+  border-left: 4px solid #004077;
 }
 
 .stage-card:hover {
   transform: translateY(-5px);
-  background: #f8fafc;
-  box-shadow: 0 8px 20px rgba(45, 90, 135, 0.1);
-  border-left-color: #3d6a97;
+  background: rgba(248, 250, 252, 0.55);
+  box-shadow: 0 8px 20px rgba(0, 64, 119, 0.12);
+  border-left-color: #E65907;
 }
 
 .stage-card.selected {
-  background: rgba(45, 90, 135, 0.08);
-  border: 1px solid #2d5a87;
-  border-left: 4px solid #2d5a87;
-  box-shadow: 0 4px 16px rgba(45, 90, 135, 0.15);
+  background: rgba(0, 64, 119, 0.1);
+  border: 1px solid #004077;
+  border-left: 4px solid #E65907;
+  box-shadow: 0 4px 16px rgba(0, 64, 119, 0.18);
 }
 
 .stage-header {
@@ -255,14 +275,16 @@
 }
 
 .stage-accumulated {
-  color: #2d5a87;
+  color: #004077;
   font-size: 0.9rem;
   font-weight: 500;
 }
 
 .stage-details {
-  background: #f8fafc;
-  border: 1px solid #d1dce5;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(209, 220, 229, 0.65);
   border-radius: 12px;
   padding: 2rem;
   animation: slideIn 0.3s ease;
@@ -299,13 +321,15 @@
 }
 
 .metric-box {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: 8px;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(226, 232, 240, 0.6);
 }
 
 .metric-label {

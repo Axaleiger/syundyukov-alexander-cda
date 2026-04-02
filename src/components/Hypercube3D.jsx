@@ -22,14 +22,17 @@ const FUNNEL_LEVELS = [
   { title: 'Функции' },
 ]
 
-const PLANE_LEVEL_COLORS = ['#7a9cba', '#6b8caa', '#5c7d9a', '#4d6e8a', '#3e5f7a']
+const BRAND_BLUE = '#004077'
+const BRAND_ORANGE = '#E65907'
+
+const PLANE_LEVEL_COLORS = FUNNEL_LEVELS.map((_, i) => (i % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE))
 
 const RISK_ZONE_OPACITY = 0.72
 const RISK_TINT_BY_LEVEL = ['#e8a84a', '#5a9d6e', '#5b8dc9', '#5a9d6e', '#e8a84a']
 
 const RISK_VOLUME_COLORS = {
-  red: new THREE.Color('#dc2626'),
-  green: new THREE.Color('#16a34a'),
+  red: new THREE.Color(BRAND_ORANGE),
+  green: new THREE.Color(BRAND_BLUE),
 }
 
 function getPlaneY(levelIndex) {
@@ -74,7 +77,7 @@ const CASE_TREE_STEPS = [
   [{ from: [0, 0], to: [0, 2] }, { from: [0, 2], to: [0, 3] }],
   [{ from: [0, 0], to: [0, 1] }, { from: [0, 2], to: [0, 1] }, { from: [0, 3], to: [0, 1] }],
 ]
-const CASE_TREE_BLUE = '#5b8dc9'
+const CASE_TREE_BLUE = BRAND_BLUE
 
 function getPathForVariant(variantId) {
   const path = []
@@ -106,7 +109,7 @@ function WireframeCube() {
   )
   return (
     <lineSegments geometry={geom}>
-      <lineBasicMaterial color="#5b8dc9" transparent opacity={0.75} />
+      <lineBasicMaterial color={BRAND_BLUE} transparent opacity={0.75} />
     </lineSegments>
   )
 }
@@ -153,9 +156,9 @@ function AxesFromBottomLeft({ npv = 50, reserves = 50, extraction = 50 }) {
   const origin = AXIS_ORIGIN
   const axisLen = AXIS_LEN
   const axes = useMemo(() => [
-    { dir: 'x', from: [origin, origin, origin], to: [origin + axisLen, origin, origin], color: '#1f2937', scale: AXIS_SCALES.x, unit: AXIS_UNITS.x },
-    { dir: 'y', from: [origin, origin, origin], to: [origin, origin + axisLen, origin], color: '#374151', scale: AXIS_SCALES.y, unit: AXIS_UNITS.y },
-    { dir: 'z', from: [origin, origin, origin], to: [origin, origin, origin + axisLen], color: '#4b5563', scale: AXIS_SCALES.z, unit: AXIS_UNITS.z },
+    { dir: 'x', from: [origin, origin, origin], to: [origin + axisLen, origin, origin], color: BRAND_BLUE, scale: AXIS_SCALES.x, unit: AXIS_UNITS.x },
+    { dir: 'y', from: [origin, origin, origin], to: [origin, origin + axisLen, origin], color: BRAND_BLUE, scale: AXIS_SCALES.y, unit: AXIS_UNITS.y },
+    { dir: 'z', from: [origin, origin, origin], to: [origin, origin, origin + axisLen], color: BRAND_BLUE, scale: AXIS_SCALES.z, unit: AXIS_UNITS.z },
   ], [])
   const tickValues = useMemo(() => {
     const n = Math.max(1, Math.floor(axisLen / TICK_STEP) - 1)
@@ -270,12 +273,6 @@ function RiskZones({ npv = 50, reserves = 50, extraction = 50 }) {
   )
 }
 
-const VARIANT_COLORS = {
-  inapplicable: '#1e4976',
-  applicable: '#38bdf8',
-  legitimate: '#0d9488',
-}
-
 function getVariantType(npv, reserves, extraction, variantId) {
   const sumLever = (npv + reserves + extraction) / 300
   const tInapp = 0.01 + 0.99 * (variantId / NUM_POINTS)
@@ -291,44 +288,22 @@ function getVariantType(npv, reserves, extraction, variantId) {
   return 'applicable'
 }
 
-function valueToColor(variantType) {
-  return VARIANT_COLORS[variantType] || VARIANT_COLORS.applicable
+function valueToColor(variantId) {
+  return variantId % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE
 }
-
-const BASE_PLANE_POINT_COLOR = '#5b8dc9'
 
 const PLANE_POINT_STATUS_COLORS = {
-  ok: '#2563eb',
-  critical: '#be185d',
-  no_data: '#374151',
-  bad_calc: '#ea580c',
-  fluctuation: '#6b7280',
-  bad_excess: '#c2410c',
-  asymmetry: '#78350f',
-  non_normal: '#57534e',
-  no_executor: '#dc2626',
-  no_approver: '#ca8a04',
-  no_deadline: '#b45309',
-}
-
-const INDICATOR_BASKETS = {
-  'Проблемы в данных': [
-    { key: 'no_data', label: 'Нет данных', color: '#374151' },
-    { key: 'fluctuation', label: 'Флуктуации данных', color: '#6b7280' },
-    { key: 'asymmetry', label: 'Асимметрия распределения', color: '#78350f' },
-    { key: 'non_normal', label: 'Распределение ненормальное', color: '#57534e' },
-  ],
-  'Проблемы с расчётом и риски': [
-    { key: 'bad_calc', label: 'Невалидный расчёт', color: '#ea580c' },
-    { key: 'bad_excess', label: 'Невалидный коэффициент эксцесса', color: '#c2410c' },
-    { key: 'no_executor', label: 'Не назначен исполнитель', color: '#dc2626' },
-    { key: 'no_approver', label: 'Нет согласующего', color: '#ca8a04' },
-    { key: 'no_deadline', label: 'Нет срока', color: '#b45309' },
-    { key: 'critical', label: 'Критично', color: '#be185d' },
-  ],
-  'Норма': [
-    { key: 'ok', label: 'Норма', color: '#2563eb' },
-  ],
+  ok: BRAND_BLUE,
+  critical: BRAND_ORANGE,
+  no_data: BRAND_BLUE,
+  bad_calc: BRAND_ORANGE,
+  fluctuation: BRAND_BLUE,
+  bad_excess: BRAND_ORANGE,
+  asymmetry: BRAND_BLUE,
+  non_normal: BRAND_ORANGE,
+  no_executor: BRAND_ORANGE,
+  no_approver: BRAND_BLUE,
+  no_deadline: BRAND_ORANGE,
 }
 
 function getPlanePointStatus(levelIndex, pointIndex) {
@@ -353,7 +328,7 @@ function VariantPoint({ variantId, npv, reserves, extraction, onPointClick, filt
     () => getVariantType(npv, reserves, extraction, variantId),
     [npv, reserves, extraction, variantId]
   )
-  const color = valueToColor(variantType)
+  const color = valueToColor(variantId)
   const visible = filterVariantType == null || filterVariantType === variantType
   if (!visible) return null
   return (
@@ -460,7 +435,7 @@ function getCylinderSegments(levelIndex, pointIndex) {
     segments.push({
       key: item.key,
       label: item.label,
-      color: item.color,
+      color: i % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE,
       share: rawShares[i] / sum,
     })
   }
@@ -485,13 +460,13 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
     if (showOnlyStatus) return getPlanePointStatus(levelIndex, pointIdx) === filterByStatusKey
     return true
   }
-  const planeColor = !showRisks ? '#e8eef4' : null
-  const planeOpacity = showRisks ? 0.72 : 0.85
+  const planeColor = !showRisks ? BRAND_BLUE : null
+  const planeOpacity = showRisks ? 0.72 : 0.14
   const planeMeshRef = useRef(null)
   const planeRiskUniforms = useMemo(
     () => ({
-      colorRed: { value: new THREE.Color('#d32f2f') },
-      colorGreen: { value: new THREE.Color('#2e7d32') },
+      colorRed: { value: new THREE.Color(BRAND_ORANGE) },
+      colorGreen: { value: new THREE.Color(BRAND_BLUE) },
       opacity: { value: 0.72 },
       uNpv: { value: npv / 100 },
       uReserves: { value: reserves / 100 },
@@ -535,7 +510,9 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
         const [x, , z] = getPlanePointPosition(levelIndex, idx)
         const selected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex && selectedPlanePoint.pointIndex === idx
         const planeStatus = getPlanePointStatus(levelIndex, idx)
-        const pointColor = selected ? (PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok) : BASE_PLANE_POINT_COLOR
+        const pointColor = selected
+          ? (PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok)
+          : ((levelIndex + idx) % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE)
         const isHovered = hoveredPlanePoint && hoveredPlanePoint.levelIndex === levelIndex && hoveredPlanePoint.pointIndex === idx
         return (
           <group key={idx}>
@@ -629,7 +606,8 @@ function getCaseTreePosition(key) {
   return getPlanePointPosition(key[0], key[1])
 }
 
-function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50, highlightCaseTree, caseTreeRevealStep }) {
+function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50, highlightCaseTree, caseTreeRevealStep, forceFunnelForHudExpand = false }) {
+  const funnelVariantId = selectedVariantId != null ? selectedVariantId : (forceFunnelForHudExpand ? 0 : null)
   const n0 = POINTS_PER_LEVEL[0]
   const fullCaseTreeSteps = useMemo(() => {
     const steps = [...CASE_TREE_STEPS]
@@ -697,32 +675,33 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
   }, [])
 
   const selectedPathPoints = useMemo(() => {
-    if (selectedVariantId == null && !highlightCaseTree) return []
-    const pts = [getVariantBasePosition(selectedVariantId ?? 0)]
+    if (funnelVariantId == null && !highlightCaseTree) return []
+    const vid = funnelVariantId != null ? funnelVariantId : (selectedVariantId ?? 0)
+    const pts = [getVariantBasePosition(vid)]
     for (let l = 0; l < FUNNEL_LEVELS.length; l++) {
-      const idx = (selectedVariantId ?? 0) % POINTS_PER_LEVEL[l]
+      const idx = vid % POINTS_PER_LEVEL[l]
       pts.push(getPlanePointPosition(l, idx))
     }
     return pts
-  }, [selectedVariantId, highlightCaseTree])
+  }, [funnelVariantId, highlightCaseTree, selectedVariantId])
 
-  const showFunnel = selectedVariantId != null || highlightCaseTree
+  const showFunnel = funnelVariantId != null || highlightCaseTree
   if (!showFunnel) return null
 
   return (
     <group position={[0, 0, 0]}>
       {fluxCurvesCubeToL0.map(({ start, end }, i) => (
-        <CurveLine key={`c-${i}`} start={start} end={end} color="#5b8dc9" opacity={highlightCaseTree ? 0.08 : 0.2} seed={i} />
+        <CurveLine key={`c-${i}`} start={start} end={end} color={i % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE} opacity={highlightCaseTree ? 0.08 : 0.2} seed={i} />
       ))}
       {fluxCurvesBetweenLevels.map(({ start, end }, i) => (
-        <CurveLine key={`l-${i}`} start={start} end={end} color="#5b8dc9" opacity={highlightCaseTree ? 0.06 : 0.15} seed={i + 100} />
+        <CurveLine key={`l-${i}`} start={start} end={end} color={i % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE} opacity={highlightCaseTree ? 0.06 : 0.15} seed={i + 100} />
       ))}
       {highlightCaseTree && caseTreeSegments.map(({ start, end }, i) => (
         <CurveLine
           key={`case-${i}`}
           start={start}
           end={end}
-          color={CASE_TREE_BLUE}
+          color={i % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE}
           opacity={1}
           seed={i + 300}
         />
@@ -732,7 +711,7 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
           key={`full-${i}`}
           start={start}
           end={end}
-          color={CASE_TREE_BLUE}
+          color={i % 2 === 0 ? BRAND_BLUE : BRAND_ORANGE}
           opacity={1}
           seed={i + 400}
         />
@@ -771,7 +750,7 @@ const axisLabelPositions = [
   { position: [AXIS_ORIGIN, AXIS_ORIGIN, AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
-function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep }) {
+function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep, forceFunnelForHudExpand }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
 
   return (
@@ -815,6 +794,7 @@ function Scene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVar
         extraction={extraction}
         highlightCaseTree={highlightCaseTree}
         caseTreeRevealStep={caseTreeRevealStep}
+        forceFunnelForHudExpand={forceFunnelForHudExpand}
       />
 
 
@@ -839,18 +819,16 @@ function toMillions(pct, scale) {
   return ((pct / 100) * scale).toFixed(2)
 }
 
-function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
+function Hypercube3D({ onOpenBpm, highlightCaseTree, demoHudExpanded = false }) {
   const [npv, setNpv] = useState(50)
   const [reserves, setReserves] = useState(50)
   const [extraction, setExtraction] = useState(50)
   const [selectedVariantId, setSelectedVariantId] = useState(null)
   const [selectedPlanePoint, setSelectedPlanePoint] = useState(null)
   const [filterPlanePoint, setFilterPlanePoint] = useState(null)
-  const [filterByStatusKey, setFilterByStatusKey] = useState(null)
-  const [filterVariantType, setFilterVariantType] = useState(null)
+  const [filterVariantType] = useState(null)
   const [getEntityLabel, setGetEntityLabel] = useState(() => defaultGetEntityLabel)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showRisks, setShowRisks] = useState(false)
   const cubeCanvasRef = useRef(null)
 
   const [hoveredPlanePoint, setHoveredPlanePoint] = useState(null)
@@ -946,81 +924,6 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
       </div>
 
       <div className="hypercube-visualization">
-        <div className="cube-info">
-          <h3>Гиперкуб рычагов влияния (параметры в млн)</h3>
-          <div className="cube-metrics">
-            <div className="metric">
-              <span className="metric-label" title="NPV — оперативный рычаг, деньги за год (млн руб)">NPV, млн руб</span>
-              <span className="metric-value">{npvMillions}</span>
-            </div>
-            <div className="metric">
-              <span className="metric-label" title="Запасы — стратегический рычаг, суммарная добыча нефти/КИН за 30 лет (млн т)">Запасы, млн т</span>
-              <span className="metric-value">{reservesMillions}</span>
-            </div>
-            <div className="metric">
-              <span className="metric-label" title="Добыча (Q) — оперативный рычаг добычи нефти за год (млн т)">Добыча Q, млн т</span>
-              <span className="metric-value">{extractionMillions}</span>
-            </div>
-          </div>
-          <div className="cube-points-legend">
-            <span className="cube-plane-legend-title">Пространство вариантов внутри гипер-куба</span>
-            <div className="cube-plane-legend-items cube-plane-legend-items-rows">
-              <button
-                type="button"
-                className={`cube-indicator-legend-item ${filterVariantType === 'inapplicable' ? 'cube-indicator-legend-item-on' : ''}`}
-                style={{ color: VARIANT_COLORS.inapplicable }}
-                onClick={() => setFilterVariantType((prev) => (prev === 'inapplicable' ? null : 'inapplicable'))}
-              >
-                ● Вариант неприменим для текущего положения рычагов
-              </button>
-              <button
-                type="button"
-                className={`cube-indicator-legend-item ${filterVariantType === 'applicable' ? 'cube-indicator-legend-item-on' : ''}`}
-                style={{ color: VARIANT_COLORS.applicable }}
-                onClick={() => setFilterVariantType((prev) => (prev === 'applicable' ? null : 'applicable'))}
-              >
-                ● Вариант применим для текущего положения рычагов
-              </button>
-              <button
-                type="button"
-                className={`cube-indicator-legend-item ${filterVariantType === 'legitimate' ? 'cube-indicator-legend-item-on' : ''}`}
-                style={{ color: VARIANT_COLORS.legitimate }}
-                onClick={() => setFilterVariantType((prev) => (prev === 'legitimate' ? null : 'legitimate'))}
-              >
-                ● Вариант легитимен для текущего положения рычагов
-              </button>
-            </div>
-          </div>
-          <div className="cube-plane-legend cube-plane-legend-indicators">
-            <span className="cube-plane-legend-title">Индикаторы состояния</span>
-            {Object.entries(INDICATOR_BASKETS).map(([groupName, items]) => (
-              <div key={groupName} className="cube-indicator-basket">
-                <span className="cube-indicator-basket-name">{groupName}</span>
-                <div className="cube-plane-legend-items cube-plane-legend-items-rows">
-                  {items.map(({ key, label, color }) => (
-                    <span key={key} className="cube-indicator-legend-item cube-indicator-legend-item-static" style={{ color }}>
-                      ● {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="cube-palette-hint">Области рисков</p>
-          <div className="cube-palette-legend">
-            <span className="cube-legend-cold">Низкие</span>
-            <div className="cube-legend-gradient" />
-            <span className="cube-legend-hot">Высокие</span>
-          </div>
-          <label className="cube-risks-toggle">
-            <input
-              type="checkbox"
-              checked={showRisks}
-              onChange={(e) => setShowRisks(e.target.checked)}
-            />
-            <span>Карта рисков (зоны и плоскости)</span>
-          </label>
-        </div>
         <div className={`hypercube-window ${isFullscreen ? 'hypercube-window-fullscreen' : ''} ${selectedVariantId != null ? 'hypercube-window-funnel-open' : ''}`} ref={cubeCanvasRef}>
           <div className="cube-canvas-wrap">
             {selectedVariantId != null && (
@@ -1053,7 +956,14 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
               {isFullscreen ? '✕ Свернуть' : '⛶ На весь экран'}
             </button>
             <div className="cube-canvas">
-            <Canvas camera={{ position: [4, 4, 4], fov: 50 }}>
+            <Canvas
+              camera={{ position: [4, 4, 4], fov: 50 }}
+              gl={{ alpha: true, premultipliedAlpha: false, antialias: true }}
+              onCreated={({ scene, gl: renderer }) => {
+                scene.background = null
+                renderer.setClearColor(0x000000, 0)
+              }}
+            >
               <Scene
                 npv={npv}
                 reserves={reserves}
@@ -1067,13 +977,14 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
                 onPlanePointHover={setHoveredPlanePoint}
                 hoveredPlanePoint={hoveredPlanePoint}
                 filterPlanePoint={filterPlanePoint}
-                filterByStatusKey={filterByStatusKey}
+                filterByStatusKey={null}
                 filterVariantType={filterVariantType}
                 onOpenBpm={onOpenBpm}
                 getEntityLabel={getEntityLabel}
-                showRisks={showRisks}
+                showRisks={false}
                 highlightCaseTree={highlightCaseTree}
                 caseTreeRevealStep={caseTreeRevealStep}
+                forceFunnelForHudExpand={demoHudExpanded}
               />
             </Canvas>
             </div>
@@ -1082,7 +993,7 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
       </div>
 
       <div className="hypercube-instructions">
-        <p>Наведите на названия рычагов (NPV, Запасы, Добыча) в блоке выше для полного описания. Точки куба — варианты сценариев; точки на плоскостях воронки — по статусу ЦД (см. легенду). Нажмите на точку куба — откроется воронка сквозных сценариев.</p>
+        <p>Наведите на названия рычагов (NPV, Запасы, Добыча) в блоке выше для полного описания. Точки куба — варианты сценариев. Нажмите на точку куба — откроется воронка сквозных сценариев.</p>
       </div>
     </div>
   )

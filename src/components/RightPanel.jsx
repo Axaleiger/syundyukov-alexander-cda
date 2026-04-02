@@ -1,33 +1,8 @@
 import React, { useMemo } from 'react'
 import { getAssetScenarioComparisonDemo, SCENARIO_METRIC_DEFS } from '../data/assetScenarioComparison.demo'
 import { ScenarioMetricRow } from './ScenarioMetricRow'
+import StrategyContextSection from './StrategyContextSection'
 import './RightPanel.css'
-
-const DECISIONS = [
-  {
-    title: 'Принято решение: бурение в точке D',
-    chosen: 'Точка D +120 т',
-    detail: '+65 т добычи. Коррекция модели зоны D по результатам бурения.',
-    outcome: 'Подтвердилось',
-    outcomeIcon: 'check',
-  },
-  {
-    title: 'Расширить добычу за счёт сектора Z',
-    chosen: 'Сектор Z — +130 т > 2 года',
-    alternative: 'Сектор Y +90 т, низкий риск',
-    detail: 'Старт добычи в секторе Z. Обнаружен осложняющий фактор в секторах Y и Z.',
-    outcome: 'Подтвердилось',
-    outcomeIcon: 'check',
-  },
-  {
-    title: 'Принято решение: отказ от проекта X',
-    chosen: 'Отказ — согласие на снижение рисков',
-    alternative: 'Проект Х — быстрый риск',
-    detail: 'Оценочный риск +50 т из запасов южного блока.',
-    outcome: 'Частично подтвердилось',
-    outcomeIcon: 'partial',
-  },
-]
 
 function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
   const comparison = useMemo(() => getAssetScenarioComparisonDemo(assetId), [assetId])
@@ -68,34 +43,7 @@ function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
         </p>
       </section>
 
-      <section className="right-panel-section">
-        <h3 className="right-panel-heading">Контекст текущей стратегии</h3>
-        <p className="right-panel-note">Текущая стратегия сформирована последовательностью управленческих решений</p>
-        <h4 className="right-panel-subheading">Управленческие решения, определившие текущую стратегию</h4>
-        <div className="right-panel-decisions">
-          {DECISIONS.map((d, i) => (
-            <div key={i} className="right-panel-decision">
-              <h5 className="right-panel-decision-title">{d.title}</h5>
-              <div className="right-panel-decision-row">
-                <span className="right-panel-decision-label">Выбранный</span>
-                <span>{d.chosen}</span>
-              </div>
-              {d.alternative && (
-                <div className="right-panel-decision-row right-panel-decision-alternative">
-                  <span className="right-panel-decision-label">Альтернатива</span>
-                  <span>{d.alternative}</span>
-                </div>
-              )}
-              {d.detail && <p className="right-panel-decision-detail">{d.detail}</p>}
-              <div className="right-panel-decision-outcome">
-                {d.outcomeIcon === 'check' && <span className="right-panel-outcome-ok">✓</span>}
-                {d.outcomeIcon === 'partial' && <span className="right-panel-outcome-partial">◐</span>}
-                <span>{d.outcome}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <StrategyContextSection rootClass="right-panel-section" />
     </aside>
   )
 }

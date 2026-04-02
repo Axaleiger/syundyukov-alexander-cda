@@ -5,8 +5,8 @@ import { getLifecycleStreamData } from '../data/lifecycleData'
 import './LifecycleChart.css'
 
 const CURRENT_YEAR = 2026
-const LIFECYCLE_HISTORY_COLOR = '#3b82f6'
-const LIFECYCLE_FORECAST_COLOR = '#22c55e'
+const LIFECYCLE_HISTORY_COLOR = '#004077'
+const LIFECYCLE_FORECAST_COLOR = '#E65907'
 const VIEW_MODES = [
   { id: 'sum', label: 'По умолчанию' },
   { id: 'cumulative', label: 'Накопление' },
@@ -14,11 +14,11 @@ const VIEW_MODES = [
 ]
 
 const stages = [
-  { key: 'geologorazvedka', name: 'Геологоразведка и работа с ресурсной базой', color: '#5b8dc9' },
-  { key: 'razrabotka', name: 'Разработка', color: '#6b7fd7' },
-  { key: 'planirovanie', name: 'Планирование и обустройство', color: '#8b7fd4' },
-  { key: 'burenie', name: 'Бурение и ВСР', color: '#7eb8e8' },
-  { key: 'dobycha', name: 'Добыча', color: '#6bc4a0' },
+  { key: 'geologorazvedka', name: 'Геологоразведка и работа с ресурсной базой', color: '#004077' },
+  { key: 'razrabotka', name: 'Разработка', color: '#E65907' },
+  { key: 'planirovanie', name: 'Планирование и обустройство', color: '#004077' },
+  { key: 'burenie', name: 'Бурение и ВСР', color: '#E65907' },
+  { key: 'dobycha', name: 'Добыча', color: '#004077' },
 ]
 
 function buildCumulative(data) {
@@ -78,7 +78,7 @@ function LifecycleSegmentLines(props) {
       {points.map(({ key, x, y: py, color }) => (
         <g key={key}>
           <circle cx={x} cy={py} r={5} fill={color} />
-          <circle cx={x} cy={py} r={2} fill="#fff" />
+          <circle cx={x} cy={py} r={2} fill="#E65907" />
         </g>
       ))}
     </g>
@@ -96,7 +96,7 @@ function smoothSeries(arr, key, n = 2) {
   return out
 }
 
-function LifecycleChart({ onStageClick, faceSeed = 0 }) {
+function LifecycleChart({ onStageClick, faceSeed = 0, compactOverlay = false, hudExpanded = false }) {
   const [selectedStage, setSelectedStage] = useState(null)
   const [streamData, setStreamData] = useState(null)
   const [viewMode, setViewMode] = useState('sum')
@@ -152,36 +152,46 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
     if (stage) onStageClick?.(stage.name)
   }
 
+  const chartHeight = compactOverlay ? (hudExpanded ? 220 : 200) : 380
+  const chartMargin = compactOverlay
+    ? { top: 4, right: 4, left: 4, bottom: 0 }
+    : { top: 20, right: 24, left: 32, bottom: 8 }
+  const axisTickFill = compactOverlay ? 'rgba(255,255,255,0.72)' : '#5a6c7d'
+
   return (
-    <div className="lifecycle-container">
-      <div className="lifecycle-view-toggle">
-        {VIEW_MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className={`lifecycle-toggle-btn ${viewMode === m.id ? 'active' : ''}`}
-            onClick={() => setViewMode(m.id)}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-      <div className="lifecycle-chart lifecycle-streamgraph">
-        <div className="lifecycle-legend-underline">
-          {stages.map((s) => (
+    <div className={`lifecycle-container${compactOverlay ? ' lifecycle-container--compact-overlay' : ''}`}>
+      {!compactOverlay && (
+        <div className="lifecycle-view-toggle">
+          {VIEW_MODES.map((m) => (
             <button
-              key={s.key}
+              key={m.id}
               type="button"
-              className={`lifecycle-legend-item ${legendOnly === s.key ? 'solo' : ''}`}
-              onClick={() => handleLegendClick(s.key)}
+              className={`lifecycle-toggle-btn ${viewMode === m.id ? 'active' : ''}`}
+              onClick={() => setViewMode(m.id)}
             >
-              <span className="lifecycle-legend-dot" style={{ background: s.color }} />
-              <span className="lifecycle-legend-label">{s.name}</span>
+              {m.label}
             </button>
           ))}
         </div>
-        <ResponsiveContainer width="100%" height={380}>
-          <AreaChart data={chartData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }} isAnimationActive={false} stackOffset={viewMode === 'sum' ? undefined : undefined}>
+      )}
+      <div className="lifecycle-chart lifecycle-streamgraph">
+        {!compactOverlay && (
+          <div className="lifecycle-legend-underline">
+            {stages.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                className={`lifecycle-legend-item ${legendOnly === s.key ? 'solo' : ''}`}
+                onClick={() => handleLegendClick(s.key)}
+              >
+                <span className="lifecycle-legend-dot" style={{ background: s.color }} />
+                <span className="lifecycle-legend-label">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <AreaChart data={chartData} margin={chartMargin} isAnimationActive={false} stackOffset={viewMode === 'sum' ? undefined : undefined}>
             <defs>
               {stages.map((s) => (
                 <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -193,30 +203,30 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
             <ReferenceLine x={String(CURRENT_YEAR)} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
             <XAxis
               dataKey="year"
-              axisLine={{ stroke: '#e2e8f0' }}
+              axisLine={{ stroke: compactOverlay ? 'rgba(255,255,255,0.2)' : '#e2e8f0' }}
               tickLine={false}
               interval="preserveStartEnd"
-              minTickGap={32}
+              minTickGap={compactOverlay ? 18 : 32}
               tick={({ x, y, payload }) => (
                   <g transform={`translate(${x},${y})`}>
-                    <text x={0} y={14} textAnchor="middle" fill="#5a6c7d" fontSize={10}>{payload.value}</text>
+                    <text x={0} y={14} textAnchor="middle" fill={axisTickFill} fontSize={compactOverlay ? 9 : 10}>{payload.value}</text>
                   </g>
                 )}
             />
             <YAxis
               domain={[0, 'auto']}
               allowDataOverflow
-              tick={{ fontSize: 10 }}
-              label={{ value: viewMode === 'cumulative' ? 'Накопленный объём затрат, млрд руб.' : 'Объём затрат, млрд руб.', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
+              tick={{ fontSize: compactOverlay ? 9 : 10, fill: axisTickFill }}
+              label={compactOverlay ? undefined : { value: viewMode === 'cumulative' ? 'Накопленный объём затрат, млрд руб.' : 'Объём затрат, млрд руб.', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                border: '1px solid #004077',
                 borderRadius: 12,
-                boxShadow: '0 8px 24px rgba(45, 90, 135, 0.12)',
+                boxShadow: '0 8px 24px rgba(0, 64, 119, 0.2)',
               }}
-              labelStyle={{ color: '#2d5a87', fontWeight: 600 }}
+              labelStyle={{ color: '#004077', fontWeight: 600 }}
               formatter={(value, name) => [typeof value === 'number' ? value.toFixed(1) : value, stages.find((s) => s.key === name)?.name ?? name]}
               labelFormatter={(label) => `Год ${label}`}
             />
@@ -243,12 +253,26 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      {compactOverlay && hudExpanded ? (
+        <div className="lifecycle-hud-expanded-desc">
+          <p>
+            Жизненный цикл актива охватывает этапы от геологоразведки до добычи. На графике — динамика затрат по
+            этапам; синяя ось времени отделяет историю и прогноз. На вкладке «Главная» доступны переключение вида и
+            детализация по этапам.
+          </p>
+        </div>
+      ) : null}
+      {!compactOverlay && (
+        <>
       <div className="lifecycle-period-legend">
         <span className="lifecycle-legend-history" style={{ color: LIFECYCLE_HISTORY_COLOR }}>● История (до {CURRENT_YEAR})</span>
         <span className="lifecycle-legend-forecast" style={{ color: LIFECYCLE_FORECAST_COLOR }}>● Прогнозный период (после {CURRENT_YEAR})</span>
       </div>
       <p className="lifecycle-redline-hint">Красная линия — текущий срез {CURRENT_YEAR} г.</p>
+        </>
+      )}
 
+      {!compactOverlay && (
       <div className="lifecycle-stages">
         <h4>Детализация этапов</h4>
         <div className="stages-grid">
@@ -275,8 +299,9 @@ function LifecycleChart({ onStageClick, faceSeed = 0 }) {
           ))}
         </div>
       </div>
+      )}
 
-      {selectedStage && (
+      {!compactOverlay && selectedStage && (
         <div className="stage-details">
           <h4>Детали этапа: {selectedStage}</h4>
           <div className="details-content">

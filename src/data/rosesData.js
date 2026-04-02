@@ -67,9 +67,7 @@ export const DEFAULT_OBJECTS = [
   { name: 'Трубопровод', value: 83, coverage: 83 },
 ]
 
-export function petalColorFromCoverage(coverage) {
-  const t = coverage / 100
-  if (t >= 0.8) return '#2e9d7a'
-  if (t >= 0.5) return '#b8a24a'
-  return '#c76b5a'
+/** Палитра визуализации: только #004077 и #E65907 (чередование по индексу лепестка). */
+export function petalColorFromCoverage(_coverage, index = 0) {
+  return index % 2 === 0 ? '#004077' : '#E65907'
 }
