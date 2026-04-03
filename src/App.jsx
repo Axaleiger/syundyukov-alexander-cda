@@ -17,8 +17,10 @@ import { getScenarioGraphNodesFromBoard } from './lib/planningGraphNodes'
 import ConfiguratorDocPage from './components/ConfiguratorDocPage'
 import ResultsTab from './components/ResultsTab'
 import AdminTab from './components/AdminTab'
-import AiThinkingUI from './components/AiThinkingUI'
-import BrainChainView from './components/BrainChainView'
+import ThinkingPanelBody from './components/ThinkingPanelBody'
+import FaceScenarioOverlay from './components/FaceScenarioOverlay'
+import NavTabIcon from './components/NavTabIcon'
+import { OPTIMAL_SCENARIO_VARIANT } from './lib/scenarioGraphData'
 import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from './data/assetStatus'
 import { SCENARIO_STAGE_FILTERS } from './data/scenariosData'
 import mapPointsData from './data/mapPoints.json'
@@ -32,12 +34,12 @@ const ADMIN_SUB_TABS = [
 ]
 
 const TABS = [
-  { id: 'face', label: 'Главная страница' },
-  { id: 'scenarios', label: 'Список сценариев' },
-  { id: 'planning', label: 'Планирование' },
-  { id: 'ontology', label: 'Конфигуратор систем' },
-  { id: 'results', label: 'Результаты' },
-  { id: 'admin', label: 'Администрирование', separatorBefore: true },
+  { id: 'face', label: 'Главная страница', icon: 'home' },
+  { id: 'scenarios', label: 'Список сценариев', icon: 'list' },
+  { id: 'planning', label: 'Планирование', icon: 'calendar' },
+  { id: 'ontology', label: 'Конфигуратор систем', icon: 'gear' },
+  { id: 'results', label: 'Результаты', icon: 'chart' },
+  { id: 'admin', label: 'Администрирование', icon: 'admin', separatorBefore: true },
 ]
 
 function getBpmPageUrl(highlight) {
@@ -65,11 +67,51 @@ function parseTabFromHash() {
   return { tab: valid ? hash : 'face', adminSub: 'roles', servicePageName: null }
 }
 
+function readDemoModeFlag() {
+  if (typeof window === 'undefined') return false
+  const v = new URLSearchParams(window.location.search).get('demo')
+  return v === 'portrait' || v === '1' || v === 'stand'
+}
+
+function readDemoStandFlag() {
+  if (typeof window === 'undefined') return false
+  return new URLSearchParams(window.location.search).get('demo') === 'stand'
+}
+
 function App() {
+  const [demoMode] = useState(readDemoModeFlag)
+  const [demoStand] = useState(readDemoStandFlag)
+  const [faceSelectedScenarioTitle, setFaceSelectedScenarioTitle] = useState(null)
+  const faceSelectedScenarioTitleRef = useRef(null)
+  useEffect(() => {
+    faceSelectedScenarioTitleRef.current = faceSelectedScenarioTitle
+  }, [faceSelectedScenarioTitle])
+  const [agreedInfluenceLine, setAgreedInfluenceLine] = useState(null)
+  const [hudPanelExpanded, setHudPanelExpanded] = useState(null)
+
+  useEffect(() => {
+    if (!demoMode) return
+    document.body.classList.add('body-demo')
+    return () => document.body.classList.remove('body-demo')
+  }, [demoMode])
+
+  useEffect(() => {
+    if (!demoStand) return
+    document.documentElement.classList.add('demo-stand-4k-root')
+    document.body.classList.add('demo-stand-4k')
+    return () => {
+      document.documentElement.classList.remove('demo-stand-4k-root')
+      document.body.classList.remove('demo-stand-4k')
+    }
+  }, [demoStand])
+
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'face'
     return parseTabFromHash().tab
   })
+
+  const demoHudPanelsRowRef = useRef(null)
+
   const [servicePageName, setServicePageName] = useState(() => {
     if (typeof window === 'undefined') return null
     const h = window.location.hash.replace(/^#/, '')
@@ -156,17 +198,23 @@ function App() {
     })
   }, [])
   const handleThinkingConfirm = useCallback(() => {
+    const wasBrain = thinkingConfirmPhaseRef.current === 'brain'
     if (selectedDecisionPathIdRef.current) {
       setAppliedDecisionPathId(selectedDecisionPathIdRef.current)
     }
     if (thinkingConfirmResolverRef.current) {
       thinkingConfirmResolverRef.current()
     }
+    if (wasBrain && selectedAssetId) {
+      const title = faceSelectedScenarioTitleRef.current || `Вариант ${OPTIMAL_SCENARIO_VARIANT}`
+      setAgreedInfluenceLine(`Влияние предложенного «${title}» на актив`)
+      setScenarioComparisonRevision((n) => n + 1)
+    }
     setThinkingPanelOpen(false)
     setThinkingCurrentMessage('')
     setThinkingPaused(false)
     setThinkingConfirmPhase(null)
-  }, [])
+  }, [selectedAssetId])
   const [bpmStages, setBpmStages] = useState(null)
   const [bpmTasks, setBpmTasks] = useState(null)
   const handleBoardChange = useCallback((stages, tasks) => {
@@ -179,6 +227,7 @@ function App() {
   const [configuratorInitialEdges, setConfiguratorInitialEdges] = useState(null)
   const configuratorSchemaRef = useRef(null)
   const [hypercubeCaseIntro, setHypercubeCaseIntro] = useState(false)
+
   const [selectedDecisionPathId, setSelectedDecisionPathId] = useState(null)
   const [appliedDecisionPathId, setAppliedDecisionPathId] = useState(null)
   const selectedDecisionPathIdRef = useRef(null)
@@ -309,7 +358,17 @@ function App() {
     setSelectedAssetId(pointId || null)
     setActiveTab('face')
     setScenarioComparisonRevision(0)
+    setFaceSelectedScenarioTitle(null)
+    setAgreedInfluenceLine(null)
   }
+
+  const handleThinkingPanelSoftClose = useCallback(() => {
+    setThinkingPanelOpen(false)
+    setThinkingCurrentMessage('')
+    setThinkingPaused(false)
+  }, [])
+
+  const showThinkingHologram = demoMode && activeTab === 'face'
 
   const handleLifecycleStageClick = (stageName) => {
     setScenarioStageFilters(SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: name === stageName }), {}))
@@ -382,45 +441,24 @@ function App() {
                 <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
               </div>
               <div className="app-thinking-drawer-body">
-                {showCollapsedBrainMinimal ? (
-                  <div className="app-thinking-drawer-minimal">
-                    <h3 className="app-thinking-drawer-title">Цепочка размышлений</h3>
-                    <button
-                      type="button"
-                      className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
-                      onClick={handleThinkingConfirm}
-                    >
-                      Согласовать предлагаемый сценарий
-                    </button>
-                  </div>
-                ) : thinkingConfirmPhase === 'brain' ? (
-                  <BrainChainView
-                    key={`brain-${brainPanelOpenKey}`}
-                    steps={thinkingSteps}
-                    graphNodes={graphNodesForThinking}
-                    chainAlreadyRevealed={thinkingChainRevealedRef.current}
-                    selectedDecisionPathId={selectedDecisionPathId}
-                    appliedDecisionPathId={appliedDecisionPathId}
-                    onSelectDecisionPath={setSelectedDecisionPathId}
-                    onRecalculate={handleRecalculateDecision}
-                    awaitingConfirm={thinkingAwaitingConfirm}
-                    onConfirm={handleThinkingConfirm}
-                  />
-                ) : (
-                  <>
-                    <AiThinkingUI
-                      steps={thinkingSteps}
-                      currentMessage={thinkingCurrentMessage}
-                      isPaused={thinkingPaused}
-                      isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))}
-                      onStop={() => setThinkingPaused(true)}
-                      onResume={() => setThinkingPaused(false)}
-                      awaitingConfirm={thinkingAwaitingConfirm}
-                      onConfirm={handleThinkingConfirm}
-                    />
-                  </>
-                )}
-                <button type="button" className="app-thinking-drawer-exit" onClick={() => { thinkingChainRevealedRef.current = true; setThinkingPanelOpen(false); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>Закрыть панель</button>
+                <ThinkingPanelBody
+                  showCollapsedBrainMinimal={showCollapsedBrainMinimal}
+                  thinkingConfirmPhase={thinkingConfirmPhase}
+                  thinkingSteps={thinkingSteps}
+                  graphNodesForThinking={graphNodesForThinking}
+                  thinkingChainRevealedRef={thinkingChainRevealedRef}
+                  brainPanelOpenKey={brainPanelOpenKey}
+                  selectedDecisionPathId={selectedDecisionPathId}
+                  appliedDecisionPathId={appliedDecisionPathId}
+                  setSelectedDecisionPathId={setSelectedDecisionPathId}
+                  handleRecalculateDecision={handleRecalculateDecision}
+                  thinkingAwaitingConfirm={thinkingAwaitingConfirm}
+                  handleThinkingConfirm={handleThinkingConfirm}
+                  thinkingCurrentMessage={thinkingCurrentMessage}
+                  thinkingPaused={thinkingPaused}
+                  setThinkingPaused={setThinkingPaused}
+                  onClosePanel={handleThinkingPanelSoftClose}
+                />
               </div>
             </div>
           </>
@@ -429,12 +467,33 @@ function App() {
     )
   }
 
+  const staticBase = `${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}`
+  const standFaceHeader = demoStand && activeTab === 'face'
+
   return (
-    <div className="app app-with-sidebar">
+    <div
+      className={`app app-with-sidebar${demoMode ? ' app--demo' : ''}${demoStand ? ' app--demo-stand-4k' : ''}${standFaceHeader ? ' app--demo-stand-face' : ''}`}
+    >
+      {demoMode && activeTab === 'face' && (
+        <div className="app-demo-globe-fixed">
+          <div className="app-demo-globe-transform">
+            <RussiaGlobe
+              immersiveBackground
+              demoLarge
+              standLayout={demoStand}
+              onAssetSelect={handleMapAssetSelect}
+            />
+          </div>
+        </div>
+      )}
       <header className="app-header">
-        <img src={`${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/emblem.png`} alt="Оркестратор актива" className="app-header-emblem" />
+        <img
+          src={standFaceHeader ? `${staticBase}/gazprom-neft-logo.png` : `${staticBase}/emblem.png`}
+          alt={standFaceHeader ? 'Цифровой двойник актива' : 'Оркестратор актива'}
+          className={`app-header-emblem${standFaceHeader ? ' app-header-emblem--stand-gpn' : ''}`}
+        />
         <div className="app-header-text">
-          <h1>Оркестратор актива</h1>
+          <h1>{standFaceHeader ? 'Цифровой двойник актива' : 'Оркестратор актива'}</h1>
         </div>
         <div className="app-header-actions">
           <button
@@ -453,9 +512,14 @@ function App() {
         </div>
       </header>
 
-      {selectedAssetId && selectedAssetPoint && assetStatus && (
-        <div className="app-asset-sticky">
+      {selectedAssetId && selectedAssetPoint && assetStatus && !(demoMode && activeTab === 'face') && (
+        <div className={`app-asset-sticky${demoMode ? ' app-asset-sticky--demo' : ''}`}>
           <span className="app-asset-sticky-name">{selectedAssetPoint.name}</span>
+          {agreedInfluenceLine && (
+            <span className="app-asset-sticky-influence" title={agreedInfluenceLine}>
+              {agreedInfluenceLine}
+            </span>
+          )}
           <span className="app-asset-sticky-status">{assetStatusLabel}</span>
           {assetStatusIcon && (
             <span className={`app-asset-sticky-icon app-asset-sticky-icon-${assetStatusIcon.color}`} title={assetStatusLabel}>
@@ -464,12 +528,57 @@ function App() {
               {assetStatusIcon.type === 'question' && '?'}
             </span>
           )}
-          <button type="button" className="app-asset-sticky-close" onClick={() => setSelectedAssetId(null)} aria-label="Сбросить">×</button>
+          <button
+            type="button"
+            className="app-asset-sticky-close"
+            onClick={() => {
+              setSelectedAssetId(null)
+              setAgreedInfluenceLine(null)
+              setFaceSelectedScenarioTitle(null)
+            }}
+            aria-label="Сбросить"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      <div className="app-body">
-        <nav className="app-sidebar">
+      {demoMode && activeTab === 'face' && selectedAssetId && selectedAssetPoint && assetStatus && (
+        <div className="demo-float-asset-bar glass-panel demo-glass--light" role="status" aria-live="polite">
+          <span className="app-asset-sticky-name">{selectedAssetPoint.name}</span>
+          {agreedInfluenceLine && (
+            <>
+              <span className="demo-float-asset-sep" aria-hidden>|</span>
+              <span className="app-asset-sticky-influence demo-float-asset-influence" title={agreedInfluenceLine}>
+                {agreedInfluenceLine}
+              </span>
+            </>
+          )}
+          <span className="app-asset-sticky-status">{assetStatusLabel}</span>
+          {assetStatusIcon && (
+            <span className={`app-asset-sticky-icon app-asset-sticky-icon-${assetStatusIcon.color}`} title={assetStatusLabel}>
+              {assetStatusIcon.type === 'check' && '✓'}
+              {assetStatusIcon.type === 'exclamation' && '!'}
+              {assetStatusIcon.type === 'question' && '?'}
+            </span>
+          )}
+          <button
+            type="button"
+            className="app-asset-sticky-close"
+            onClick={() => {
+              setSelectedAssetId(null)
+              setAgreedInfluenceLine(null)
+              setFaceSelectedScenarioTitle(null)
+            }}
+            aria-label="Сбросить"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      <div className={`app-body${demoMode && activeTab === 'face' ? ' app-body--immersive-face' : ''}`}>
+        <nav className={`app-sidebar${demoMode ? ' app-sidebar--icons' : ''}`}>
           {TABS.map((t) => (
             <React.Fragment key={t.id}>
               {t.separatorBefore && <hr className="app-sidebar-divider" />}
@@ -477,15 +586,17 @@ function App() {
                 type="button"
                 className={`app-sidebar-tab ${activeTab === t.id ? 'app-sidebar-tab-active' : ''}`}
                 onClick={() => setActiveTab(t.id)}
+                title={t.label}
+                aria-label={t.label}
               >
-                {t.label}
+                {demoMode ? <NavTabIcon name={t.icon} /> : t.label}
               </button>
             </React.Fragment>
           ))}
         </nav>
 
         {activeTab === 'scenarios' && (
-          <nav className="app-sidebar app-sidebar-secondary">
+          <nav className={`app-sidebar app-sidebar-secondary${demoMode ? ' app-sidebar-secondary--demo' : ''}`}>
             {SCENARIO_STAGE_FILTERS.map((name) => (
               <button
                 key={name}
@@ -503,7 +614,7 @@ function App() {
         )}
 
         {activeTab === 'admin' && (
-          <nav className="app-sidebar app-sidebar-secondary">
+          <nav className={`app-sidebar app-sidebar-secondary${demoMode ? ' app-sidebar-secondary--demo' : ''}`}>
             {ADMIN_SUB_TABS.map((t) => (
               <button
                 key={t.id}
@@ -517,7 +628,7 @@ function App() {
           </nav>
         )}
 
-        <main className="app-main">
+        <main className={`app-main${demoMode ? ' app-main--demo' : ''}${demoMode && activeTab === 'face' ? ' app-main--demo-immersive' : ''}`}>
           {activeTab === 'scenarios' && (
             <ScenariosList
               activeStageFilter={scenariosStageFilter}
@@ -533,7 +644,7 @@ function App() {
             />
           )}
 
-          {activeTab === 'face' && (
+          {activeTab === 'face' && !demoMode && (
             <div className="app-content app-content-face">
               <section className="section map-section">
                 <h2>Карта объектов Оркестратора актива</h2>
@@ -577,17 +688,208 @@ function App() {
                 />
               </section>
 
-              {/*
-              <section className="section cashflow-section">
-                <h2>Динамика Cash flow и добычи</h2>
-                <CashFlowChart faceSeed={faceSeed} />
-              </section>
-              */}
-
               <section className="section lifecycle-section">
                 <h2>Этап выбранного жизненного цикла актива</h2>
                 <LifecycleChart onStageClick={handleLifecycleStageClick} faceSeed={faceSeed} />
               </section>
+            </div>
+          )}
+
+          {activeTab === 'face' && demoMode && (
+            <div className="app-content app-content-face app-face-demo app-face-demo--immersive">
+              <div className="app-demo-scene">
+                <div className={`app-demo-float-top app-demo-float-hud${selectedAssetId && selectedAssetPoint && assetStatus ? ' app-demo-float-top--with-asset' : ''}`}>
+                  <div ref={demoHudPanelsRowRef} className="demo-hud-panels-row">
+                    <div
+                      className={`demo-hud-panel demo-hud-panel--roses${demoStand ? ' demo-hud-panel--roses-stand' : ''}${hudPanelExpanded === 'roses' ? ' demo-hud-panel--expanded' : ''}`}
+                    >
+                      {!demoStand && (
+                        <button
+                          type="button"
+                          className="demo-hud-panel-expand"
+                          onClick={() => setHudPanelExpanded((e) => (e === 'roses' ? null : 'roses'))}
+                          aria-expanded={hudPanelExpanded === 'roses'}
+                          aria-label={hudPanelExpanded === 'roses' ? 'Свернуть карту здоровья' : 'Развернуть карту здоровья'}
+                        >
+                          <svg
+                            className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'roses' ? ' demo-hud-panel-expand-icon--open' : ''}`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden
+                          >
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      )}
+                      {demoStand && (
+                        <h3 className="demo-hud-panel__title">Карта здоровья ЦД</h3>
+                      )}
+                      {demoStand ? (
+                        <div
+                          className={`demo-wind-rose-stack demo-wind-rose-stack--stand-face${hudPanelExpanded === 'roses' ? ' demo-wind-rose-stack--stand-face-expanded' : ''}`}
+                        >
+                          <div className="demo-wind-rose-stand-primary">
+                            <div className="wind-rose-item demo-wind-rose-item">
+                              <WindRose
+                                type="left"
+                                standVisual
+                                showLegend={false}
+                                data={leftRoseData}
+                                centerTitle="ЦД этапов"
+                                selectedIndex={selectedLeftStageIndex}
+                                onSegmentClick={handleLeftSegmentClick}
+                              />
+                            </div>
+                            <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-stand-legend">
+                              <WindRose
+                                type="left"
+                                standVisual
+                                showDiagram={false}
+                                data={leftRoseData}
+                                centerTitle="ЦД этапов"
+                                selectedIndex={selectedLeftStageIndex}
+                                onSegmentClick={handleLeftSegmentClick}
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="demo-hud-panel-expand demo-hud-panel-expand--stand-roses"
+                            onClick={() => setHudPanelExpanded((e) => (e === 'roses' ? null : 'roses'))}
+                            aria-expanded={hudPanelExpanded === 'roses'}
+                            aria-label={hudPanelExpanded === 'roses' ? 'Свернуть карту здоровья' : 'Показать розу объектов'}
+                          >
+                            <svg
+                              className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'roses' ? ' demo-hud-panel-expand-icon--open' : ''}`}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              aria-hidden
+                            >
+                              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                          {hudPanelExpanded === 'roses' && (
+                            <div className="demo-wind-rose-stand-secondary">
+                              <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-item--second">
+                                <WindRose
+                                  type="right"
+                                  standVisual
+                                  showLegend={false}
+                                  data={rightRoseData}
+                                  centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
+                                  selectedIndex={selectedRightObjectIndex}
+                                  onSegmentClick={handleRightSegmentClick}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="demo-wind-rose-stack">
+                          <div className="wind-rose-item demo-wind-rose-item">
+                            <WindRose
+                              type="left"
+                              data={leftRoseData}
+                              centerTitle="ЦД этапов"
+                              selectedIndex={selectedLeftStageIndex}
+                              onSegmentClick={handleLeftSegmentClick}
+                            />
+                          </div>
+                          <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-item--second">
+                            <WindRose
+                              type="right"
+                              data={rightRoseData}
+                              centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
+                              selectedIndex={selectedRightObjectIndex}
+                              onSegmentClick={handleRightSegmentClick}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className={`demo-hud-panel demo-hud-panel--lifecycle${hudPanelExpanded === 'lifecycle' ? ' demo-hud-panel--expanded' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        className="demo-hud-panel-expand"
+                        onClick={() => setHudPanelExpanded((e) => (e === 'lifecycle' ? null : 'lifecycle'))}
+                        aria-expanded={hudPanelExpanded === 'lifecycle'}
+                        aria-label={hudPanelExpanded === 'lifecycle' ? 'Свернуть жизненный цикл' : 'Развернуть жизненный цикл'}
+                      >
+                        <svg
+                          className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'lifecycle' ? ' demo-hud-panel-expand-icon--open' : ''}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden
+                        >
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      <div className="demo-lifecycle-wrap">
+                        <LifecycleChart
+                          compactOverlay
+                          hudExpanded={hudPanelExpanded === 'lifecycle'}
+                          onStageClick={handleLifecycleStageClick}
+                          faceSeed={faceSeed}
+                        />
+                      </div>
+                    </div>
+                    <div
+                      className={`demo-hud-panel demo-hud-panel--hyper${hypercubeCaseIntro ? ' hypercube-case-intro' : ''}${hudPanelExpanded === 'hyper' ? ' demo-hud-panel--expanded' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        className="demo-hud-panel-expand"
+                        onClick={() => setHudPanelExpanded((e) => (e === 'hyper' ? null : 'hyper'))}
+                        aria-expanded={hudPanelExpanded === 'hyper'}
+                        aria-label={hudPanelExpanded === 'hyper' ? 'Свернуть гипер-куб' : 'Развернуть гипер-куб'}
+                      >
+                        <svg
+                          className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'hyper' ? ' demo-hud-panel-expand-icon--open' : ''}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          aria-hidden
+                        >
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      <div className="demo-hypercube-wrap">
+                        <Hypercube3D
+                          highlightCaseTree={hypercubeCaseIntro}
+                          demoHudExpanded={hudPanelExpanded === 'hyper'}
+                          onOpenBpm={(highlight) => {
+                            setBpmHighlight(highlight || null)
+                            setActiveTab('planning')
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {hudPanelExpanded && !(demoStand && hudPanelExpanded === 'roses') ? (
+                    <button
+                      type="button"
+                      className="demo-hud-expand-backdrop"
+                      aria-label="Закрыть увеличенную панель"
+                      onClick={() => setHudPanelExpanded(null)}
+                    />
+                  ) : null}
+                </div>
+                {selectedAssetId && (
+                  <div className="app-demo-scenario-dock">
+                    <FaceScenarioOverlay
+                      assetId={selectedAssetId}
+                      scenarioComparisonRevision={scenarioComparisonRevision}
+                      selectedScenarioTitle={faceSelectedScenarioTitle}
+                      onSelectScenario={setFaceSelectedScenarioTitle}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -653,7 +955,7 @@ function App() {
         </main>
 
         {activeTab === 'face' && selectedAssetId && (
-          <aside className="app-right-panel">
+          <aside className={`app-right-panel${demoMode ? ' app-right-panel--demo-float' : ''}`}>
             <RightPanel
               assetId={selectedAssetId}
               scenarioComparisonRevision={scenarioComparisonRevision}
@@ -684,7 +986,42 @@ function App() {
         setCurrentMessage={setThinkingCurrentMessage}
         setIsPaused={setThinkingPaused}
       />
-      {thinkingPanelOpen && (
+      {thinkingPanelOpen && (showThinkingHologram ? (
+        <div className="app-thinking-scene">
+          <div className="app-thinking-overlay app-thinking-overlay--holo" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
+          <div
+            className="app-thinking-hologram glass-panel app-thinking-hologram--scene"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="thinking-holo-title"
+          >
+            <div className="app-thinking-hologram-head">
+              <h3 id="thinking-holo-title" className="app-thinking-drawer-title">Режим мышления</h3>
+              <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
+            </div>
+            <div className="app-thinking-hologram-body app-thinking-drawer-body">
+              <ThinkingPanelBody
+                showCollapsedBrainMinimal={showCollapsedBrainMinimal}
+                thinkingConfirmPhase={thinkingConfirmPhase}
+                thinkingSteps={thinkingSteps}
+                graphNodesForThinking={graphNodesForThinking}
+                thinkingChainRevealedRef={thinkingChainRevealedRef}
+                brainPanelOpenKey={brainPanelOpenKey}
+                selectedDecisionPathId={selectedDecisionPathId}
+                appliedDecisionPathId={appliedDecisionPathId}
+                setSelectedDecisionPathId={setSelectedDecisionPathId}
+                handleRecalculateDecision={handleRecalculateDecision}
+                thinkingAwaitingConfirm={thinkingAwaitingConfirm}
+                handleThinkingConfirm={handleThinkingConfirm}
+                thinkingCurrentMessage={thinkingCurrentMessage}
+                thinkingPaused={thinkingPaused}
+                setThinkingPaused={setThinkingPaused}
+                onClosePanel={handleThinkingPanelSoftClose}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
         <>
           <div className="app-thinking-overlay" onClick={() => setThinkingPanelOpen(false)} aria-hidden />
           <div className={`app-thinking-drawer ${isThinkingDrawerCollapsed ? 'app-thinking-drawer--collapsed' : ''}`}>
@@ -693,49 +1030,28 @@ function App() {
               <button type="button" className="app-thinking-drawer-close" onClick={() => setThinkingPanelOpen(false)} aria-label="Закрыть">×</button>
             </div>
             <div className="app-thinking-drawer-body">
-              {showCollapsedBrainMinimal ? (
-                <div className="app-thinking-drawer-minimal">
-                  <h3 className="app-thinking-drawer-title">Цепочка размышлений</h3>
-                  <button
-                    type="button"
-                    className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
-                    onClick={handleThinkingConfirm}
-                  >
-                    Согласовать предлагаемый сценарий
-                  </button>
-                </div>
-              ) : thinkingConfirmPhase === 'brain' ? (
-                <BrainChainView
-                  key={`brain-${brainPanelOpenKey}`}
-                  steps={thinkingSteps}
-                  graphNodes={graphNodesForThinking}
-                  chainAlreadyRevealed={thinkingChainRevealedRef.current}
-                  selectedDecisionPathId={selectedDecisionPathId}
-                  appliedDecisionPathId={appliedDecisionPathId}
-                  onSelectDecisionPath={setSelectedDecisionPathId}
-                  onRecalculate={handleRecalculateDecision}
-                  awaitingConfirm={thinkingAwaitingConfirm}
-                  onConfirm={handleThinkingConfirm}
-                />
-              ) : (
-                <AiThinkingUI
-                  steps={thinkingSteps}
-                  currentMessage={thinkingCurrentMessage}
-                  isPaused={thinkingPaused}
-                  isFinished={thinkingSteps.some((s) => s.label && s.label.includes('Готово'))}
-                  onStop={() => setThinkingPaused(true)}
-                  onResume={() => setThinkingPaused(false)}
-                  awaitingConfirm={thinkingAwaitingConfirm}
-                  onConfirm={handleThinkingConfirm}
-                />
-              )}
-              <button type="button" className="app-thinking-drawer-exit" onClick={() => { thinkingChainRevealedRef.current = true; setThinkingPanelOpen(false); setThinkingCurrentMessage(''); setThinkingPaused(false); }}>
-                Закрыть панель
-              </button>
+              <ThinkingPanelBody
+                showCollapsedBrainMinimal={showCollapsedBrainMinimal}
+                thinkingConfirmPhase={thinkingConfirmPhase}
+                thinkingSteps={thinkingSteps}
+                graphNodesForThinking={graphNodesForThinking}
+                thinkingChainRevealedRef={thinkingChainRevealedRef}
+                brainPanelOpenKey={brainPanelOpenKey}
+                selectedDecisionPathId={selectedDecisionPathId}
+                appliedDecisionPathId={appliedDecisionPathId}
+                setSelectedDecisionPathId={setSelectedDecisionPathId}
+                handleRecalculateDecision={handleRecalculateDecision}
+                thinkingAwaitingConfirm={thinkingAwaitingConfirm}
+                handleThinkingConfirm={handleThinkingConfirm}
+                thinkingCurrentMessage={thinkingCurrentMessage}
+                thinkingPaused={thinkingPaused}
+                setThinkingPaused={setThinkingPaused}
+                onClosePanel={handleThinkingPanelSoftClose}
+              />
             </div>
           </div>
         </>
-      )}
+      ))}
     </div>
   )
 }

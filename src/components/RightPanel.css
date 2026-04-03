@@ -226,6 +226,10 @@
   gap: 1rem;
 }
 
+.right-panel-decisions--compact {
+  gap: 0.5rem;
+}
+
 .right-panel-decision {
   padding: 1rem;
   background: #fff;

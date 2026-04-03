@@ -171,6 +171,156 @@
   height: 100%;
 }
 
+/* Демо-стенд: не обрезать верх сферы */
+.globe-viewport-clip--stand {
+  overflow: visible;
+}
+
+/* Полноэкранный фон сцены: без скруглений и обрезки */
+.globe-viewport-clip--immersive {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  clip-path: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100%;
+}
+
+.globe-viewport-clip--immersive .scene-container canvas {
+  border-radius: 0;
+}
+
+/* ?demo=stand#face: без clip — купол не «съедается»; сильный зум снова виден целиком */
+.globe-viewport-clip--immersive.globe-viewport-clip--stand-face {
+  overflow: visible !important;
+  clip-path: none !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.russia-globe-container--stand-globe {
+  width: 100%;
+  max-width: none;
+}
+
+.russia-globe-container--stand-globe .globe-wrapper--immersive-bg {
+  width: 100%;
+  max-width: none;
+}
+
+.russia-globe-container--immersive {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 100%;
+  flex: 1 1 auto;
+  align-self: stretch;
+  gap: 0;
+  overflow: visible;
+}
+
+.globe-wrapper--immersive-bg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  flex: 1 1 auto;
+  max-width: none;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  box-shadow: none !important;
+}
+
+.globe-immersive-hud {
+  position: absolute;
+  left: 16px;
+  bottom: 20px;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.globe-hud-icon-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(226, 232, 240, 0.92);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.globe-hud-icon-btn:hover {
+  background: rgba(30, 41, 59, 0.72);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.globe-hud-icon-btn--active {
+  background: rgba(14, 165, 233, 0.28);
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #e0f2fe;
+}
+
+.globe-hud-icon-btn__inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.globe-hud-svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.globe-chain-panel--immersive {
+  position: absolute;
+  left: 72px;
+  bottom: 20px;
+  right: auto;
+  z-index: 8;
+  min-width: 220px;
+  max-width: min(300px, calc(100vw - 400px));
+  max-height: min(52vh, 420px);
+  overflow: auto;
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.55) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.globe-chain-panel--immersive .globe-chain-title {
+  color: #f1f5f9;
+}
+
+.globe-chain-panel--immersive .globe-chain-item {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+
+.globe-chain-panel--immersive .globe-chain-link {
+  color: #7dd3fc;
+}
+
+.globe-chain-panel--immersive .globe-chain-link:hover {
+  color: #bae6fd;
+}
+
 .globe-viewport-clip canvas {
   display: block;
   width: 100% !important;

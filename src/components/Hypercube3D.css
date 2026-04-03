@@ -24,9 +24,11 @@
   align-items: flex-end;
   gap: 0.75rem 1.25rem;
   padding: 1rem 1.5rem;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(226, 232, 240, 0.55);
 }
 
 .control-group {
@@ -80,7 +82,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #2d5a87;
+  background: #004077;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(45, 90, 135, 0.35);
@@ -95,7 +97,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #2d5a87;
+  background: #004077;
   cursor: pointer;
   border: none;
   transition: all 0.3s ease;
@@ -109,7 +111,7 @@
 
 .hypercube-visualization {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
   align-items: stretch;
   min-height: 520px;
@@ -120,24 +122,28 @@
   flex-direction: column;
   gap: 0;
   min-height: 520px;
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(226, 232, 240, 0.5);
   overflow: hidden;
 }
 
 .cube-info {
   padding: 1rem;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(226, 232, 240, 0.5);
   overflow-y: auto;
 }
 
 .cube-info h3 {
   font-size: 1.45rem;
   margin-bottom: 1rem;
-  color: #2d5a87;
+  color: #004077;
   font-weight: 600;
 }
 
@@ -189,15 +195,15 @@
   padding: 0.4rem 0.75rem;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #2d5a87;
+  color: #004077;
   background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #2d5a87;
+  border: 1px solid #004077;
   border-radius: 8px;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .cube-close-funnel-btn:hover {
-  background: #2d5a87;
+  background: #004077;
   color: #fff;
 }
 
@@ -209,15 +215,17 @@
   padding: 0.4rem 0.75rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #2d5a87;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #2d5a87;
+  color: #004077;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #004077;
   border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 .cube-fullscreen-btn:hover {
-  background: #2d5a87;
+  background: #004077;
   color: #fff;
 }
 
@@ -292,24 +300,28 @@
 }
 .cube-axis-tick-label {
   font-size: 10px;
-  color: #475569;
-  background: rgba(255, 255, 255, 0.9);
+  color: #004077;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 0.1rem 0.25rem;
   border-radius: 4px;
   white-space: nowrap;
 }
 .cube-axis-label {
   font-size: 14px;
-  color: #2d5a87;
+  color: #004077;
   font-weight: 700;
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0.25rem 0.5rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 6px;
-  border: 1px solid rgba(45, 90, 135, 0.25);
+  border: 1px solid rgba(45, 90, 135, 0.28);
   display: block;
 }
 .cube-axis-label-wrap:hover .cube-axis-label {
@@ -325,11 +337,13 @@
   padding: 0.5rem 0.75rem;
   font-size: 12px;
   font-weight: 500;
-  color: #1e293b;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  color: #004077;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.75);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   white-space: normal;
   max-width: 280px;
   z-index: 1000;
@@ -442,7 +456,7 @@
 .hypercube-instructions {
   padding: 1rem;
   background: rgba(45, 90, 135, 0.06);
-  border-left: 4px solid #2d5a87;
+  border-left: 4px solid #004077;
   border-radius: 8px;
 }
 
@@ -455,8 +469,10 @@
 .variant-space-panel {
   margin-top: 0.5rem;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: linear-gradient(180deg, #f0f4f8 0%, #e8eef4 100%);
+  border: 1px solid rgba(226, 232, 240, 0.45);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   overflow: hidden;
 }
 
@@ -466,10 +482,12 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(45, 90, 135, 0.2);
   font-size: 12px;
-  color: #2d5a87;
+  color: #004077;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -478,7 +496,7 @@
 .variant-space-3d-close button {
   border: none;
   background: rgba(45, 90, 135, 0.15);
-  color: #2d5a87;
+  color: #004077;
   font-size: 0.95rem;
   line-height: 1.2;
   border-radius: 6px;
@@ -498,25 +516,29 @@
 
 .cube-label-activa {
   font-size: 14px;
-  color: #2d5a87;
+  color: #004077;
   font-weight: 700;
   white-space: nowrap;
   padding: 0.3rem 0.6rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 6px;
-  border: 1px solid rgba(45, 90, 135, 0.25);
+  border: 1px solid rgba(45, 90, 135, 0.28);
   pointer-events: none;
 }
 
 .funnel-level-label {
   font-size: 1.35rem;
   font-weight: 700;
-  color: #2d5a87;
+  color: #004077;
   white-space: nowrap;
   padding: 0.35rem 0.65rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 6px;
-  border: 1px solid rgba(45, 90, 135, 0.25);
+  border: 1px solid rgba(45, 90, 135, 0.28);
   pointer-events: none;
 }
 
@@ -525,10 +547,12 @@
   color: #1e3a5f;
   font-weight: 600;
   padding: 0.4rem 0.7rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: 6px;
-  border: 1px solid rgba(45, 90, 135, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(45, 90, 135, 0.28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   max-width: 220px;
   text-align: center;
   pointer-events: none;
@@ -569,7 +593,7 @@
 .cube-goto-btn {
   display: inline-block;
   padding: 0.35rem 0.75rem;
-  background: #2d5a87;
+  background: #004077;
   color: #fff;
   border-radius: 6px;
   font-size: 12px;
@@ -582,7 +606,7 @@
 }
 
 .cube-goto-btn:hover {
-  background: #3d6a97;
+  background: #E65907;
   color: #fff;
 }
 
@@ -614,10 +638,12 @@
   gap: 0.75rem;
   padding: 0 12px;
   margin: 2px 8px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: 8px;
-  border: 1px solid rgba(45, 90, 135, 0.2);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(45, 90, 135, 0.22);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   z-index: 1;
 }
 
@@ -629,7 +655,7 @@
 }
 
 .variant-space-level-item {
-  color: #2d5a87;
+  color: #004077;
   font-weight: 600;
   font-size: 11px;
 }
