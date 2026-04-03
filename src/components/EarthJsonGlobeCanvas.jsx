@@ -13,7 +13,7 @@ import { Line, OrbitControls, Stars } from '@react-three/drei'
 import * as THREE from 'three'
 import {
   applyEarthJsonProjectToRenderer,
-  loadEarthJsonFull,
+  loadEarthGlobeScene,
 } from '../lib/loadEarthJsonFull'
 import {
   GLOBE_RADIUS,
@@ -24,58 +24,20 @@ import {
 
 const STARFIELD_URL = 'https://unpkg.com/three-globe@2.45.1/example/img/night-sky.png'
 
+/** Референс stand-face: широкий FOV, чтобы при сильном pitch не резался купол. */
+const STAND_DOME_CAMERA_FOV = 62
 /**
- * После успешного StandHudWidthFit — не затирать FOV из ImmersiveOverrides / прочих хуков.
- * Сбрасывается, когда стенд выключен (StandHudWidthFit active=false).
+ * Сдвиг корня Земли по локальному Y (с орбитой камеры частично «съезжает» вместе — см. pitch + CSS padding).
  */
-let __standFovLocked = false
+const STAND_EARTH_SHIFT_Y_FACTOR = -1.55
+/** Сильный наклон: широкая часть диска и «пояс» к нижней трети canvas. */
+const STAND_DOME_PITCH_DEG = -54
 
-function logFovOverride(label) {
-  if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console -- трассировка перезаписей FOV
-    console.log('FOV OVERRIDE HERE', label, new Error().stack)
-  }
+const standDomePitchScratch = {
+  view: new THREE.Vector3(),
+  horiz: new THREE.Vector3(),
+  offset: new THREE.Vector3(),
 }
-
-/** ?demo=stand + immersive: смещение корня сцены по Y (отрицательное — шар ниже в кадре). */
-const IMMERSIVE_STAND_WORLD_OFFSET_Y = -6
-
-/**
- * Стенд: FOV подбирает «зум» без захода внутрь шара (R=100).
- * После ~0.92° (экстрем. крупно) — ~×15 «отдаления»: tan(h/2) → 15·tan(0.46°) → h≈13.8°.
- */
-const STAND_CAMERA_FOV = 13.8
-/** Целевая ширина силуэта в пикселях = ширина canvas × коэффициент (immersiveStandLayout / ?demo=stand#face). */
-const STAND_GLOBE_WIDTH_OVERSHOOT = 7.2
-/**
- * После подбора дистанции — дополнительно подвести камеру ближе (1 = как по ширине силуэта).
- * Измерение span часто упирается в ширину canvas, тогда без множителя зум не меняется от overshoot.
- */
-const STAND_POST_FIT_DISTANCE_SCALE = 0.09
-/** Мин. расстояние камера–центр орбиты (ближе к поверхности ≈ сильнее зум; ниже — риск клиппинга). */
-const STAND_MIN_CAMERA_DISTANCE = GLOBE_RADIUS * 1.003
-/** Доп. множитель к дистанции после bisect+scale (×15 к прошлой итерации — дальше от шара). */
-const STAND_DISTANCE_FINAL_MUL = (0.34 / 30) * 15
-/** Запасная дистанция, если project не даёт ширину (см. шаг 3). */
-const STAND_DISTANCE_FALLBACK = Math.max(
-  STAND_MIN_CAMERA_DISTANCE,
-  GLOBE_RADIUS * 1.35 * STAND_POST_FIT_DISTANCE_SCALE * STAND_DISTANCE_FINAL_MUL,
-)
-/** Включить true — в конце эффекта принудительно подтянуть камеру (проверка, что зум = distance). */
-const STAND_FORCE_CAMERA_DISTANCE_TEST = false
-/**
- * Включить true — камера в (0,0, R*2.5), lookAt(0,0,0). Сцена может быть не в начале координат;
- * цель — проверить, что меняется именно эта PerspectiveCamera, а не «другая».
- */
-const STAND_DEBUG_CAMERA_ORIGIN_OVERRIDE = false
-
-/** Подъём купола в кадре (сумма с pull задаёт вертикаль). */
-const STAND_IMMERSIVE_CAMERA_LIFT = 18
-const STAND_IMMERSIVE_SCREEN_UP_EXTRA = 28
-const STAND_IMMERSIVE_WORLD_Y_PULL = 44
-
-/** Горизонталь центровки под ось lifecycle (px). Не через CSS translateX — иначе слева полоса без canvas. */
-const STAND_HUD_TARGET_CX_OFFSET_PX = 262
 
 function worldOrbitCenter(root, orbitTargetLocal) {
   const wc = orbitTargetLocal.clone()
@@ -93,6 +55,41 @@ function worldCameraPosition(root, orbitTargetLocal, lat, lng, alt) {
   return camLocal
 }
 
+/** Стенд: мировой «верх» = север (ось Y сцены); не меняет position, только ориентацию камеры. */
+function applyStandCameraNorthUp(camera, wc) {
+  if (!camera?.isPerspectiveCamera || !wc) return
+  camera.up.set(0, 1, 0)
+  camera.lookAt(wc)
+  camera.updateProjectionMatrix()
+}
+
+/** Стенд: north-up + вертикальный pitch (экватор к нижнему краю viewport). */
+function applyStandDomeCameraFrame(camera, wc) {
+  if (!camera?.isPerspectiveCamera || !wc) return
+  applyStandCameraNorthUp(camera, wc)
+  if (STAND_DOME_PITCH_DEG === 0) return
+  const { view, horiz, offset } = standDomePitchScratch
+  view.copy(camera.position).sub(wc)
+  const dist = view.length()
+  if (dist < 1e-6) return
+  view.multiplyScalar(1 / dist)
+  horiz.crossVectors(camera.up, view)
+  if (horiz.lengthSq() < 1e-12) return
+  horiz.normalize()
+  offset.copy(camera.position).sub(wc)
+  offset.applyAxisAngle(horiz, THREE.MathUtils.degToRad(STAND_DOME_PITCH_DEG))
+  camera.position.copy(wc).add(offset)
+  applyStandCameraNorthUp(camera, wc)
+}
+
+/** Полный кадр стенда: позиция из lat/lng/alt + pitch (вызывать при resize, чтобы не «залипал» lookAt без pitch). */
+function setStandDomeCameraFromPov(camera, root, orbitTarget, lat, lng, alt) {
+  if (!camera?.isPerspectiveCamera || !root) return
+  const wc = worldOrbitCenter(root, orbitTarget)
+  camera.position.copy(worldCameraPosition(root, orbitTarget, lat, lng, alt))
+  applyStandDomeCameraFrame(camera, wc)
+}
+
 /** Локальный +Y корня Земли — ось север–юг (долгота: Владивосток ↔ СПб), после normalizeEarthSceneToGlobeRadius */
 const STAND_SPIN_GEO_POLE_LOCAL = new THREE.Vector3(0, 1, 0)
 
@@ -107,11 +104,8 @@ function StandGlobeYawSpin({ active, spinGroupRef, earthRoot, gl, invalidate }) 
     axisWorld: new THREE.Vector3(),
     axisLocal: new THREE.Vector3(),
     quat: new THREE.Quaternion(),
-    posBefore: new THREE.Vector3(),
-    posAfter: new THREE.Vector3(),
     invMw: new THREE.Matrix4(),
   })
-  const moveLogCountRef = useRef(0)
   useEffect(() => {
     if (!active) return
     const el = gl.domElement
@@ -136,7 +130,6 @@ function StandGlobeYawSpin({ active, spinGroupRef, earthRoot, gl, invalidate }) 
       const sg = spinGroupRef.current
       const p = spinAxisPoolRef.current
       earthRoot.updateWorldMatrix(true, true)
-      earthRoot.getWorldPosition(p.posBefore)
       earthRoot.getWorldQuaternion(p.quat)
       p.axisWorld.copy(STAND_SPIN_GEO_POLE_LOCAL).applyQuaternion(p.quat)
       if (p.axisWorld.lengthSq() < 1e-12) return
@@ -148,30 +141,6 @@ function StandGlobeYawSpin({ active, spinGroupRef, earthRoot, gl, invalidate }) 
       p.axisLocal.normalize()
       sg.rotateOnAxis(p.axisLocal, angle)
       earthRoot.updateWorldMatrix(true, true)
-      earthRoot.getWorldPosition(p.posAfter)
-      const drift = p.posAfter.distanceTo(p.posBefore)
-      moveLogCountRef.current += 1
-      // #region agent log
-      if (moveLogCountRef.current <= 30 && moveLogCountRef.current % 5 === 0) {
-        fetch('http://127.0.0.1:7436/ingest/211ab724-0b9d-43d2-b8ad-555efba1a9a8', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'fd2585' },
-          body: JSON.stringify({
-            sessionId: 'fd2585',
-            location: 'EarthJsonGlobeCanvas:StandGlobeYawSpin',
-            message: 'spin drift earthRoot world pos',
-            data: {
-              drift,
-              moveN: moveLogCountRef.current,
-              axL: p.axisLocal.toArray(),
-            },
-            timestamp: Date.now(),
-            hypothesisId: 'H1-noRotatedParent',
-            runId: 'rotateOnAxis-fix',
-          }),
-        }).catch(() => {})
-      }
-      // #endregion
       invalidate()
     }
     const release = (e) => {
@@ -267,9 +236,8 @@ function ImmersiveOverrides({ enabled, sceneRoot, wideHorizontalFraming }) {
     /* eslint-disable react-hooks/immutability -- Three.js objects are mutated by design */
     if (!enabled) return
     if (camera) {
-      /* Портретный иммерсив: широкий FOV. Стенд: фикс. FOV в StandHudWidthFit, зум — дистанция. */
-      if (!wideHorizontalFraming && !__standFovLocked) {
-        logFovOverride('ImmersiveOverrides:immersive-non-stand-fov58')
+      /* Портретный иммерсив: широкий FOV. Стенд: FOV задаёт StandDomeCamera (STAND_DOME_CAMERA_FOV). */
+      if (!wideHorizontalFraming) {
         camera.fov = 58
       }
       camera.near = Math.min(camera.near, 0.06)
@@ -277,7 +245,6 @@ function ImmersiveOverrides({ enabled, sceneRoot, wideHorizontalFraming }) {
     }
     if (wideHorizontalFraming) {
       if (gl) gl.shadowMap.enabled = false
-      return
     }
     if (gl) {
       gl.toneMapping = THREE.ACESFilmicToneMapping
@@ -305,253 +272,43 @@ function ImmersiveOverrides({ enabled, sceneRoot, wideHorizontalFraming }) {
   return null
 }
 
-function projectOrbitCenterScreenX(camera, gl, root, orbitTarget, vW) {
-  root.updateWorldMatrix(true, false)
-  vW.copy(worldOrbitCenter(root, orbitTarget))
-  vW.project(camera)
-  const rect = gl.domElement.getBoundingClientRect()
-  return rect.left + (vW.x * 0.5 + 0.5) * rect.width
-}
-
-/**
- * Ширина силуэта шара в пикселях: выборка точек на сфере (локально orbitTarget + polar → world),
- * project → minX/maxX по canvas. vPt / vDelta / vFwd — рабочие векторы без аллокаций.
- */
-function measureGlobeHorizontalSpanPxSampled(camera, gl, root, orbitTarget, vPt, vDelta, vFwd) {
-  root.updateWorldMatrix(true, false)
-  const cw = gl.domElement.getBoundingClientRect().width
-  camera.getWorldDirection(vFwd)
-  let minX = Infinity
-  let maxX = -Infinity
-  for (let lat = -88; lat <= 88; lat += 5) {
-    for (let lng = 0; lng < 360; lng += 10) {
-      vPt.copy(orbitTarget).add(polarToCartesian(lat, lng, 0))
-      root.localToWorld(vPt)
-      vDelta.copy(vPt).sub(camera.position)
-      if (vDelta.dot(vFwd) < 0.02) continue
-      vPt.project(camera)
-      const sx = (vPt.x * 0.5 + 0.5) * cw
-      if (Number.isFinite(sx)) {
-        minX = Math.min(minX, sx)
-        maxX = Math.max(maxX, sx)
-      }
-    }
-  }
-  if (!Number.isFinite(minX) || maxX <= minX) return 0
-  return maxX - minX
-}
-
-const HUD_FIT_EPS_PX = 1.5
-
-/**
- * Стенд: подгонка **дистанции** камеры под целевую экранную ширину шара (project), FOV постоянный;
- * затем горизонтальное центрирование и сдвиг «купола».
- */
-function StandHudWidthFit({ active, root, orbitTarget, invalidate, povRevision = 0 }) {
+/** ?demo=stand#face: фиксированный FOV и север вверх после pointOfView; resize — повторная привязка. */
+function StandDomeCamera({ active, root, orbitTarget, standPov, standEarthLiftY, invalidate }) {
   const { camera, gl } = useThree()
-  const vW = useMemo(() => new THREE.Vector3(), [])
-  const vCam = useMemo(() => new THREE.Vector3(), [])
-  const vRight = useMemo(() => new THREE.Vector3(), [])
-  const lastAppliedRef = useRef({ cx: NaN, rev: -1, layout: -1, targetW: NaN })
-  const [canvasLayoutStamp, setCanvasLayoutStamp] = useState(0)
-
-  useLayoutEffect(() => {
-    if (!active) {
-      __standFovLocked = false
-    }
-  }, [active])
+  const [resizeStamp, setResizeStamp] = useState(0)
 
   useLayoutEffect(() => {
     if (!active || !gl?.domElement) return
     const el = gl.domElement
-    const ro = new ResizeObserver(() => setCanvasLayoutStamp((n) => n + 1))
+    const ro = new ResizeObserver(() => setResizeStamp((n) => n + 1))
     ro.observe(el)
     return () => ro.disconnect()
   }, [active, gl])
 
   useLayoutEffect(() => {
-    if (!active || !root || !camera?.isPerspectiveCamera || !gl?.domElement) return
-    const cr = gl.domElement.getBoundingClientRect()
-    const targetCx = cr.left + cr.width / 2 + STAND_HUD_TARGET_CX_OFFSET_PX
-    const targetW = cr.width * STAND_GLOBE_WIDTH_OVERSHOOT
-    if (!Number.isFinite(cr.width) || cr.width < 80) return
-
-    /* После pointOfView и onStandFitAfterPov — revision ≥ 1 */
-    if (povRevision < 1) return
-
-    const prev = lastAppliedRef.current
-    if (
-      prev.rev === povRevision
-      && prev.layout === canvasLayoutStamp
-      && Math.abs(prev.cx - targetCx) < HUD_FIT_EPS_PX
-      && Math.abs(prev.targetW - targetW) < HUD_FIT_EPS_PX
-    ) {
-      return
-    }
-    prev.cx = targetCx
-    prev.rev = povRevision
-    prev.layout = canvasLayoutStamp
-    prev.targetW = targetW
-
-    logFovOverride('StandHudWidthFit:fixed-fov')
-    camera.fov = STAND_CAMERA_FOV
+    if (!active || !root || !camera?.isPerspectiveCamera) return
+    camera.fov = STAND_DOME_CAMERA_FOV
     camera.updateProjectionMatrix()
-
-    let wcLift = worldOrbitCenter(root, orbitTarget)
-    const centerPov = wcLift.clone()
-    vW.subVectors(camera.position, centerPov)
-    if (vW.lengthSq() < 1e-10) {
-      vW.set(0, 0.2, 1).normalize()
+    const wc = worldOrbitCenter(root, orbitTarget)
+    if (standPov && Number.isFinite(standPov.lat) && Number.isFinite(standPov.lng) && Number.isFinite(standPov.altitude)) {
+      setStandDomeCameraFromPov(camera, root, orbitTarget, standPov.lat, standPov.lng, standPov.altitude)
     } else {
-      vW.normalize()
+      applyStandCameraNorthUp(camera, wc)
     }
-    const dirFromPov = vW.clone()
-
-    const widthAtDistance = (dist) => {
-      const c = worldOrbitCenter(root, orbitTarget)
-      camera.fov = STAND_CAMERA_FOV
-      camera.updateProjectionMatrix()
-      camera.position.copy(c.clone().addScaledVector(dirFromPov, dist))
-      camera.lookAt(c)
-      camera.updateProjectionMatrix()
-      return measureGlobeHorizontalSpanPxSampled(camera, gl, root, orbitTarget, vW, vCam, vRight)
-    }
-
-    let lo = STAND_MIN_CAMERA_DISTANCE
-    let hi = GLOBE_RADIUS * 120
-    for (let i = 0; i < 35; i++) {
-      const mid = (lo + hi) / 2
-      const spanPx = widthAtDistance(mid)
-      const cIter = worldOrbitCenter(root, orbitTarget)
-      const distIter = camera.position.distanceTo(cIter)
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console -- сходимость бинарного поиска по дистанции
-        console.log('[STAND FIT ITER]', {
-          distance: distIter,
-          spanPx,
-          targetW,
-          error: spanPx - targetW,
-          lo,
-          hi,
-        })
-      }
-      if (!Number.isFinite(spanPx) || spanPx <= 0) {
-        hi = mid
-        continue
-      }
-      if (spanPx < targetW) hi = mid
-      else lo = mid
-      if (hi - lo < GLOBE_RADIUS * 0.002) break
-    }
-
-    const rawBisectDist = (lo + hi) / 2
-    let finalDistance =
-      rawBisectDist * STAND_POST_FIT_DISTANCE_SCALE * STAND_DISTANCE_FINAL_MUL
-    finalDistance = Math.max(STAND_MIN_CAMERA_DISTANCE, finalDistance)
-    wcLift = worldOrbitCenter(root, orbitTarget)
-    camera.fov = STAND_CAMERA_FOV
-    camera.updateProjectionMatrix()
-    /* Сначала ставим по известному лучу из POV, затем явное применение как в спецификации */
-    camera.position.copy(wcLift.clone().addScaledVector(dirFromPov, finalDistance))
-    camera.lookAt(wcLift)
-    camera.updateProjectionMatrix()
-    const dir = new THREE.Vector3().subVectors(camera.position, wcLift).normalize()
-    if (dir.lengthSq() < 1e-12) dir.copy(dirFromPov)
-    camera.position.copy(wcLift.clone().add(dir.multiplyScalar(finalDistance)))
-    camera.lookAt(wcLift)
-    camera.updateProjectionMatrix()
-
-    let finalSpanPx = measureGlobeHorizontalSpanPxSampled(camera, gl, root, orbitTarget, vW, vCam, vRight)
-    if (!Number.isFinite(finalSpanPx) || finalSpanPx <= 0) {
-      finalDistance = Math.max(STAND_MIN_CAMERA_DISTANCE, STAND_DISTANCE_FALLBACK)
-      camera.position.copy(wcLift.clone().addScaledVector(dirFromPov, finalDistance))
-      camera.lookAt(wcLift)
-      camera.updateProjectionMatrix()
-      const dirFb = new THREE.Vector3().subVectors(camera.position, wcLift).normalize()
-      if (dirFb.lengthSq() < 1e-12) dirFb.copy(dirFromPov)
-      camera.position.copy(wcLift.clone().add(dirFb.multiplyScalar(finalDistance)))
-      camera.lookAt(wcLift)
-      camera.updateProjectionMatrix()
-      finalSpanPx = measureGlobeHorizontalSpanPxSampled(camera, gl, root, orbitTarget, vW, vCam, vRight)
-    }
-
-    // eslint-disable-next-line no-console -- итог подбора дистанции (сверка targetW / span)
-    console.log('[STAND FIT RESULT]', {
-      finalDistance,
-      finalSpanPx,
-      targetW,
-    })
-
-    for (let j = 0; j < 14; j++) {
-      wcLift = worldOrbitCenter(root, orbitTarget)
-      const cx = projectOrbitCenterScreenX(camera, gl, root, orbitTarget, vCam)
-      const err = targetCx - cx
-      if (Math.abs(err) < 1.5) break
-      vCam.copy(wcLift).sub(camera.position).normalize()
-      vRight.crossVectors(vCam, camera.up).normalize()
-      camera.position.addScaledVector(vRight, err * 0.0018)
-      camera.lookAt(wcLift)
-    }
-
-    wcLift = worldOrbitCenter(root, orbitTarget)
-    camera.lookAt(wcLift)
-    vW.copy(wcLift).sub(camera.position).normalize()
-    const worldUp = new THREE.Vector3(0, 1, 0)
-    vRight.crossVectors(vW, worldUp)
-    if (vRight.lengthSq() < 1e-10) vRight.set(1, 0, 0)
-    else vRight.normalize()
-    vCam.crossVectors(vRight, vW).normalize()
-    camera.position.addScaledVector(vCam, STAND_IMMERSIVE_CAMERA_LIFT + STAND_IMMERSIVE_SCREEN_UP_EXTRA)
-    camera.position.y -= STAND_IMMERSIVE_WORLD_Y_PULL
-    camera.lookAt(wcLift)
-
-    if (STAND_FORCE_CAMERA_DISTANCE_TEST) {
-      const c = worldOrbitCenter(root, orbitTarget)
-      const d = new THREE.Vector3().subVectors(camera.position, c).normalize()
-      camera.position.copy(c.clone().addScaledVector(d, GLOBE_RADIUS * 1.2))
-      camera.lookAt(c)
-      camera.updateProjectionMatrix()
-      // eslint-disable-next-line no-console -- обязательный тест шага 1
-      console.log('FORCED CAMERA DISTANCE MOVE')
-    }
-
-    if (STAND_DEBUG_CAMERA_ORIGIN_OVERRIDE) {
-      const centerDbg = new THREE.Vector3(0, 0, 0)
-      camera.position.set(0, 0, GLOBE_RADIUS * 2.5)
-      camera.lookAt(centerDbg)
-      camera.updateProjectionMatrix()
-      // eslint-disable-next-line no-console -- проверка, что двигается эта камера
-      console.log('[STAND DEBUG] camera at origin test (0,0,R*2.5) lookAt 0')
-    }
-
-    __standFovLocked = true
-
-    if (import.meta.env.DEV) {
-      const cEnd = worldOrbitCenter(root, orbitTarget)
-      // eslint-disable-next-line no-console -- итог кадра
-      console.log('STAND APPLY', {
-        fov: camera.fov,
-        distanceToCenter: camera.position.distanceTo(cEnd),
-        finalDistance,
-        finalSpanPx,
-      })
-    }
-
     invalidate()
-    // Константы зума в deps — иначе при смене только чисел эффект не перезапускается (HMR / правки).
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- invalidate не в deps намеренно
   }, [
     active,
     root,
     orbitTarget,
-    canvasLayoutStamp,
-    povRevision,
-    STAND_GLOBE_WIDTH_OVERSHOOT,
-    STAND_CAMERA_FOV,
-    STAND_POST_FIT_DISTANCE_SCALE,
-    STAND_MIN_CAMERA_DISTANCE,
-    STAND_DISTANCE_FINAL_MUL,
-    STAND_HUD_TARGET_CX_OFFSET_PX,
+    camera,
+    invalidate,
+    resizeStamp,
+    standEarthLiftY,
+    standPov?.lat,
+    standPov?.lng,
+    standPov?.altitude,
+    STAND_DOME_CAMERA_FOV,
+    STAND_DOME_PITCH_DEG,
   ])
 
   return null
@@ -658,8 +415,6 @@ function GlobeScene({
   loaded,
   immersiveBackground,
   immersiveStandLayout,
-  standPovRevision = 0,
-  onStandFitAfterPov,
   immersiveEuler,
   polarLimits,
   orbitTarget,
@@ -680,13 +435,15 @@ function GlobeScene({
   onPointClick,
   onPointHover,
   onArcHover,
+  standCameraPov,
 }) {
   const orbitRef = useRef(null)
   const orbitTargetRef = useRef(orbitTarget.clone())
   const standSpinGroupRef = useRef(null)
   const { camera, gl, scene, invalidate } = useThree()
 
-  const standWorldOffsetY = immersiveStandLayout ? IMMERSIVE_STAND_WORLD_OFFSET_Y : 0
+  /* Стенд: сдвиг шара по мировому Y — в паре с applyStandDomeCameraFrame (экватор к низу полосы). */
+  const standEarthLiftY = immersiveStandLayout ? GLOBE_RADIUS * STAND_EARTH_SHIFT_Y_FACTOR : 0
   orbitTargetRef.current.copy(orbitTarget)
 
   const root = loaded.sceneRoot
@@ -723,32 +480,21 @@ function GlobeScene({
       const lng = pov?.lng ?? 60
       const alt = Number.isFinite(pov?.altitude) ? pov.altitude : 0.88
       const wc = worldOrbitCenter(root, orbitTarget)
-      const camW = worldCameraPosition(root, orbitTarget, lat, lng, alt)
-      camera.position.copy(camW)
-      camera.lookAt(wc)
-      if (import.meta.env.DEV && immersiveStandLayout && args.length > 0) {
-        // eslint-disable-next-line no-console -- диагностика после pointOfView (стенд)
-        console.log('CAMERA DEBUG', {
-          fov: camera.fov,
-          distance: camera.position.length(),
-          distanceToOrbit: camera.position.distanceTo(wc),
-          altitudeArg: alt,
-        })
+      if (immersiveStandLayout) {
+        setStandDomeCameraFromPov(camera, root, orbitTarget, lat, lng, alt)
+      } else {
+        camera.position.copy(worldCameraPosition(root, orbitTarget, lat, lng, alt))
+        camera.lookAt(wc)
       }
       if (orbitRef.current) {
         orbitRef.current.target.copy(wc)
-        /* Стенд: не вызывать update() — OrbitControls может пересобрать внутреннее состояние и сбить камеру после StandHudWidthFit */
         if (!immersiveStandLayout) {
           orbitRef.current.update()
         }
       }
       apiRef.current.orbitTarget = wc.clone()
-      /* standFitRevision ≥ 1 — иначе StandHudWidthFit всегда выходит на povRevision < 1 */
-      if (immersiveStandLayout && onStandFitAfterPov) {
-        onStandFitAfterPov()
-      }
     }
-  }, [apiRef, camera, gl, scene, orbitTarget, root, immersiveStandLayout, onStandFitAfterPov])
+  }, [apiRef, camera, gl, scene, orbitTarget, root, immersiveStandLayout])
 
   useEffect(() => {
     if (readyFiredRef.current) return
@@ -781,12 +527,13 @@ function GlobeScene({
       ) : null}
       {immersiveStandLayout ? <StandTransparentScene active /> : null}
       {immersiveStandLayout ? (
-        <StandHudWidthFit
+        <StandDomeCamera
           active
           root={root}
           orbitTarget={orbitTarget}
+          standPov={standCameraPov}
+          standEarthLiftY={standEarthLiftY}
           invalidate={invalidate}
-          povRevision={standPovRevision}
         />
       ) : null}
       {immersiveBackground && !immersiveStandLayout ? <EquirectBackground url={STARFIELD_URL} /> : null}
@@ -795,7 +542,7 @@ function GlobeScene({
         <Stars radius={420} depth={80} count={6000} factor={3} fade speed={0.3} />
       ) : null}
       <group rotation={immersiveEuler}>
-        <group position={[0, standWorldOffsetY, 0]}>
+        <group position={[0, standEarthLiftY, 0]}>
         <group ref={standSpinGroupRef}>
         <primitive object={loaded.sceneRoot} />
         {budgetZoneFeatures.map((feat, i) => {
@@ -923,12 +670,12 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
     onPointClick,
     onPointHover,
     onArcHover,
-    jsonUrl,
+    globeTextureUrl,
     onLoadError,
     onReady,
     dprCap = 1.25,
-    standPovRevision = 0,
-    onStandFitAfterPov,
+    /** Стенд: дефолтный POV для камеры при каждом resize (иначе сдвиг/pitch не переустанавливаются). */
+    standCameraPov,
   },
   ref,
 ) {
@@ -946,11 +693,17 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
   const [loaded, setLoaded] = useState(null)
   const [err, setErr] = useState(null)
 
+  const resolvedGlobeTextureUrl = useMemo(() => {
+    if (globeTextureUrl) return globeTextureUrl
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+    return `${base}/earth-globe-equirect.jpg`
+  }, [globeTextureUrl])
+
   useEffect(() => {
     let cancelled = false
     setErr(null)
     readyFiredRef.current = false
-    loadEarthJsonFull(jsonUrl)
+    loadEarthGlobeScene(resolvedGlobeTextureUrl)
       .then((data) => {
         if (!cancelled) setLoaded(data)
       })
@@ -963,7 +716,7 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
     return () => {
       cancelled = true
     }
-  }, [jsonUrl, onLoadError])
+  }, [resolvedGlobeTextureUrl, onLoadError])
 
   useImperativeHandle(ref, () => ({
     camera: () => apiRef.current.camera,
@@ -1002,14 +755,16 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
   )
 
   if (err) {
+    const errMinH = immersiveStandLayout ? 160 : 240
     return (
-      <div className="globe-error" style={{ width, height: Math.max(240, height) }}>
+      <div className="globe-error" style={{ width, height: Math.max(errMinH, height) }}>
         Не удалось загрузить сцену Земли: {String(err?.message || err)}
       </div>
     )
   }
 
   const standNoSky = !!immersiveStandLayout
+  const layoutMinCanvasH = immersiveStandLayout ? 160 : 240
 
   if (!loaded) {
     return (
@@ -1017,7 +772,7 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
         className="globe-earth-loading globe-earth-loading--silent"
         style={{
           width,
-          height: Math.max(240, height),
+          height: Math.max(layoutMinCanvasH, height),
           background: standNoSky ? 'transparent' : '#020617',
         }}
         aria-busy="true"
@@ -1029,12 +784,12 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
 
   return (
     <Canvas
-      style={{ width, height: Math.max(240, height), display: 'block', background: canvasCssBg }}
+      style={{ width, height: Math.max(layoutMinCanvasH, height), display: 'block', background: canvasCssBg }}
       camera={{
         position: [0, 0, 280],
         near: 0.05,
         far: 1e7,
-        fov: standNoSky ? 60 : 50,
+        fov: standNoSky ? STAND_DOME_CAMERA_FOV : 50,
       }}
       gl={{ antialias: true, alpha: true, powerPreference: immersiveBackground ? 'high-performance' : 'low-power' }}
       onCreated={({ gl, scene }) => {
@@ -1050,8 +805,6 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
         loaded={loaded}
         immersiveBackground={immersiveBackground}
         immersiveStandLayout={immersiveStandLayout}
-        standPovRevision={standPovRevision}
-        onStandFitAfterPov={onStandFitAfterPov}
         immersiveEuler={immersiveEuler}
         polarLimits={polarLimits}
         orbitTarget={loaded.orbitTarget}
@@ -1072,6 +825,7 @@ const EarthJsonGlobeCanvas = forwardRef(function EarthJsonGlobeCanvas(
         onPointClick={onPointClick}
         onPointHover={onPointHover}
         onArcHover={onArcHover}
+        standCameraPov={standCameraPov}
       />
     </Canvas>
   )

@@ -187,3 +187,90 @@
   font-weight: 600;
   flex-shrink: 0;
 }
+
+/* --- Stand HUD (?demo=stand#face) --- */
+.wind-rose--stand-visual.wind-rose svg {
+  border: none;
+  box-shadow: none;
+  padding: 0.2rem;
+  border-radius: 0;
+}
+
+.wind-rose--legend-only {
+  gap: 0;
+  align-items: stretch;
+  width: 100%;
+}
+
+.wind-rose--legend-only .wind-rose-legend {
+  max-width: none;
+}
+
+.wind-rose-outside-label--stand {
+  background: rgba(5, 22, 38, 0.62);
+  border: 1px solid rgba(47, 180, 233, 0.38);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.wind-rose-outside-label--stand:hover {
+  background: rgba(12, 40, 72, 0.75);
+  border-color: rgba(47, 180, 233, 0.55);
+}
+
+.wind-rose-outside-label--stand.wind-rose-outside-label-selected {
+  background: rgba(230, 89, 7, 0.18);
+  border-color: #e65907;
+}
+
+.wind-rose-outside-label--stand .wind-rose-outside-name {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 8.5px;
+}
+
+.wind-rose-outside-label--stand .wind-rose-outside-value {
+  font-size: 9.5px;
+}
+
+.wind-rose-legend--stand .legend-item--stand {
+  padding: 0.28rem 0.15rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.wind-rose-legend--stand .legend-item--stand:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: transparent;
+}
+
+.wind-rose-legend--stand .legend-item--stand.legend-item-selected {
+  background: rgba(230, 89, 7, 0.12);
+  border-color: transparent;
+}
+
+.wind-rose-legend--stand .legend-item--stand .legend-dot {
+  background: #2fb4e9;
+  box-shadow: 0 0 0 1px rgba(47, 180, 233, 0.35);
+}
+
+.wind-rose-legend--stand .legend-item--stand .legend-name {
+  color: rgba(255, 255, 255, 0.95);
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.wind-rose-legend--stand .legend-item--stand .legend-value {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.72rem;
+}
+
+.wind-rose-contour--stand {
+  filter: drop-shadow(0 0 1px rgba(230, 89, 7, 0.35));
+}

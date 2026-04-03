@@ -9,9 +9,10 @@ import { buildAssetVoronoiFeatures } from '../lib/assetVoronoiZones'
 import EarthJsonGlobeCanvas from './EarthJsonGlobeCanvas'
 import { STAND_4K_HEIGHT, STAND_4K_WIDTH } from '../lib/standDisplay.js'
 
-/** Макс. размер canvas по умолчанию (пиксели) — снижает нагрузку на GPU */
-const DEFAULT_MAX_GLOBE_W = 1200
+/** Макс. высота canvas по умолчанию (пиксели) — снижает нагрузку на GPU; ширина = ширина контейнера (см. MAX_CANVAS_W) */
 const DEFAULT_MAX_GLOBE_H = 860
+/** Верхняя граница ширины canvas (не-demoLarge), чтобы не раздувать буферы на экстремальных разрешениях */
+const MAX_CANVAS_W = 8192
 const DEMO_MAX_GLOBE_W = 1680
 const DEMO_MAX_GLOBE_H = 1500
 /** Демо-стенд ?demo=stand — строго под 4K UHD 16:9 (55" и т.п.) */
@@ -24,22 +25,37 @@ const ASSET_VORONOI_BBOX = { lngMin: 18, lngMax: 138, latMin: 39, latMax: 76 }
 /** Только физические пределы глобуса (без «коридора» по РФ). */
 const POV_ALT_MIN = 0.04
 /** Иммерсив + стенд: чуть ближе к шару, чем глобальный минимум (клики по активам не откатывают к 0.04). */
-/** Клики по активам; кадр стенда задаётся дистанцией в StandHudWidthFit, не altitude */
+/** Клики по активам; на стенде зум в основном через altitude в IMMERSIVE_STAND_POV и FOV купола */
 const POV_ALT_MIN_STAND = 0.04
 const POV_ALT_MAX = 4
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v))
+}
+
+/**
+ * Расстояние камеры от центра шара — R·(1+alt) (см. polarToCameraPosition).
+ * Вдвое ближе к сцене: (1+alt_new) = 0.5·(1+alt_old) → alt_new = 0.5·(1+alt_old) − 1.
+ * При старых alt≈0.8–1 даёт отрицательный alt — ограничиваем POV_ALT_MIN (ближе без клипа нельзя).
+ */
+function povAltitudeTwiceCloser(altOld) {
+  return clamp(0.5 * (1 + altOld) - 1, POV_ALT_MIN, POV_ALT_MAX)
+}
 
 /** Стартовая широта центра кадра (севернее — больше Арктики и «макушки» в кадре). */
 const POV_LAT_DEFAULT = 64
 /** Стартовый зум: вся Россия в поле зрения + северная кривизна / полюс; только приближение. */
-const DEFAULT_POV = { lat: POV_LAT_DEFAULT, lng: 90, altitude: 0.84 }
+const DEFAULT_POV = { lat: POV_LAT_DEFAULT, lng: 90, altitude: povAltitudeTwiceCloser(0.84) }
 /** Демо-стенд: ещё дальше — макушка сферы и края РФ по широте/долготе */
-const DEMO_STAND_POV = { lat: 65, lng: 92, altitude: 1.02 }
-/** Earth_Simple.json из корня репо — Vite отдаёт как /Earth_Simple.json */
-const EARTH_JSON_URL = `${(import.meta.env.BASE_URL || '/').replace(/\/$/, '')}/Earth_Simple.json`
+const DEMO_STAND_POV = { lat: 65, lng: 92, altitude: povAltitudeTwiceCloser(1.02) }
 /** Иммерсив: компромисс между «ДВ вправо» и исходным центром (Европа снова в кадре) */
-const IMMERSIVE_POV = { lat: 50, lng: 76, altitude: 0.88 }
-/** Иммерсив + стенд: lat/lng — направление; altitude не задаёт зум (дистанция в StandHudWidthFit). */
-const IMMERSIVE_STAND_POV = { lat: 58, lng: 96, altitude: 1.02 }
+const IMMERSIVE_POV = { lat: 50, lng: 76, altitude: povAltitudeTwiceCloser(0.88) }
+/**
+ * ?demo=stand#face: камера с юга, север вверх. Без povAltitudeTwiceCloser — иначе clamp к POV_ALT_MIN
+ * и камера у поверхности шара (гигантский зум на океан).
+ */
+/** Референс: камера южнее и чуть дальше — меньше южного полушария в кадре, купол как на целевом скрине. */
+const IMMERSIVE_STAND_POV = { lat: 54, lng: 78, altitude: 0.9 }
 /**
  * Наклон корня шара вокруг X (°). «−22×15 = −330» по математике ≡ +30° (лишний полный оборот), визуально почти как раньше.
  * Здесь ~−22 − 14×15° ≈ −232° — заметный сдвиг без лишней эквивалентности по mod 360.
@@ -47,24 +63,20 @@ const IMMERSIVE_STAND_POV = { lat: 58, lng: 96, altitude: 1.02 }
 const IMMERSIVE_EARTH_PITCH_X_DEG = -232
 /** Поворот корня вокруг Z (°): умеренный сдвиг ДВ вправо (~половина от пика 34°) */
 const IMMERSIVE_EARTH_YAW_Z_DEG = 17
+/** ?demo=stand#face: без наклона — север по Y сцены вверх, Россия читаема на куполе. */
+const IMMERSIVE_STAND_FACE_PITCH_X_DEG = 0
+const IMMERSIVE_STAND_FACE_YAW_Z_DEG = 0
 /** Доп. наклон polar (°); 0 = Россия «в лоб» как до эксперимента с сильным наклоном */
 const IMMERSIVE_POLAR_TILT_EXTRA_DEG = 0
 
 const TOP_SPACE_PX = 18
 
-/** Синхронно с App.css `--stand-face-globe-nudge-y` и clamp(2vh, 12px, 6vh) — высота canvas под сдвиг translateY */
-const STAND_FACE_GLOBE_NUDGE_Y_PX = 710
+/** Доля высоты viewport под полосу купола — синхронно с `.app--demo-stand-face .app-demo-globe-fixed` в App.css */
+const STAND_FACE_DOME_BAND_VH = 0.7
 
-function standFaceGlobeClampPartPx(vhPx) {
-  return Math.max(vhPx * 0.02, Math.min(12, vhPx * 0.06))
-}
-
+/** Высота canvas = доля vh; не смешивать с min 520 — иначе полоса короче canvas и overflow:hidden срезает кадр («уехал вниз»). */
 function standFaceImmersiveCanvasHeightPx(vhPx) {
-  return Math.floor(vhPx + STAND_FACE_GLOBE_NUDGE_Y_PX - standFaceGlobeClampPartPx(vhPx))
-}
-
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v))
+  return Math.max(160, Math.floor(vhPx * STAND_FACE_DOME_BAND_VH))
 }
 
 /** Долгота в градусах [-180, 180] для сравнения с коридором РФ. */
@@ -95,30 +107,36 @@ export default function RussiaGlobe({
   standLayout = false,
   immersiveBackground = false,
 }) {
-  const maxGlobeW = demoLarge ? (standLayout ? STAND_MAX_GLOBE_W : DEMO_MAX_GLOBE_W) : DEFAULT_MAX_GLOBE_W
+  const maxGlobeW = demoLarge ? (standLayout ? STAND_MAX_GLOBE_W : DEMO_MAX_GLOBE_W) : MAX_CANVAS_W
   const maxGlobeH = demoLarge ? (standLayout ? STAND_MAX_GLOBE_H : DEMO_MAX_GLOBE_H) : DEFAULT_MAX_GLOBE_H
+  /* Копии + lat/lng/alt в deps: иначе при HMR useMemo оставляет старый объект IMMERSIVE_* и pointOfView не подхватывает новый altitude. */
   const effectiveDefaultPov = useMemo(() => {
-    if (immersiveBackground && standLayout) return IMMERSIVE_STAND_POV
-    if (immersiveBackground) return IMMERSIVE_POV
-    if (standLayout) return DEMO_STAND_POV
-    return DEFAULT_POV
-  }, [standLayout, immersiveBackground])
+    if (immersiveBackground && standLayout) return { ...IMMERSIVE_STAND_POV }
+    if (immersiveBackground) return { ...IMMERSIVE_POV }
+    if (standLayout) return { ...DEMO_STAND_POV }
+    return { ...DEFAULT_POV }
+  }, [
+    standLayout,
+    immersiveBackground,
+    IMMERSIVE_STAND_POV.lat,
+    IMMERSIVE_STAND_POV.lng,
+    IMMERSIVE_STAND_POV.altitude,
+    IMMERSIVE_POV.lat,
+    IMMERSIVE_POV.lng,
+    IMMERSIVE_POV.altitude,
+    DEMO_STAND_POV.lat,
+    DEMO_STAND_POV.lng,
+    DEMO_STAND_POV.altitude,
+    DEFAULT_POV.lat,
+    DEFAULT_POV.lng,
+    DEFAULT_POV.altitude,
+  ])
   const topSpacePx = immersiveBackground ? 0 : (standLayout ? 2 : TOP_SPACE_PX)
 
   const globeRef = useRef(null)
   const containerRef = useRef(null)
 
   const [size, setSize] = useState({ width: 800, height: 620 })
-  /** После pointOfView — пересчёт StandHudWidthFit (povRevision должен доходить до StandHudWidthFit) */
-  const [standFitRevision, setStandFitRevision] = useState(0)
-
-  const bumpStandFitAfterPov = useCallback(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setStandFitRevision((n) => n + 1)
-      })
-    })
-  }, [])
 
   /* Иммерсив: сдвиг вниз через CSS; стенд — только Three.js offset (CSS translate давал синюю полосу body сверху) */
   const immersiveGlobeOffset = useMemo(() => {
@@ -170,7 +188,7 @@ export default function RussiaGlobe({
         /* Иммерсив (?demo + face): canvas на всю ширину окна; высота — полная на стенде, иначе с лимитом по maxGlobeH */
         const w = Math.max(320, Math.floor(vw))
         const h = standLayout
-          ? Math.max(520, standFaceImmersiveCanvasHeightPx(vh))
+          ? standFaceImmersiveCanvasHeightPx(vh)
           : Math.min(maxGlobeH, Math.max(520, Math.floor(vh)))
         setSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
       }
@@ -205,15 +223,18 @@ export default function RussiaGlobe({
     const globe = globeRef.current
     if (!globe) return
 
+    /* POV не должен зависеть от OrbitControls: ref контролов иногда ещё null в том же кадре, что onReady — иначе камера остаётся дефолтной и «зума» нет. */
+    if (options.resetPov) {
+      try {
+        globe.pointOfView(effectiveDefaultPov, 0)
+      } catch (_) { /* api ещё не готов */ }
+    }
+
     const controls = typeof globe.controls === 'function' ? globe.controls() : null
     if (!controls) return
 
     controlsCleanupRef.current?.()
     controlsCleanupRef.current = null
-
-    if (options.resetPov) {
-      globe.pointOfView(effectiveDefaultPov, 0)
-    }
 
     controls.enablePan = false
     controls.enableDamping = false
@@ -271,6 +292,9 @@ export default function RussiaGlobe({
 
   const handleEarthGlobeReady = useCallback(() => {
     installPovBarriers({ resetPov: true })
+    requestAnimationFrame(() => {
+      installPovBarriers({ resetPov: false })
+    })
   }, [installPovBarriers])
 
   useEffect(() => {
@@ -281,17 +305,21 @@ export default function RussiaGlobe({
     return () => cancelAnimationFrame(id)
   }, [standLayout, immersiveBackground, installPovBarriers])
 
-  // После смены размера canvas контролы могут сброситься — снова вешаем барьеры (центр кадра не трогаем).
+  // После смены размера: стенд — полный сброс POV+pitch (StandDomeCamera тоже пересчитывает кадр).
   useEffect(() => {
     if (!webglOk || !povBarriersArmedRef.current) return
     const id = requestAnimationFrame(() => {
       const g = globeRef.current
       if (!g) return
+      if (immersiveBackground && standLayout) {
+        installPovBarriers({ resetPov: true })
+        return
+      }
       const c = typeof g.controls === 'function' ? g.controls() : null
       if (c) installPovBarriers({ resetPov: false })
     })
     return () => cancelAnimationFrame(id)
-  }, [size.width, size.height, webglOk, installPovBarriers])
+  }, [size.width, size.height, webglOk, installPovBarriers, immersiveBackground, standLayout])
 
   useEffect(() => () => {
     controlsCleanupRef.current?.()
@@ -436,14 +464,22 @@ export default function RussiaGlobe({
             <EarthJsonGlobeCanvas
               ref={globeRef}
               width={size.width}
-              height={Math.max(240, size.height - topSpacePx)}
-              jsonUrl={EARTH_JSON_URL}
+              height={Math.max(
+                standLayout && immersiveBackground ? 160 : 240,
+                size.height - topSpacePx,
+              )}
               immersiveBackground={immersiveBackground}
               immersiveStandLayout={standLayout && immersiveBackground}
-              standPovRevision={standLayout && immersiveBackground ? standFitRevision : 0}
-              onStandFitAfterPov={standLayout && immersiveBackground ? bumpStandFitAfterPov : undefined}
-              immersivePitchXDeg={IMMERSIVE_EARTH_PITCH_X_DEG}
-              immersiveYawZDeg={IMMERSIVE_EARTH_YAW_Z_DEG}
+              immersivePitchXDeg={
+                standLayout && immersiveBackground
+                  ? IMMERSIVE_STAND_FACE_PITCH_X_DEG
+                  : IMMERSIVE_EARTH_PITCH_X_DEG
+              }
+              immersiveYawZDeg={
+                standLayout && immersiveBackground
+                  ? IMMERSIVE_STAND_FACE_YAW_Z_DEG
+                  : IMMERSIVE_EARTH_YAW_Z_DEG
+              }
               immersivePolarExtraDeg={IMMERSIVE_POLAR_TILT_EXTRA_DEG}
               onReady={handleEarthGlobeReady}
               mapPointsData={mapPointsData}
@@ -460,6 +496,9 @@ export default function RussiaGlobe({
               onPointClick={handlePointClick}
               onPointHover={(p) => setHoveredAssetId(p?.id || null)}
               onArcHover={handleArcHover}
+              standCameraPov={
+                standLayout && immersiveBackground ? effectiveDefaultPov : undefined
+              }
             />
           </div>
         </div>

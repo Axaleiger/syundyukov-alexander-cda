@@ -360,6 +360,12 @@
   margin: 0 auto;
 }
 
+/* После .app-content: иначе max-width:1400px перекрывает .app-content-face выше по файлу */
+.app-content.app-content-face {
+  max-width: none;
+  width: 100%;
+}
+
 .app-content-bpm {
   padding: 0.5rem;
   flex: 1;
@@ -928,25 +934,37 @@ body.demo-stand-4k #root {
   height: 100%;
 }
 
-/* ?demo=stand#face: опустить глобус ниже (купол визуально ниже в окне) */
+/*
+ * ?demo=stand#face: купол — нижние ~70% viewport (референс: HUD ~30%, глобус крупно снизу).
+ * Высота = STAND_FACE_DOME_BAND_VH (0.7) в RussiaGlobe.jsx — менять вместе.
+ */
 .app--demo-stand-face .app-demo-globe-fixed {
-  overflow: visible;
-}
-
-/* Горизонталь под ось lifecycle — в StandHudWidthFit (STAND_HUD_TARGET_CX_OFFSET_PX), не translateX: иначе слева «дыра» без WebGL */
-/* translateY вверх: нужна явная height (не только min-height), иначе height:100% у детей не разрешается; canvas остаётся ~100vh и снизу голубой фон body */
-.app--demo-stand-face .app-demo-globe-transform {
-  --stand-face-globe-nudge-y: 710px;
-  --stand-face-globe-layer-h: calc(100vh + var(--stand-face-globe-nudge-y) - clamp(2vh, 12px, 6vh));
-  transform: translateY(calc(clamp(2vh, 12px, 6vh) - var(--stand-face-globe-nudge-y)));
-  height: var(--stand-face-globe-layer-h);
-  min-height: var(--stand-face-globe-layer-h);
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  max-width: none;
+  height: 70vh;
+  overflow: hidden;
+  transform: none;
+  background: transparent;
 }
 
 @supports (height: 100dvh) {
-  .app--demo-stand-face .app-demo-globe-transform {
-    --stand-face-globe-layer-h: calc(100dvh + var(--stand-face-globe-nudge-y) - clamp(2vh, 12px, 6vh));
+  .app--demo-stand-face .app-demo-globe-fixed {
+    height: calc(100dvh * 0.7);
   }
+}
+
+/* Стенд: пустое поле сверху полосы — купол визуально ниже (в паре с pitch в EarthJsonGlobeCanvas). */
+.app--demo-stand-face .app-demo-globe-transform {
+  transform: none;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  padding-top: 14vh;
 }
 
 .app-demo-globe-fixed .russia-globe-container--immersive {
@@ -956,7 +974,7 @@ body.demo-stand-4k #root {
   min-height: 100%;
 }
 
-/* Стенд: слой глобуса совпадает с шириной viewport (подгонка FOV по canvas.clientWidth) */
+/* Стенд: слой глобуса на ширину viewport; FOV купола фиксирован в EarthJsonGlobeCanvas */
 .app--demo-stand-4k .app-demo-globe-fixed .russia-globe-container--stand-globe {
   width: 100vw !important;
   max-width: 100vw !important;
@@ -1093,6 +1111,10 @@ body.demo-stand-4k #root {
   pointer-events: none;
 }
 
+.app-demo-float-hud:has(.demo-hud-panel--roses-stand.demo-hud-panel--expanded) .demo-hud-panels-row {
+  pointer-events: auto;
+}
+
 .demo-hud-panel {
   padding: 8px 12px;
   background: linear-gradient(160deg, rgba(0, 64, 119, 0.5) 0%, rgba(0, 64, 119, 0.38) 100%);
@@ -1172,6 +1194,69 @@ body.demo-stand-4k #root {
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
 }
 
+/* ?demo=stand#face — панель роз: без модалки, высота 2× вниз при раскрытии */
+.app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses-stand.demo-hud-panel--expanded {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: var(--demo-hud-cell-w) !important;
+  min-width: var(--demo-hud-cell-w) !important;
+  max-width: var(--demo-hud-cell-w) !important;
+  height: calc(var(--demo-hud-cell-h) * 2) !important;
+  max-height: calc(var(--demo-hud-cell-h) * 2) !important;
+  flex: 0 0 calc(var(--demo-hud-cell-h) * 2) !important;
+  z-index: 8;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+}
+
+.app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses-stand {
+  padding-top: 10px;
+}
+
+.app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses-stand.demo-hud-panel--expanded .demo-wind-rose-stack--stand-face {
+  flex-direction: column !important;
+  overflow: hidden !important;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.app-demo-float-top.app-demo-float-hud .demo-hud-panel-expand--stand-roses {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  align-self: center;
+  margin: 2px auto;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.demo-wind-rose-stand-primary {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.demo-wind-rose-stack--stand-face-expanded .demo-wind-rose-stand-primary {
+  flex: 1 1 0;
+}
+
+.demo-wind-rose-stand-secondary {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .app-demo-float-top.app-demo-float-hud .demo-wind-rose-stack {
   flex: 1;
   min-height: 0;
@@ -1204,6 +1289,81 @@ body.demo-stand-4k #root {
 .app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses:not(.demo-hud-panel--expanded) .wind-rose-legend,
 .app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses:not(.demo-hud-panel--expanded) .wind-rose-labels-outside {
   display: none !important;
+}
+
+/* ?demo=stand#face — главная роза + легенда; стрелка снизу; без скролла */
+.demo-hud-panel__title {
+  margin: 0 4px 6px 2px;
+  padding: 0;
+  font-size: clamp(0.74rem, 0.95vw, 0.92rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.96);
+  line-height: 1.2;
+  flex-shrink: 0;
+  align-self: stretch;
+  text-align: left;
+}
+
+.app-demo-float-top.app-demo-float-hud .demo-wind-rose-stack--stand-face {
+  overflow: hidden;
+  align-items: stretch;
+  gap: 0;
+  justify-content: flex-start;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand:not(.demo-hud-panel--expanded)
+  .demo-wind-rose-stack--stand-face
+  .wind-rose--stand-visual:not(.wind-rose--legend-only)
+  .wind-rose-labels-outside {
+  display: block !important;
+}
+
+.app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand:not(.demo-hud-panel--expanded)
+  .demo-wind-rose-stack--stand-face
+  .demo-wind-rose-stand-primary
+  .wind-rose-item:not(.demo-wind-rose-stand-legend)
+  .wind-rose--stand-visual {
+  transform: scale(0.4);
+  transform-origin: top center;
+}
+
+.app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand.demo-hud-panel--expanded
+  .demo-wind-rose-stack--stand-face
+  .demo-wind-rose-stand-primary
+  .wind-rose-item:not(.demo-wind-rose-stand-legend)
+  .wind-rose--stand-visual {
+  transform: scale(0.32);
+  transform-origin: top center;
+}
+
+.app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand.demo-hud-panel--expanded
+  .demo-wind-rose-stand-secondary
+  .wind-rose--stand-visual {
+  transform: scale(0.32);
+  transform-origin: top center;
+}
+
+.app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand
+  .demo-wind-rose-stack--stand-face
+  .demo-wind-rose-stand-legend
+  .wind-rose--stand-visual {
+  transform: none;
+  margin-top: -2px;
+}
+
+.app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand
+  .demo-wind-rose-stack--stand-face
+  .demo-wind-rose-stand-legend
+  .wind-rose-legend-items {
+  gap: 0.15rem;
 }
 
 .app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses.demo-hud-panel--expanded .demo-wind-rose-stack {
@@ -1320,6 +1480,37 @@ body.demo-stand-4k #root {
 
 .app--demo-stand-4k .app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses.demo-hud-panel--expanded .wind-rose {
   transform: scale(0.5);
+  transform-origin: top center;
+}
+
+.app--demo-stand-4k .app-demo-float-top.app-demo-float-hud .demo-hud-panel--roses-stand {
+  padding-top: 8px;
+}
+
+.app--demo-stand-4k
+  .app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand:not(.demo-hud-panel--expanded)
+  .demo-wind-rose-stack--stand-face
+  .demo-wind-rose-stand-primary
+  .wind-rose-item:not(.demo-wind-rose-stand-legend)
+  .wind-rose--stand-visual {
+  transform: scale(0.44);
+  transform-origin: top center;
+}
+
+.app--demo-stand-4k
+  .app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand.demo-hud-panel--expanded
+  .demo-wind-rose-stack--stand-face
+  .demo-wind-rose-stand-primary
+  .wind-rose-item:not(.demo-wind-rose-stand-legend)
+  .wind-rose--stand-visual,
+.app--demo-stand-4k
+  .app-demo-float-top.app-demo-float-hud
+  .demo-hud-panel--roses-stand.demo-hud-panel--expanded
+  .demo-wind-rose-stand-secondary
+  .wind-rose--stand-visual {
+  transform: scale(0.36);
   transform-origin: top center;
 }
 

@@ -50,6 +50,8 @@ export function stripCamerasFromObject3D(root) {
 }
 
 /**
+ * Процедурная сфера + equirect-текстура; тот же normalizeEarthSceneToGlobeRadius и контракт, что у старого JSON.
+ *
  * @returns {Promise<{
  *   sceneRoot: THREE.Object3D,
  *   full: object,
@@ -57,40 +59,51 @@ export function stripCamerasFromObject3D(root) {
  *   cameraMatrix: number[] | null,
  * }>}
  */
-export async function loadEarthJsonFull(jsonUrl) {
-  const res = await fetch(jsonUrl)
-  if (!res.ok) throw new Error(`Earth сцена HTTP ${res.status}`)
-  const full = await res.json()
-  if (!full?.scene) throw new Error('Earth: в JSON нет scene')
-
-  const loader = new THREE.ObjectLoader()
-  const sceneRoot = await loader.parseAsync(full.scene)
-  stripCamerasFromObject3D(sceneRoot)
-
-  const center = full.controls?.center
-  const orbitTarget = Array.isArray(center) && center.length >= 3
-    ? new THREE.Vector3(center[0], center[1], center[2])
-    : new THREE.Vector3(0, 0, 0)
-
-  let cameraMatrix = null
-  try {
-    const m = full.camera?.object?.matrix
-    if (Array.isArray(m) && m.length >= 16) cameraMatrix = [...m]
-  } catch (_) { /* ignore */ }
-
-  sceneRoot.updateMatrixWorld(true)
-  const m0 = sceneRoot.matrixWorld.clone()
-  normalizeEarthSceneToGlobeRadius(sceneRoot, GLOBE_RADIUS)
-  sceneRoot.updateMatrixWorld(true)
-  const m1 = sceneRoot.matrixWorld.clone()
-  const invM0 = new THREE.Matrix4().copy(m0).invert()
-  const delta = new THREE.Matrix4().multiplyMatrices(m1, invM0)
-  orbitTarget.applyMatrix4(delta)
-  if (cameraMatrix) {
-    const camM = new THREE.Matrix4().fromArray(cameraMatrix)
-    camM.premultiply(delta)
-    cameraMatrix = camM.toArray()
+export async function loadEarthGlobeScene(textureUrl) {
+  if (!textureUrl || typeof textureUrl !== 'string') {
+    throw new Error('Earth: не задан URL текстуры глобуса')
   }
 
-  return { sceneRoot, full, orbitTarget, cameraMatrix }
+  const loader = new THREE.TextureLoader()
+  loader.setCrossOrigin('anonymous')
+
+  const tex = await new Promise((resolve, reject) => {
+    loader.load(
+      textureUrl,
+      (t) => resolve(t),
+      undefined,
+      (err) => reject(err instanceof Error ? err : new Error(String(err))),
+    )
+  })
+
+  if (THREE.SRGBColorSpace && 'colorSpace' in tex) {
+    tex.colorSpace = THREE.SRGBColorSpace
+  }
+  tex.anisotropy = 8
+
+  const sceneRoot = new THREE.Group()
+  const geom = new THREE.SphereGeometry(GLOBE_RADIUS, 96, 96)
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    roughness: 0.55,
+    metalness: 0.06,
+  })
+  const mesh = new THREE.Mesh(geom, mat)
+  mesh.receiveShadow = true
+  sceneRoot.add(mesh)
+
+  const orbitTarget = new THREE.Vector3(0, 0, 0)
+
+  normalizeEarthSceneToGlobeRadius(sceneRoot, GLOBE_RADIUS)
+
+  const full = {
+    project: {
+      toneMapping: 4,
+      toneMappingExposure: 1,
+      shadows: false,
+    },
+    controls: { center: [0, 0, 0] },
+  }
+
+  return { sceneRoot, full, orbitTarget, cameraMatrix: null }
 }

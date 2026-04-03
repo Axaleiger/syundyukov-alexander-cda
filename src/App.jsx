@@ -701,45 +701,113 @@ function App() {
                 <div className={`app-demo-float-top app-demo-float-hud${selectedAssetId && selectedAssetPoint && assetStatus ? ' app-demo-float-top--with-asset' : ''}`}>
                   <div ref={demoHudPanelsRowRef} className="demo-hud-panels-row">
                     <div
-                      className={`demo-hud-panel demo-hud-panel--roses${hudPanelExpanded === 'roses' ? ' demo-hud-panel--expanded' : ''}`}
+                      className={`demo-hud-panel demo-hud-panel--roses${demoStand ? ' demo-hud-panel--roses-stand' : ''}${hudPanelExpanded === 'roses' ? ' demo-hud-panel--expanded' : ''}`}
                     >
-                      <button
-                        type="button"
-                        className="demo-hud-panel-expand"
-                        onClick={() => setHudPanelExpanded((e) => (e === 'roses' ? null : 'roses'))}
-                        aria-expanded={hudPanelExpanded === 'roses'}
-                        aria-label={hudPanelExpanded === 'roses' ? 'Свернуть карту здоровья' : 'Развернуть карту здоровья'}
-                      >
-                        <svg
-                          className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'roses' ? ' demo-hud-panel-expand-icon--open' : ''}`}
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          aria-hidden
+                      {!demoStand && (
+                        <button
+                          type="button"
+                          className="demo-hud-panel-expand"
+                          onClick={() => setHudPanelExpanded((e) => (e === 'roses' ? null : 'roses'))}
+                          aria-expanded={hudPanelExpanded === 'roses'}
+                          aria-label={hudPanelExpanded === 'roses' ? 'Свернуть карту здоровья' : 'Развернуть карту здоровья'}
                         >
-                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
-                      <div className="demo-wind-rose-stack">
-                        <div className="wind-rose-item demo-wind-rose-item">
-                          <WindRose
-                            type="left"
-                            data={leftRoseData}
-                            centerTitle="ЦД этапов"
-                            selectedIndex={selectedLeftStageIndex}
-                            onSegmentClick={handleLeftSegmentClick}
-                          />
+                          <svg
+                            className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'roses' ? ' demo-hud-panel-expand-icon--open' : ''}`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            aria-hidden
+                          >
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      )}
+                      {demoStand && (
+                        <h3 className="demo-hud-panel__title">Карта здоровья ЦД</h3>
+                      )}
+                      {demoStand ? (
+                        <div
+                          className={`demo-wind-rose-stack demo-wind-rose-stack--stand-face${hudPanelExpanded === 'roses' ? ' demo-wind-rose-stack--stand-face-expanded' : ''}`}
+                        >
+                          <div className="demo-wind-rose-stand-primary">
+                            <div className="wind-rose-item demo-wind-rose-item">
+                              <WindRose
+                                type="left"
+                                standVisual
+                                showLegend={false}
+                                data={leftRoseData}
+                                centerTitle="ЦД этапов"
+                                selectedIndex={selectedLeftStageIndex}
+                                onSegmentClick={handleLeftSegmentClick}
+                              />
+                            </div>
+                            <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-stand-legend">
+                              <WindRose
+                                type="left"
+                                standVisual
+                                showDiagram={false}
+                                data={leftRoseData}
+                                centerTitle="ЦД этапов"
+                                selectedIndex={selectedLeftStageIndex}
+                                onSegmentClick={handleLeftSegmentClick}
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="demo-hud-panel-expand demo-hud-panel-expand--stand-roses"
+                            onClick={() => setHudPanelExpanded((e) => (e === 'roses' ? null : 'roses'))}
+                            aria-expanded={hudPanelExpanded === 'roses'}
+                            aria-label={hudPanelExpanded === 'roses' ? 'Свернуть карту здоровья' : 'Показать розу объектов'}
+                          >
+                            <svg
+                              className={`demo-hud-panel-expand-icon${hudPanelExpanded === 'roses' ? ' demo-hud-panel-expand-icon--open' : ''}`}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              aria-hidden
+                            >
+                              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                          {hudPanelExpanded === 'roses' && (
+                            <div className="demo-wind-rose-stand-secondary">
+                              <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-item--second">
+                                <WindRose
+                                  type="right"
+                                  standVisual
+                                  showLegend={false}
+                                  data={rightRoseData}
+                                  centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
+                                  selectedIndex={selectedRightObjectIndex}
+                                  onSegmentClick={handleRightSegmentClick}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-item--second">
-                          <WindRose
-                            type="right"
-                            data={rightRoseData}
-                            centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
-                            selectedIndex={selectedRightObjectIndex}
-                            onSegmentClick={handleRightSegmentClick}
-                          />
+                      ) : (
+                        <div className="demo-wind-rose-stack">
+                          <div className="wind-rose-item demo-wind-rose-item">
+                            <WindRose
+                              type="left"
+                              data={leftRoseData}
+                              centerTitle="ЦД этапов"
+                              selectedIndex={selectedLeftStageIndex}
+                              onSegmentClick={handleLeftSegmentClick}
+                            />
+                          </div>
+                          <div className="wind-rose-item demo-wind-rose-item demo-wind-rose-item--second">
+                            <WindRose
+                              type="right"
+                              data={rightRoseData}
+                              centerTitle={selectedLeftStageIndex != null ? PRODUCTION_STAGES[selectedLeftStageIndex].name : 'ЦД объектов'}
+                              selectedIndex={selectedRightObjectIndex}
+                              onSegmentClick={handleRightSegmentClick}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                     <div
                       className={`demo-hud-panel demo-hud-panel--lifecycle${hudPanelExpanded === 'lifecycle' ? ' demo-hud-panel--expanded' : ''}`}
@@ -802,7 +870,7 @@ function App() {
                       </div>
                     </div>
                   </div>
-                  {hudPanelExpanded ? (
+                  {hudPanelExpanded && !(demoStand && hudPanelExpanded === 'roses') ? (
                     <button
                       type="button"
                       className="demo-hud-expand-backdrop"
