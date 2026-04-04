@@ -1,5 +1,9 @@
+/**
+ * Маршрут /ontology: контент рендерится в AppLayout (постоянный mount OntologyTab),
+ * чтобы состояние схемы не терялось при смене вкладок — как в main-stand.
+ */
 export function OntologyPage() {
-    return <div>OntologyPage</div>
+	return null
 }
 
-export default OntologyPage;
+export default OntologyPage

@@ -1,3 +1,19 @@
+.faceWithPanel {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.faceMainColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .app-content-face {
   max-width: none;
   margin: 0;

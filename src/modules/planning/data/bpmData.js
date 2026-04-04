@@ -1,0 +1,159 @@
+/**
+ * Данные BPM-платформы: этапы, карточки, персонал, системы (по структуре Streamlit app).
+ */
+
+export const PERSONNEL = [
+  'Сюндюков А.В.', 'Иванова Е.П.', 'Петров С.М.', 'Сидорова О.И.', 'Козлов Д.А.',
+  'Николаев Г.Р.', 'Макарова В.Л.', 'Орлов Н.С.', 'Васнецова Т.К.', 'Жуков П.Ф.',
+  'Алексеева М.Д.', 'Тихонов И.Г.', 'Павлова А.Н.', 'Фролов В.Я.', 'Савельев К.О.',
+  'Морозова Л.Б.', 'Белов Р.Т.', 'Комарова Ю.Э.', 'Громов Е.Ц.', 'Ильина Н.Ч.',
+  'Данилов Б.Х.', 'Семёнова З.Щ.', 'Блинов М.Ю.', 'Ларина А.Ж.', 'Гордеев И.У.',
+  'Инженер РНГМ L2', 'Инженер ГДМ L2', 'Инженер обустройства L2',
+]
+
+export const SYSTEMS_LIST = [
+  'Б6К',
+  'СПекТР',
+  'eXoil',
+  'ГибрИМА',
+  'ЦД-Well',
+  'ТР 2.0',
+  'ЭРА: ИСКРА',
+  'ЭРА: Ремонты',
+  'КФА',
+  'ЕАРМ',
+]
+
+export const BPM_STAGES = [
+  'ЦД программ',
+  'ЦД объекта',
+  'Сервисы',
+  'Микросервисы',
+  'Функции',
+]
+
+export const BPM_CARDS_BY_STAGE = {
+  'ЦД программ': [
+    { id: 'P1', name: 'ЦД РБ' },
+    { id: 'P2', name: 'ЦД ПР' },
+    { id: 'P3', name: 'ЦД АВНМ' },
+    { id: 'P4', name: 'ЦД П' },
+  ],
+  'ЦД объекта': [
+    { id: 'O1', name: 'Пласт' },
+    { id: 'O2', name: 'Скважина' },
+    { id: 'O3', name: 'Промысел' },
+    { id: 'O4', name: 'Инфраструктура' },
+    { id: 'O5', name: 'Куст' },
+  ],
+  'Сервисы': [
+    { id: 'S1', name: 'Б6К' },
+    { id: 'S2', name: 'СпекТР' },
+    { id: 'S3', name: 'КФА' },
+    { id: 'S4', name: 'eXoil' },
+    { id: 'S5', name: 'ГибРИМА' },
+  ],
+  'Микросервисы': [
+    { id: 'M1', name: 'Микросервис 1' },
+    { id: 'M2', name: 'Микросервис 2' },
+    { id: 'M3', name: 'Расчет пластовых давлений' },
+    { id: 'M4', name: 'Микросервис 4' },
+    { id: 'M5', name: 'Микросервис 5' },
+  ],
+  'Функции': [
+    { id: 'F1', name: 'Расчёт пластовых давлений' },
+    { id: 'F2', name: 'Моделирование фильтрации' },
+    { id: 'F3', name: 'Оптимизация режима работы' },
+    { id: 'F4', name: 'Прогноз добычи' },
+    { id: 'F5', name: 'Анализ ГД модели' },
+  ],
+}
+
+/** Пресеты досок (Хантос/Зимнее, ННГ/Новогоднее, Мегион/Аганское). */
+export const BOARD_PRESETS = {
+  hantos: {
+    label: 'ООО "Газпромнефть-Хантос" \\ Зимнее',
+    stages: ['Геологоразведка и работа с РБ', 'Разработка', 'Планирование и обустройство', 'Бурение и ВСР', 'Добыча'],
+    tasks: null, // filled below
+  },
+  nng: {
+    label: 'ООО "Газпромнефть-ННГ" \\ Новогоднее',
+    stages: ['Геологоразведка и работа с РБ', 'Разработка', 'Планирование и обустройство', 'Бурение и ВСР', 'Добыча'],
+    tasks: null,
+  },
+  mgn: {
+    label: 'ООО "Газпромнефть-Мегион" \\ Аганское',
+    stages: ['Геологоразведка и работа с РБ', 'Разработка', 'Планирование и обустройство', 'Бурение и ВСР', 'Добыча'],
+    tasks: null,
+  },
+}
+
+function buildPresetTasks(stages) {
+  const cardsByStage = {
+    'Геологоразведка и работа с РБ': [
+      { id: 'G1', name: 'Оценка запасов' },
+      { id: 'G2', name: 'Подсчёт КИН' },
+      { id: 'G3', name: 'Подготовка РБ' },
+      { id: 'G4', name: 'Сейсмика и интерпретация' },
+    ],
+    'Разработка': [
+      { id: 'R1', name: 'Проект разработки' },
+      { id: 'R2', name: 'Схема обустройства' },
+      { id: 'R3', name: 'ТЭО' },
+      { id: 'R4', name: 'Проектная документация' },
+    ],
+    'Планирование и обустройство': [
+      { id: 'P1', name: 'Строительство объектов' },
+      { id: 'P2', name: 'Пусконаладка' },
+      { id: 'P3', name: 'Подготовка кустов' },
+      { id: 'P4', name: 'Инфраструктура' },
+    ],
+    'Бурение и ВСР': [
+      { id: 'B1', name: 'Бурение скважин' },
+      { id: 'B2', name: 'ГРП' },
+      { id: 'B3', name: 'КРС' },
+      { id: 'B4', name: 'ВСР и ремонты' },
+    ],
+    'Добыча': [
+      { id: 'D1', name: 'Эксплуатация' },
+      { id: 'D2', name: 'Мониторинг' },
+      { id: 'D3', name: 'Оптимизация режимов' },
+      { id: 'D4', name: 'Учёт добычи' },
+    ],
+  }
+  const out = {}
+  stages.forEach((s) => {
+    out[s] = (cardsByStage[s] || BPM_CARDS_BY_STAGE['ЦД программ']?.slice(0, 3) || []).map((c) => ({
+      ...c,
+      executor: PERSONNEL[0],
+      approver: PERSONNEL[0],
+      deadline: new Date(),
+      status: 'в работе',
+      date: new Date().toLocaleDateString('ru-RU'),
+      entries: [{ system: '', input: '', output: '' }],
+    }))
+  })
+  return out
+}
+
+BOARD_PRESETS.hantos.tasks = buildPresetTasks(BOARD_PRESETS.hantos.stages)
+BOARD_PRESETS.nng.tasks = buildPresetTasks(BOARD_PRESETS.nng.stages)
+BOARD_PRESETS.mgn.tasks = buildPresetTasks(BOARD_PRESETS.mgn.stages)
+
+export function getInitialBoard(boardId) {
+  const preset = BOARD_PRESETS[boardId]
+  if (!preset) return null
+  return { stages: [...preset.stages], tasks: JSON.parse(JSON.stringify(preset.tasks)) }
+}
+
+/** Проверяет, совпадает ли карточка с запросом подсветки (из воронки). */
+export function cardMatchesHighlight(cardName, highlightLabel) {
+  if (!highlightLabel || !cardName) return false
+  const h = highlightLabel.trim().toLowerCase()
+  const c = cardName.trim().toLowerCase()
+  if (c === h) return true
+  const hBase = h.replace(/\s*\(\d+\)\s*$/, '')
+  const cBase = c.replace(/\s*\(\d+\)\s*$/, '')
+  if (cBase === hBase || c === hBase || hBase.includes(c) || c.includes(hBase)) return true
+  return false
+}
