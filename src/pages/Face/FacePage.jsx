@@ -1,4 +1,5 @@
 import { useMemo,useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { DEFAULT_OBJECTS,OBJECTS_BY_STAGE,PRODUCTION_STAGES } from "../../shared/data/rosesData"
 import { SCENARIO_STAGE_FILTERS } from "../../shared/data/scenariosData"
 import RussiaGlobe from "../../modules/globe/ui/RussiaGlobe"
@@ -10,20 +11,24 @@ import styles from './FacePage.module.css';
 import { useAppStore } from "../../core/store/appStore"
 
 export const FacePage = () => {
-    const [ scenarioComparisonRevision,setScenarioComparisonRevision ] = useState(0)
-    const selectedAssetId = useAppStore(s => s.selectedAssetId)
-    const setSelectedAssetId = useAppStore(s => s.setSelectedAssetId)
-    
+    const navigate = useNavigate()
+    const {
+        selectedAssetId,
+        setSelectedAssetId,
+        bpmHighlight,
+        setBpmHighlight,
+        scenarioStageFilters,
+        setScenarioStageFilters,
+        scenariosStageFilter,
+        setScenariosStageFilter,
+        scenarioComparisonRevision,
+        setScenarioComparisonRevision,
+    } = useAppStore()
+
     const [ selectedLeftStageIndex,setSelectedLeftStageIndex ] = useState(null)
     const [ selectedRightObjectIndex,setSelectedRightObjectIndex ] = useState(null)
     const [ cdPageNode,setCdPageNode ] = useState(null)
     const [ hypercubeCaseIntro,setHypercubeCaseIntro ] = useState(false)
-    const [ bpmHighlight,setBpmHighlight ] = useState(null)
-    const [ scenariosStageFilter,setScenariosStageFilter ] = useState(null)
-
-    const [ scenarioStageFilters,setScenarioStageFilters ] = useState(() =>
-        SCENARIO_STAGE_FILTERS.reduce((acc,name) => ({ ...acc,[ name ]: true }),{})
-    )
 
     const handleMapAssetSelect = (pointId) => {
         setSelectedAssetId(pointId || null)
@@ -76,8 +81,7 @@ export const FacePage = () => {
     const handleLifecycleStageClick = (stageName) => {
         setScenarioStageFilters(SCENARIO_STAGE_FILTERS.reduce((acc,name) => ({ ...acc,[ name ]: name === stageName }),{}))
         setScenariosStageFilter(stageName)
-        // TODO: Replace to navigate
-        // setActiveTab('scenarios')
+        navigate('/scenarios')
     }
 
     return <div className={`${styles[ 'app-content' ]} ${styles[ 'app-content-face' ]}`}>
@@ -118,8 +122,7 @@ export const FacePage = () => {
                 highlightCaseTree={hypercubeCaseIntro}
                 onOpenBpm={(highlight) => {
                     setBpmHighlight(highlight || null)
-                    //TODO: Replace to navigate
-                    // setActiveTab('planning')
+                    navigate('/planning')
                 }}
             />
         </section>

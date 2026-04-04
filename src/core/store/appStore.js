@@ -12,6 +12,11 @@ export const useAppStore = create((set) => ({
 
 	// scenarios
 	scenarioComparisonRevision: 0,
+	setScenarioComparisonRevision: (v) =>
+		set((s) => ({
+			scenarioComparisonRevision:
+				typeof v === "function" ? v(s.scenarioComparisonRevision) : v,
+		})),
 	incScenarioComparison: () =>
 		set((s) => ({
 			scenarioComparisonRevision: s.scenarioComparisonRevision + 1,
