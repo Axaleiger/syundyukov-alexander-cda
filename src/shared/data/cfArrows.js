@@ -1,0 +1,23 @@
+export const CF_ARROWS = [
+  { from: 'do-megion', to: 'do-noyabrsk', cf: 185 },
+  { from: 'do-yamal', to: 'do-zapolyarye', cf: 142 },
+  { from: 'do-orenburg', to: 'do-tomsk', cf: 98 },
+  { from: 'do-messoyakha', to: 'do-meretoyakha', cf: 167 },
+  { from: 'do-noyabrsk', to: 'do-meretoyakha', cf: 124 },
+  { from: 'do-zapolyarye', to: 'do-messoyakha', cf: 89 },
+  { from: 'do-tomsk', to: 'do-megion', cf: 76 },
+  { from: 'do-megion', to: 'do-zapolyarye', cf: 112 },
+  { from: 'do-noyabrsk', to: 'do-yamal', cf: 156 },
+  { from: 'do-meretoyakha', to: 'do-yamal', cf: 203 },
+  { from: 'do-meretoyakha', to: 'novy-port', cf: 118 },
+  { from: 'do-yamal', to: 'messoyakha-m', cf: 95 },
+  { from: 'do-noyabrsk', to: 'do-megion', cf: 134 },
+  { from: 'prirazlomnoe', to: 'do-orenburg', cf: 88 },
+  { from: 'novy-port', to: 'do-meretoyakha', cf: 156 },
+  { from: 'do-megion', to: 'do-tomsk', cf: 67 },
+  { from: 'chayandinskoe', to: 'do-tomsk', cf: 142 },
+  { from: 'do-zapolyarye', to: 'do-noyabrsk', cf: 178 },
+  { from: 'do-messoyakha', to: 'do-yamal', cf: 92 },
+  { from: 'do-orenburg', to: 'do-megion', cf: 76 },
+]
+

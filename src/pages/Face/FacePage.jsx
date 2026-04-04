@@ -1,16 +1,19 @@
 import { useMemo,useState } from "react"
-import { DEFAULT_OBJECTS,OBJECTS_BY_STAGE,PRODUCTION_STAGES } from "../../main-stand/data/rosesData"
-import { SCENARIO_STAGE_FILTERS } from "../../main-stand/data/scenariosData"
+import { DEFAULT_OBJECTS,OBJECTS_BY_STAGE,PRODUCTION_STAGES } from "../../shared/data/rosesData"
+import { SCENARIO_STAGE_FILTERS } from "../../shared/data/scenariosData"
 import RussiaGlobe from "../../modules/globe/ui/RussiaGlobe"
 import WindRose from "../../modules/globe/ui/WindRose"
 import Hypercube3D from "../../modules/globe/ui/Hypercube3D"
 import LifecycleChart from "../../modules/globe/ui/LifecycleChart"
 
 import styles from './FacePage.module.css';
+import { useAppStore } from "../../core/store/appStore"
 
 export const FacePage = () => {
     const [ scenarioComparisonRevision,setScenarioComparisonRevision ] = useState(0)
-    const [ selectedAssetId,setSelectedAssetId ] = useState(null)
+    const selectedAssetId = useAppStore(s => s.selectedAssetId)
+    const setSelectedAssetId = useAppStore(s => s.setSelectedAssetId)
+    
     const [ selectedLeftStageIndex,setSelectedLeftStageIndex ] = useState(null)
     const [ selectedRightObjectIndex,setSelectedRightObjectIndex ] = useState(null)
     const [ cdPageNode,setCdPageNode ] = useState(null)

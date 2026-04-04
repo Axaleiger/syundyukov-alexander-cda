@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React,{ useCallback,useEffect,useMemo,useRef,useState } from 'react'
 import * as THREE from 'three'
 import mapPointsData from '../data/mapPoints.json'
-import { CF_ARROWS } from '../data/cfArrows'
-import { getBudgetForAssetId } from '../data/mapBudgetData'
+import { CF_ARROWS } from '../data/cfArrows.js'
+import { getBudgetForAssetId } from '../data/mapBudgetData.js'
 import chainsData from '../data/chains.json'
 import './RussiaGlobe.css'
-import { buildAssetVoronoiFeatures } from '../lib/assetVoronoiZones'
+import { buildAssetVoronoiFeatures } from '../lib/assetVoronoiZones.js'
 import EarthJsonGlobeCanvas from './EarthJsonGlobeCanvas.jsx'
-import { STAND_4K_HEIGHT, STAND_4K_WIDTH } from '../lib/standDisplay.js'
+import { STAND_4K_HEIGHT,STAND_4K_WIDTH } from '../lib/standDisplay.js'
 
 /** Макс. высота canvas по умолчанию (пиксели) — снижает нагрузку на GPU; ширина = ширина контейнера (см. MAX_CANVAS_W) */
 const DEFAULT_MAX_GLOBE_H = 860
@@ -20,7 +20,7 @@ const STAND_MAX_GLOBE_W = STAND_4K_WIDTH
 const STAND_MAX_GLOBE_H = STAND_4K_HEIGHT
 
 /** Прямоугольник для Voronoi зон вокруг активов (РФ + запас по краям). */
-const ASSET_VORONOI_BBOX = { lngMin: 18, lngMax: 138, latMin: 39, latMax: 76 }
+const ASSET_VORONOI_BBOX = { lngMin: 18,lngMax: 138,latMin: 39,latMax: 76 }
 
 /** Только физические пределы глобуса (без «коридора» по РФ). */
 const POV_ALT_MIN = 0.04
@@ -29,8 +29,8 @@ const POV_ALT_MIN = 0.04
 const POV_ALT_MIN_STAND = 0.04
 const POV_ALT_MAX = 4
 
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v))
+function clamp(v,min,max) {
+  return Math.max(min,Math.min(max,v))
 }
 
 /**
@@ -39,23 +39,23 @@ function clamp(v, min, max) {
  * При старых alt≈0.8–1 даёт отрицательный alt — ограничиваем POV_ALT_MIN (ближе без клипа нельзя).
  */
 function povAltitudeTwiceCloser(altOld) {
-  return clamp(0.5 * (1 + altOld) - 1, POV_ALT_MIN, POV_ALT_MAX)
+  return clamp(0.5 * (1 + altOld) - 1,POV_ALT_MIN,POV_ALT_MAX)
 }
 
 /** Стартовая широта центра кадра (севернее — больше Арктики и «макушки» в кадре). */
 const POV_LAT_DEFAULT = 64
 /** Стартовый зум: вся Россия в поле зрения + северная кривизна / полюс; только приближение. */
-const DEFAULT_POV = { lat: POV_LAT_DEFAULT, lng: 90, altitude: povAltitudeTwiceCloser(0.84) }
+const DEFAULT_POV = { lat: POV_LAT_DEFAULT,lng: 90,altitude: povAltitudeTwiceCloser(0.84) }
 /** Демо-стенд: ещё дальше — макушка сферы и края РФ по широте/долготе */
-const DEMO_STAND_POV = { lat: 62, lng: 90, altitude: povAltitudeTwiceCloser(1.02) }
+const DEMO_STAND_POV = { lat: 62,lng: 90,altitude: povAltitudeTwiceCloser(1.02) }
 /** Иммерсив: компромисс между «ДВ вправо» и исходным центром (Европа снова в кадре) */
-const IMMERSIVE_POV = { lat: 50, lng: 76, altitude: povAltitudeTwiceCloser(0.88) }
+const IMMERSIVE_POV = { lat: 50,lng: 76,altitude: povAltitudeTwiceCloser(0.88) }
 /**
  * ?demo=stand#face: камера с юга, север вверх. Без povAltitudeTwiceCloser — иначе clamp к POV_ALT_MIN
  * и камера у поверхности шара (гигантский зум на океан).
  */
 /** Референс: камера южнее и чуть дальше — меньше южного полушария в кадре, купол как на целевом скрине. */
-const IMMERSIVE_STAND_POV = { lat: 40, lng: 170, altitude: 1.8 }
+const IMMERSIVE_STAND_POV = { lat: 40,lng: 170,altitude: 1.8 }
 /**
  * Наклон корня шара вокруг X (°). «−22×15 = −330» по математике ≡ +30° (лишний полный оборот), визуально почти как раньше.
  * Здесь ~−22 − 14×15° ≈ −232° — заметный сдвиг без лишней эквивалентности по mod 360.
@@ -76,7 +76,7 @@ const STAND_FACE_DOME_BAND_VH = 0.7
 
 /** Высота canvas = доля vh; не смешивать с min 520 — иначе полоса короче canvas и overflow:hidden срезает кадр («уехал вниз»). */
 function standFaceImmersiveCanvasHeightPx(vhPx) {
-  return Math.max(160, Math.floor(vhPx * STAND_FACE_DOME_BAND_VH))
+  return Math.max(160,Math.floor(vhPx * STAND_FACE_DOME_BAND_VH))
 }
 
 /** Долгота в градусах [-180, 180] для сравнения с коридором РФ. */
@@ -91,13 +91,13 @@ function normalizeLngDeg(lng) {
 function canCreateWebGLContext() {
   try {
     const canvas = document.createElement('canvas')
-    const gl2 = canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: true })
-    if (gl2) return { ok: true, kind: 'webgl2' }
-    const gl1 = canvas.getContext('webgl', { failIfMajorPerformanceCaveat: true }) || canvas.getContext('experimental-webgl')
-    if (gl1) return { ok: true, kind: 'webgl1' }
-    return { ok: false, kind: null }
+    const gl2 = canvas.getContext('webgl2',{ failIfMajorPerformanceCaveat: true })
+    if (gl2) return { ok: true,kind: 'webgl2' }
+    const gl1 = canvas.getContext('webgl',{ failIfMajorPerformanceCaveat: true }) || canvas.getContext('experimental-webgl')
+    if (gl1) return { ok: true,kind: 'webgl1' }
+    return { ok: false,kind: null }
   } catch (e) {
-    return { ok: false, kind: null, error: String(e?.message || e) }
+    return { ok: false,kind: null,error: String(e?.message || e) }
   }
 }
 
@@ -115,7 +115,7 @@ export default function RussiaGlobe({
     if (immersiveBackground) return { ...IMMERSIVE_POV }
     if (standLayout) return { ...DEMO_STAND_POV }
     return { ...DEFAULT_POV }
-  }, [
+  },[
     standLayout,
     immersiveBackground,
     IMMERSIVE_STAND_POV.lat,
@@ -136,25 +136,25 @@ export default function RussiaGlobe({
   const globeRef = useRef(null)
   const containerRef = useRef(null)
 
-  const [size, setSize] = useState({ width: 800, height: 620 })
+  const [ size,setSize ] = useState({ width: 800,height: 620 })
 
   /* Иммерсив: сдвиг вниз через CSS; стенд — только Three.js offset (CSS translate давал синюю полосу body сверху) */
   const immersiveGlobeOffset = useMemo(() => {
-    if (!immersiveBackground) return [0, 0]
-    if (standLayout) return [0, 0]
-    return [0, Math.round(size.height * 0.36 + 64)]
-  }, [immersiveBackground, standLayout, size.height])
+    if (!immersiveBackground) return [ 0,0 ]
+    if (standLayout) return [ 0,0 ]
+    return [ 0,Math.round(size.height * 0.36 + 64) ]
+  },[ immersiveBackground,standLayout,size.height ])
 
-  const [webglOk, setWebglOk] = useState(true)
+  const [ webglOk,setWebglOk ] = useState(true)
 
-  const [showBudgetFill, setShowBudgetFill] = useState(false)
-  const [showCFArrows, setShowCFArrows] = useState(false)
+  const [ showBudgetFill,setShowBudgetFill ] = useState(false)
+  const [ showCFArrows,setShowCFArrows ] = useState(false)
 
-  const [selectedAssetId, setSelectedAssetId] = useState(null)
-  const [hoveredAssetId, setHoveredAssetId] = useState(null)
-  const [hoveredArcIndex, setHoveredArcIndex] = useState(null)
+  const [ selectedAssetId,setSelectedAssetId ] = useState(null)
+  const [ hoveredAssetId,setHoveredAssetId ] = useState(null)
+  const [ hoveredArcIndex,setHoveredArcIndex ] = useState(null)
 
-  const keyAssetIds = useMemo(() => new Set(['do-yamal', 'do-noyabrsk', 'do-megion']), [])
+  const keyAssetIds = useMemo(() => new Set([ 'do-yamal','do-noyabrsk','do-megion' ]),[])
   const controlsCleanupRef = useRef(null)
   /** Чтобы не вызывать install до первого onGlobeReady и не сбивать POV. */
   const povBarriersArmedRef = useRef(false)
@@ -166,16 +166,16 @@ export default function RussiaGlobe({
       if (r?.setPixelRatio) {
         const dpr = window.devicePixelRatio || 1
         const cap = immersiveBackground ? 2 : 1.25
-        r.setPixelRatio(Math.min(cap, dpr))
+        r.setPixelRatio(Math.min(cap,dpr))
       }
     } catch (_) { /* ignore */ }
-  }, [immersiveBackground])
+  },[ immersiveBackground ])
 
   useEffect(() => {
     if (!webglOk) return
     const id = requestAnimationFrame(applyRendererPixelRatio)
     return () => cancelAnimationFrame(id)
-  }, [size.width, size.height, webglOk, applyRendererPixelRatio])
+  },[ size.width,size.height,webglOk,applyRendererPixelRatio ])
 
   useEffect(() => {
     const webgl = canCreateWebGLContext()
@@ -186,37 +186,37 @@ export default function RussiaGlobe({
         const vw = typeof window !== 'undefined' ? window.innerWidth : 800
         const vh = typeof window !== 'undefined' ? window.innerHeight : 600
         /* Иммерсив (?demo + face): canvas на всю ширину окна; высота — полная на стенде, иначе с лимитом по maxGlobeH */
-        const w = Math.max(320, Math.floor(vw))
+        const w = Math.max(320,Math.floor(vw))
         const h = standLayout
           ? standFaceImmersiveCanvasHeightPx(vh)
-          : Math.min(maxGlobeH, Math.max(520, Math.floor(vh)))
-        setSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
+          : Math.min(maxGlobeH,Math.max(520,Math.floor(vh)))
+        setSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w,height: h }))
       }
       measure()
-      window.addEventListener('resize', measure)
-      return () => window.removeEventListener('resize', measure)
+      window.addEventListener('resize',measure)
+      return () => window.removeEventListener('resize',measure)
     }
 
     const el = containerRef.current
     if (!el) return
     let resizeRaf = 0
     const ro = new ResizeObserver((entries) => {
-      const entry = entries[0]
+      const entry = entries[ 0 ]
       if (!entry) return
       if (resizeRaf) cancelAnimationFrame(resizeRaf)
       resizeRaf = requestAnimationFrame(() => {
         resizeRaf = 0
-        const { width, height } = entry.contentRect
-        const w = Math.min(maxGlobeW, Math.max(320, Math.floor(width)))
+        const { width,height } = entry.contentRect
+        const w = Math.min(maxGlobeW,Math.max(320,Math.floor(width)))
         const minH = standLayout ? 520 : 380
         const frac = standLayout ? 0.995 : 0.98
-        const h = Math.min(maxGlobeH, Math.max(minH, Math.floor((height || 480) * frac)))
-        setSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
+        const h = Math.min(maxGlobeH,Math.max(minH,Math.floor((height || 480) * frac)))
+        setSize((prev) => (prev.width === w && prev.height === h ? prev : { width: w,height: h }))
       })
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [maxGlobeW, maxGlobeH, standLayout, immersiveBackground])
+  },[ maxGlobeW,maxGlobeH,standLayout,immersiveBackground ])
 
   const installPovBarriers = useCallback((options = { resetPov: true }) => {
     applyRendererPixelRatio()
@@ -226,7 +226,7 @@ export default function RussiaGlobe({
     /* POV не должен зависеть от OrbitControls: ref контролов иногда ещё null в том же кадре, что onReady — иначе камера остаётся дефолтной и «зума» нет. */
     if (options.resetPov) {
       try {
-        globe.pointOfView(effectiveDefaultPov, 0)
+        globe.pointOfView(effectiveDefaultPov,0)
       } catch (_) { /* api ещё не готов */ }
     }
 
@@ -288,14 +288,14 @@ export default function RussiaGlobe({
       povBarriersArmedRef.current = false
     }
     povBarriersArmedRef.current = true
-  }, [applyRendererPixelRatio, effectiveDefaultPov, immersiveBackground, standLayout])
+  },[ applyRendererPixelRatio,effectiveDefaultPov,immersiveBackground,standLayout ])
 
   const handleEarthGlobeReady = useCallback(() => {
     installPovBarriers({ resetPov: true })
     requestAnimationFrame(() => {
       installPovBarriers({ resetPov: false })
     })
-  }, [installPovBarriers])
+  },[ installPovBarriers ])
 
   useEffect(() => {
     if ((!standLayout && !immersiveBackground) || !povBarriersArmedRef.current || !globeRef.current) return
@@ -303,7 +303,7 @@ export default function RussiaGlobe({
       installPovBarriers({ resetPov: true })
     })
     return () => cancelAnimationFrame(id)
-  }, [standLayout, immersiveBackground, installPovBarriers])
+  },[ standLayout,immersiveBackground,installPovBarriers ])
 
   // После смены размера: стенд — полный сброс POV+pitch (StandDomeCamera тоже пересчитывает кадр).
   useEffect(() => {
@@ -319,12 +319,12 @@ export default function RussiaGlobe({
       if (c) installPovBarriers({ resetPov: false })
     })
     return () => cancelAnimationFrame(id)
-  }, [size.width, size.height, webglOk, installPovBarriers, immersiveBackground, standLayout])
+  },[ size.width,size.height,webglOk,installPovBarriers,immersiveBackground,standLayout ])
 
   useEffect(() => () => {
     controlsCleanupRef.current?.()
     controlsCleanupRef.current = null
-  }, [])
+  },[])
 
   const handlePointClick = useCallback((p) => {
     const next = selectedAssetId === p.id ? null : p.id
@@ -334,7 +334,7 @@ export default function RussiaGlobe({
     const globe = globeRef.current
     if (!globe || !p) return
 
-    const desiredLat = clamp((p.lat ?? effectiveDefaultPov.lat) + 2.2, -88, 88)
+    const desiredLat = clamp((p.lat ?? effectiveDefaultPov.lat) + 2.2,-88,88)
 
     let cur = null
     try { cur = globe.pointOfView() } catch (_) { /* ignore */ }
@@ -343,19 +343,19 @@ export default function RussiaGlobe({
 
     const targetLng = normalizeLngDeg(p.lon ?? curLng)
     const altMin = immersiveBackground && standLayout ? POV_ALT_MIN_STAND : POV_ALT_MIN
-    const targetAlt = clamp(curAlt, altMin, POV_ALT_MAX)
+    const targetAlt = clamp(curAlt,altMin,POV_ALT_MAX)
 
     try {
-      globe.pointOfView({ lat: desiredLat, lng: targetLng, altitude: targetAlt }, 350)
+      globe.pointOfView({ lat: desiredLat,lng: targetLng,altitude: targetAlt },350)
     } catch (_) { /* ignore */ }
 
     if (immersiveBackground && standLayout) {
       requestAnimationFrame(() => installPovBarriers({ resetPov: false }))
     }
-  }, [onAssetSelect, selectedAssetId, effectiveDefaultPov, immersiveBackground, standLayout, installPovBarriers])
+  },[ onAssetSelect,selectedAssetId,effectiveDefaultPov,immersiveBackground,standLayout,installPovBarriers ])
 
   const arcsData = useMemo(() => {
-    const byId = new Map(mapPointsData.map((p) => [p.id, p]))
+    const byId = new Map(mapPointsData.map((p) => [ p.id,p ]))
     return CF_ARROWS.map((a) => {
       const from = byId.get(a.from)
       const to = byId.get(a.to)
@@ -369,7 +369,7 @@ export default function RussiaGlobe({
         label: `${from.name} → ${to.name}`,
       }
     }).filter(Boolean)
-  }, [])
+  },[])
 
   const handleArcHover = useCallback((a) => {
     if (!a) {
@@ -378,10 +378,10 @@ export default function RussiaGlobe({
     }
     const idx = arcsData.indexOf(a)
     setHoveredArcIndex(idx >= 0 ? idx : null)
-  }, [arcsData])
+  },[ arcsData ])
 
   const budgetZoneFeatures = useMemo(
-    () => buildAssetVoronoiFeatures(mapPointsData, ASSET_VORONOI_BBOX, getBudgetForAssetId),
+    () => buildAssetVoronoiFeatures(mapPointsData,ASSET_VORONOI_BBOX,getBudgetForAssetId),
     [],
   )
 
@@ -389,26 +389,26 @@ export default function RussiaGlobe({
     if (!showBudgetFill) return 'rgba(0,0,0,0)'
     const v = feat?.properties?.__budget
     if (v == null || !Number.isFinite(v)) return 'rgba(34,211,238,0.12)'
-    const t = Math.max(-1, Math.min(1, v))
+    const t = Math.max(-1,Math.min(1,v))
     const s = (t + 1) / 2
-    const from = { r: 25, g: 118, b: 210 }
-    const to = { r: 56, g: 142, b: 60 }
+    const from = { r: 25,g: 118,b: 210 }
+    const to = { r: 56,g: 142,b: 60 }
     const r = Math.round(from.r + (to.r - from.r) * s)
     const g = Math.round(from.g + (to.g - from.g) * s)
     const b = Math.round(from.b + (to.b - from.b) * s)
     return `rgba(${r},${g},${b},0.38)`
-  }, [showBudgetFill])
+  },[ showBudgetFill ])
 
   const ringsData = useMemo(() => {
     const base = mapPointsData || []
     // 2 rings per point (lighter on GPU).
     return base.flatMap((p) => [
-      { ...p, __ringIdx: 0 },
-      { ...p, __ringIdx: 1 },
+      { ...p,__ringIdx: 0 },
+      { ...p,__ringIdx: 1 },
     ])
-  }, [])
+  },[])
 
-  const chain = selectedAssetId ? chainsData[selectedAssetId] : null
+  const chain = selectedAssetId ? chainsData[ selectedAssetId ] : null
   function getCdPageUrl(nodeName) {
     if (typeof window === 'undefined') return '#'
     const base = window.location.origin + (window.location.pathname || '/')
@@ -420,7 +420,7 @@ export default function RussiaGlobe({
     <div className={immersiveBackground ? 'globe-chain-panel globe-chain-panel--immersive' : 'globe-chain-panel'}>
       <div className="globe-chain-title">Цифровые двойники</div>
       <ul className="globe-chain-list">
-        {chain.nodes.map((name, i) => (
+        {chain.nodes.map((name,i) => (
           <li key={i} className="globe-chain-item">
             <span className="globe-chain-num">{i + 1}</span>
             <a
@@ -430,7 +430,7 @@ export default function RussiaGlobe({
               className="globe-chain-link"
               onClick={(e) => {
                 e.preventDefault()
-                window.open(getCdPageUrl(name), '_blank', 'noopener,noreferrer')
+                window.open(getCdPageUrl(name),'_blank','noopener,noreferrer')
               }}
             >
               {name}
@@ -457,7 +457,7 @@ export default function RussiaGlobe({
           <div
             style={
               immersiveBackground
-                ? { transform: `translate(${immersiveGlobeOffset[0]}px, ${immersiveGlobeOffset[1]}px)` }
+                ? { transform: `translate(${immersiveGlobeOffset[ 0 ]}px, ${immersiveGlobeOffset[ 1 ]}px)` }
                 : undefined
             }
           >
