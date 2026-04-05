@@ -155,4 +155,3 @@ function clampInt(v, min, max) {
   if (v > max) return max
   return v
 }
-

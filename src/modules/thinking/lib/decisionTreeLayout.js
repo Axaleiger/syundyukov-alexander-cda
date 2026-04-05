@@ -1,7 +1,7 @@
 // Утилиты для построения органической раскладки дерева решений
 // на основе статичного decisionTreeRoot из DecisionTree.jsx.
 
-import { VARIANT_IDS } from '../components/DecisionTree'
+import { VARIANT_IDS } from '../ui/archive/DecisionTree.jsx'
 
 /**
  * Рекурсивно собирает все пути от корня до листьев.
@@ -195,4 +195,3 @@ function pseudoRand(seed) {
     return x / 4294967296
   }
 }
-

@@ -12,4 +12,3 @@ export function fromPythonTreeJson(treeJson, ruleJson) {
   // Здесь можно добавить нормализацию структуры по мере необходимости.
   return { tree: treeJson, rule }
 }
-

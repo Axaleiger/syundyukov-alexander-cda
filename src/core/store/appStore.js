@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { DEFAULT_FLOW_CODE } from "../../modules/ontology/ui/OntologyTab"
+import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap"
 import { SCENARIO_STAGE_FILTERS } from "../../shared/data/scenariosData"
 
 export const useAppStore = create((set) => ({

@@ -10,6 +10,9 @@ import RussiaGlobe from "../../modules/globe/ui/RussiaGlobe"
 import WindRose from "../../modules/globe/ui/WindRose"
 import Hypercube3D from "../../modules/globe/ui/Hypercube3D"
 import LifecycleChart from "../../modules/globe/ui/LifecycleChart"
+// Секция cash flow отключена в UI (как в main-stand); импорт оставлен для будущего включения блока ниже.
+// eslint-disable-next-line no-unused-vars -- см. закомментированный <CashFlowChart /> ниже
+import CashFlowChart from "../../modules/face/ui/CashFlowChart"
 import RightPanel from "../../widgets/right-panel/RightPanel"
 
 import styles from "./FacePage.module.css"
@@ -178,6 +181,13 @@ export const FacePage = () => {
 							}}
 						/>
 					</section>
+
+					{/*
+					<section className={`${styles["section"]} ${styles["cashflow-section"]}`}>
+						<h2>Динамика Cash flow и добычи</h2>
+						<CashFlowChart faceSeed={faceSeed} />
+					</section>
+					*/}
 
 					<section className={`${styles["section"]} ${styles["lifecycle-section"]}`}>
 						<h2>Этап выбранного жизненного цикла актива</h2>

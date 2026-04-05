@@ -13,7 +13,7 @@ import { SecondarySidebar } from "../../shared/ui/SecondarySidebar/SecondarySide
 import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import AiThinkingUI from "../../modules/thinking/ui/AiThinkingUI"
 import BrainChainView from "../../modules/thinking/ui/BrainChainView"
-import { getSchemaFromFlowCode } from "../../modules/ontology/ui/OntologyTab"
+import { getSchemaFromFlowCode } from "../../modules/ontology/lib/ontologyBootstrap"
 
 /** Совпадает с `ADMIN_SUB_TABS` в SecondarySidebar / main-stand */
 const LEGACY_ADMIN_SUBTAB_IDS = new Set([
@@ -174,7 +174,7 @@ export const AppLayout = () => {
 			}
 
 			await requestUserConfirm(
-				"Проверьте сквозной бизнес-сценарий на доске планирования и нажмите «Продолжить», чтобы перейти в конфигуратор.",
+				"Проверьте сквозной бизнес-сценарий на доске планирования и нажмите «Согласовать», чтобы построить схему в Конфигураторе систем.",
 				{ phase: "brain" },
 			)
 
