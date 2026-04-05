@@ -13,10 +13,7 @@ import { SecondarySidebar } from "../../shared/ui/SecondarySidebar/SecondarySide
 import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import AiThinkingUI from "../../modules/thinking/ui/AiThinkingUI"
 import BrainChainView from "../../modules/thinking/ui/BrainChainView"
-import ConfiguratorDocPage from "../../modules/ontology/ui/ConfiguratorDocPage"
-import OntologyTab, {
-	getSchemaFromFlowCode,
-} from "../../modules/ontology/ui/OntologyTab"
+import { getSchemaFromFlowCode } from "../../modules/ontology/ui/OntologyTab"
 
 /** Совпадает с `ADMIN_SUB_TABS` в SecondarySidebar / main-stand */
 const LEGACY_ADMIN_SUBTAB_IDS = new Set([
@@ -68,15 +65,10 @@ export const AppLayout = () => {
 		setAppliedDecisionPathId,
 		flowCode,
 		setFlowCode,
-		showConfiguratorDoc,
-		setShowConfiguratorDoc,
 		openConfiguratorFromPlanning,
 		setOpenConfiguratorFromPlanning,
-		configuratorInitialNodes,
-		configuratorInitialEdges,
 		setConfiguratorInitialNodes,
 		setConfiguratorInitialEdges,
-		configuratorNodeCommand,
 		setResultsDashboardFocus,
 		setHypercubeCaseIntro,
 		setConfiguratorNodeCommand,
@@ -87,7 +79,6 @@ export const AppLayout = () => {
 	const thinkingConfirmResolverRef = useRef(null)
 	const legacyHashNavigationDoneRef = useRef("")
 	const bpmCommandConsumedRef = useRef(null)
-	const configuratorSchemaRef = useRef(null)
 	const thinkingConfirmPhaseRef = useRef(null)
 	thinkingConfirmPhaseRef.current = thinkingConfirmPhase
 
@@ -129,7 +120,6 @@ export const AppLayout = () => {
 	)
 
 	const path = (location.pathname || "").replace(/\/$/, "") || "/"
-	const isOntologyRoute = path === "/ontology"
 	const isThinkingDrawerCollapsed =
 		path.endsWith("/planning") || path.endsWith("/ontology")
 	const showCollapsedBrainMinimal =
@@ -191,16 +181,9 @@ export const AppLayout = () => {
 			const schema = getSchemaFromFlowCode(codeForSchema)
 
 			if (schema?.nodes?.length) {
-				configuratorSchemaRef.current = {
-					nodes: schema.nodes,
-					edges: schema.edges || [],
-				}
 				setConfiguratorInitialNodes(schema.nodes)
 				setConfiguratorInitialEdges(schema.edges || [])
 			} else {
-				configuratorSchemaRef.current = {
-					flowCode: codeForSchema,
-				}
 				setConfiguratorInitialNodes(null)
 				setConfiguratorInitialEdges(null)
 			}
@@ -463,14 +446,6 @@ export const AppLayout = () => {
 		)
 	}
 
-	if (showConfiguratorDoc) {
-		return (
-			<div className={styles.app}>
-				<ConfiguratorDocPage onClose={() => setShowConfiguratorDoc(false)} />
-			</div>
-		)
-	}
-
 	if (showBpm) {
 		return (
 			<div className={styles.app}>
@@ -511,29 +486,6 @@ export const AppLayout = () => {
 				<SecondarySidebar />
 				<main className={styles["app-main"]}>
 					<Outlet context={{ onBpmCommandConsumed }} />
-					<div
-						className={`${styles["app-content"]} ${styles["app-content-ontology"]}`}
-						style={{ display: isOntologyRoute ? "flex" : "none" }}
-						aria-hidden={!isOntologyRoute}
-					>
-						<OntologyTab
-							isVisible={isOntologyRoute}
-							onOpenDoc={() => setShowConfiguratorDoc(true)}
-							flowCode={flowCode}
-							onFlowCodeChange={setFlowCode}
-							openFromPlanning={openConfiguratorFromPlanning}
-							onOpenFromPlanningConsumed={() =>
-								setOpenConfiguratorFromPlanning(false)
-							}
-							configuratorNodeCommand={configuratorNodeCommand}
-							onConfiguratorNodeConsumed={() =>
-								setConfiguratorNodeCommand(null)
-							}
-							initialSchemaNodes={configuratorInitialNodes}
-							initialSchemaEdges={configuratorInitialEdges}
-							schemaFromPlanningRef={configuratorSchemaRef}
-						/>
-					</div>
 				</main>
 			</div>
 			{aiAssistantAndThinkingDrawer}
