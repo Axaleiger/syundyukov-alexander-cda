@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import ScenarioGraph from './ScenarioGraph'
 import DigitalBrain from './DigitalBrain'
 import ScenarioAnalysisDashboard from './ScenarioAnalysisDashboard'
-import './BrainChainView.css'
-import './AiThinkingUI.css'
+import styles from './BrainChainView.module.css'
+import chrome from './thinkingDrawerChrome.module.css'
 import { scenarioGraphEdges, scenarioGraphNodes } from '../lib/scenarioGraphData'
 import { buildPredsOuts, revealDelayMs } from '../lib/graphRevealSchedule'
 
@@ -110,31 +110,30 @@ function BrainChainView({
   }, [chainAlreadyRevealed])
 
   return (
-    <div className="brain-chain-view">
-      <div className="brain-chain-top">
-        <div className="brain-chain-brain-wrap">
+    <div className={styles.root}>
+      <div className={styles.top}>
+        <div className={styles.brainWrap}>
           <DigitalBrain isThinking={!graphBuildComplete} graphProgressPercent={graphTargetPercent} />
         </div>
       </div>
-      <div className="brain-chain-graph-wrap">
-        {/* Старый блок оставлен на будущее: <DecisionTreeView ... /> */}
+      <div className={styles.graphWrap}>
         <ScenarioGraph visibleNodeIds={visibleNodeIds} graphComplete={graphBuildComplete} />
       </div>
-      <div className="brain-chain-under" aria-label="Список действий">
-        <h3 className="app-thinking-drawer-title mb-4">Цепочка размышлений</h3>
-        <ul className="ai-thinking-ui-checklist brain-chain-checklist" role="list">
+      <div className={styles.under} aria-label="Список действий">
+        <h3 className={`${chrome.drawerTitle} ${chrome.drawerTitleSpaced}`}>Цепочка размышлений</h3>
+        <ul className={styles.chainChecklist} role="list">
           {stepsUnique.length === 0 ? (
-            <li className="brain-chain-placeholder">Формирую цепочку…</li>
+            <li className={styles.placeholder}>Формирую цепочку…</li>
           ) : (
             visibleSteps.map((item, i) => {
               const isActive = i === visibleCount - 1 && !graphBuildComplete
               return (
                 <li
                   key={item?.id ?? i}
-                  className={`ai-thinking-ui-step ai-thinking-ui-step--done brain-chain-step-item ${isActive ? 'brain-chain-step-active' : ''}`}
+                  className={`${styles.chainStep} ${isActive ? styles.chainStepActive : ''}`}
                 >
-                  <span className="ai-thinking-ui-step-icon">✓</span>
-                  <span className="ai-thinking-ui-step-label">{item?.label ?? ''}</span>
+                  <span className={styles.chainStepIcon}>✓</span>
+                  <span className={styles.chainStepLabel}>{item?.label ?? ''}</span>
                 </li>
               )
             })
@@ -142,13 +141,13 @@ function BrainChainView({
         </ul>
         <ScenarioAnalysisDashboard visible={graphBuildComplete} />
         {stepsUnique.length > 0 && (
-          <div className="brain-chain-actions">
+          <div className={styles.actions}>
             {awaitingConfirm && onConfirm && (
               <button
                 type="button"
-                className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
+                className={`${chrome.drawerExit} ${chrome.drawerExitSuccess}`}
                 onClick={onConfirm}
-                  disabled={!graphBuildComplete}
+                disabled={!graphBuildComplete}
               >
                 Согласовать предлагаемый сценарий
               </button>
@@ -156,7 +155,7 @@ function BrainChainView({
             {selectedDecisionPathId && appliedDecisionPathId && selectedDecisionPathId !== appliedDecisionPathId && onRecalculate && (
               <button
                 type="button"
-                className="ai-thinking-ui-btn ai-thinking-ui-btn--resume"
+                className={`${styles.btnResumeFromAi}`}
                 onClick={onRecalculate}
               >
                 Пересчитать

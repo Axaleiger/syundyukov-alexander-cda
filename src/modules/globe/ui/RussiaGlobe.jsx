@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Globe from 'react-globe.gl'
 import * as THREE from 'three'
-import mapPointsData from '../../../shared/data/mapPoints.json'
-import { CF_ARROWS } from '../../../shared/data/cfArrows'
-import { getBudgetForAssetId } from '../../../shared/data/mapBudgetData'
-import chainsData from '../../../shared/data/chains.json'
-import './RussiaGlobe.css'
+import mapPointsData from '../../../core/data/static/mapPoints.json'
+import { CF_ARROWS } from '../../../core/data/static/cfArrows'
+import { getBudgetForAssetId } from '../../../core/data/static/mapBudgetData'
+import chainsData from '../../../core/data/static/chains.json'
+import styles from './RussiaGlobe.module.css'
 import { simplifyFeatures } from '../../../shared/lib/simplifyGeoJsonRing'
 import { geojsonFeaturesToPaths } from '../../../shared/lib/geojsonToPaths'
 import { buildAssetVoronoiFeatures } from '../../../shared/lib/assetVoronoiZones'
@@ -424,7 +424,6 @@ export default function RussiaGlobe({ onAssetSelect }) {
     if (!import.meta?.env?.DEV) return
     const zoneCount = Array.isArray(budgetZoneFeatures) ? budgetZoneFeatures.length : 0
     const coastSegCount = Array.isArray(coastlinePaths) ? coastlinePaths.length : 0
-    // eslint-disable-next-line no-console
     console.log('[RussiaGlobe] counts', { zoneCount, coastSegCount, showBudgetFill })
   }, [budgetZoneFeatures, coastlinePaths, showBudgetFill])
 
@@ -437,9 +436,9 @@ export default function RussiaGlobe({ onAssetSelect }) {
   }
 
   return (
-    <div className="russia-globe-container">
-      <div className="globe-controls-row">
-        <label className="globe-toggle">
+    <div className={styles.container}>
+      <div className={styles.controlsRow}>
+        <label className={styles.toggle}>
           <input
             type="checkbox"
             checked={showBudgetFill}
@@ -449,7 +448,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
         </label>
         <button
           type="button"
-          className={`globe-cf-btn ${showCFArrows ? 'globe-cf-btn-active' : ''}`}
+          className={`${styles.cfBtn} ${showCFArrows ? styles.cfBtnActive : ''}`}
           onClick={() => setShowCFArrows((v) => !v)}
         >
           Перераспределение CF (млн руб) ДО → активы
@@ -457,21 +456,21 @@ export default function RussiaGlobe({ onAssetSelect }) {
       </div>
 
       {showBudgetFill && (
-        <div className="globe-budget-legend">
-          <span className="globe-legend-label">Недостаток бюджета</span>
-          <div className="globe-legend-gradient globe-legend-gradient--population" />
-          <span className="globe-legend-label">Избыток бюджета</span>
+        <div className={styles.budgetLegend}>
+          <span className={styles.legendLabel}>Недостаток бюджета</span>
+          <div className={`${styles.legendGradient} ${styles.legendGradientPopulation}`} />
+          <span className={styles.legendLabel}>Избыток бюджета</span>
         </div>
       )}
 
-      <div className="globe-layout">
-        <div className="globe-wrapper globe-wrapper--perf" ref={containerRef}>
+      <div className={styles.layout}>
+        <div className={`${styles.wrapper} ${styles.wrapperPerf}`} ref={containerRef}>
         {!webglOk ? (
-          <div className="globe-error">
+          <div className={styles.error}>
             WebGL недоступен (или заблокирован) — 3D-глобус не может быть показан на этом устройстве/в этом браузере.
           </div>
         ) : (
-          <div className="globe-viewport-clip" aria-hidden="false" style={{ height: size.height }}>
+          <div className={styles.viewportClip} aria-hidden="false" style={{ height: size.height }}>
             <div style={{ height: TOP_SPACE_PX }} aria-hidden="true" />
             <Globe
               ref={globeRef}
@@ -575,17 +574,17 @@ export default function RussiaGlobe({ onAssetSelect }) {
         )}
         </div>
         {selectedAssetId && chain && (
-          <div className="globe-chain-panel">
-            <div className="globe-chain-title">Цифровые двойники</div>
-            <ul className="globe-chain-list">
+          <div className={styles.chainPanel}>
+            <div className={styles.chainTitle}>Цифровые двойники</div>
+            <ul className={styles.chainList}>
               {chain.nodes.map((name, i) => (
-                <li key={i} className="globe-chain-item">
-                  <span className="globe-chain-num">{i + 1}</span>
+                <li key={i} className={styles.chainItem}>
+                  <span className={styles.chainNum}>{i + 1}</span>
                   <a
                     href={getCdPageUrl(name)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="globe-chain-link"
+                    className={styles.chainLink}
                     onClick={(e) => {
                       e.preventDefault()
                       window.open(getCdPageUrl(name), '_blank', 'noopener,noreferrer')

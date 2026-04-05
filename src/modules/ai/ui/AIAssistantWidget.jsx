@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
-import './AIAssistantWidget.css'
+import styles from './AIAssistantWidget.module.css'
 import { isSupported, startListening, stopListening, getTranscript } from '../lib/voiceHandler'
 import { classifyIntent } from '../lib/intentClassifier'
 import { runScenario } from '../lib/scenarioExecutors'
 
-const MicIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ai-assistant-mic-svg">
+const MicIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
     <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
     <line x1="12" x2="12" y1="19" y2="22" />
@@ -74,8 +74,10 @@ function AIAssistantWidget({
   }, [onBpmCommandConsumedRef, addStep])
 
   const handlePointerDown = useCallback((e) => {
-    if (!e.target.closest('.ai-assistant-toggle') && !e.target.closest('.ai-assistant-panel')) return
-    if (e.target.closest('.ai-assistant-panel-close') || e.target.closest('.ai-assistant-input') || e.target.closest('.ai-assistant-send') || e.target.closest('.ai-assistant-mic') || e.target.closest('.ai-assistant-open-thinking')) return
+    const t = e.target
+    if (!(t instanceof Element)) return
+    if (!t.closest(`.${styles.toggle}`) && !t.closest(`.${styles.panel}`)) return
+    if (t.closest(`.${styles.panelClose}`) || t.closest(`.${styles.input}`) || t.closest(`.${styles.send}`) || t.closest(`.${styles.mic}`) || t.closest(`.${styles.openThinking}`)) return
     didDrag.current = false
     const el = widgetRef.current
     const left = position != null ? position.x : (el ? el.getBoundingClientRect().left : 0)
@@ -110,7 +112,7 @@ function AIAssistantWidget({
     if (!open || position == null) return
     const el = widgetRef.current
     if (!el) return
-    const panel = el.querySelector('.ai-assistant-panel')
+    const panel = el.querySelector(`.${styles.panel}`)
     if (!panel) return
     requestAnimationFrame(() => {
       const panelHeight = panel.offsetHeight || 320
@@ -225,47 +227,47 @@ function AIAssistantWidget({
   const isThinkingMode = (thinkingSteps ?? localThinkingSteps).length > 0
 
   return (
-    <div ref={widgetRef} className={`ai-assistant-widget ${open ? 'ai-assistant-widget-open' : ''} ${dragging ? 'ai-assistant-widget-dragging' : ''}`} style={style}>
-      <div className="ai-assistant-panel" onPointerDown={handlePointerDown}>
-        <div className="ai-assistant-panel-header">
-          <span className="ai-assistant-panel-title">ИИ-помощник</span>
-          <span className="ai-assistant-online">
-            <span className="ai-assistant-dot" /> online
+    <div ref={widgetRef} className={`${styles.widget} ${open ? styles.widgetOpen : ''}`} style={style}>
+      <div className={styles.panel} onPointerDown={handlePointerDown}>
+        <div className={styles.panelHeader}>
+          <span className={styles.panelTitle}>ИИ-помощник</span>
+          <span className={styles.online}>
+            <span className={styles.dot} /> online
           </span>
-          <button type="button" className="ai-assistant-panel-close" onClick={() => setOpen(false)} aria-label="Свернуть">×</button>
+          <button type="button" className={styles.panelClose} onClick={() => setOpen(false)} aria-label="Свернуть">×</button>
         </div>
 
         {isThinkingMode ? (
           <>
-            <p className="ai-assistant-greeting">Режим мышления открыт в правой панели.</p>
-            <button type="button" className="ai-assistant-open-thinking" onClick={() => onThinkingPanelOpen?.(true)}>
+            <p className={styles.greeting}>Режим мышления открыт в правой панели.</p>
+            <button type="button" className={styles.openThinking} onClick={() => onThinkingPanelOpen?.(true)}>
               Открыть мышление
             </button>
           </>
         ) : (
           <>
             {chatHistory.length > 0 && (
-              <div className="ai-assistant-chat-history">
+              <div className={styles.chatHistory}>
                 {chatHistory.slice(-6).map((msg, i) => (
-                  <p key={i} className={`ai-assistant-msg ai-assistant-msg-${msg.role}`}>
-                    <span className="ai-assistant-msg-role">{msg.role === 'user' ? 'Вы' : 'ИИ'}:</span> {msg.text}
+                  <p key={i} className={`${styles.msg} ${msg.role === 'user' ? styles.msgUser : styles.msgAssistant}`}>
+                    <span className={styles.msgRole}>{msg.role === 'user' ? 'Вы' : 'ИИ'}:</span> {msg.text}
                   </p>
                 ))}
               </div>
             )}
-            <p className="ai-assistant-greeting">{chatHistory.length ? 'Продолжайте диалог.' : 'Здравствуйте, задайте свой промпт.'}</p>
-            <button type="button" className="ai-assistant-open-thinking" onClick={() => onThinkingPanelOpen?.(true)}>
+            <p className={styles.greeting}>{chatHistory.length ? 'Продолжайте диалог.' : 'Здравствуйте, задайте свой промпт.'}</p>
+            <button type="button" className={styles.openThinking} onClick={() => onThinkingPanelOpen?.(true)}>
               Открыть мышление
             </button>
             {displayClarification && (
-              <p className="ai-assistant-clarification">{displayClarification}</p>
+              <p className={styles.clarification}>{displayClarification}</p>
             )}
             {voiceError && (
-              <p className="ai-assistant-voice-error">{voiceError}</p>
+              <p className={styles.voiceError}>{voiceError}</p>
             )}
-            <div className="ai-assistant-input-row">
+            <div className={styles.inputRow}>
               <textarea
-                className="ai-assistant-input"
+                className={styles.input}
                 placeholder={isListening ? 'Слушаю…' : 'Введите промпт'}
                 value={inputValue}
                 onChange={(e) => setQuestion(e.target.value)}
@@ -275,15 +277,15 @@ function AIAssistantWidget({
               />
               <button
                 type="button"
-                className={`ai-assistant-mic ${isListening ? 'ai-assistant-mic-active' : ''} ${!isSupported ? 'ai-assistant-mic-disabled' : ''}`}
+                className={`${styles.mic} ${isListening ? styles.micActive : ''} ${!isSupported ? styles.micDisabled : ''}`}
                 onClick={handleMicClick}
                 title={isSupported ? (isListening ? 'Остановить' : 'Голосовой ввод') : 'Голос недоступен'}
                 aria-label={isListening ? 'Остановить запись' : 'Голосовой ввод'}
               >
-                <MicIcon />
+                <MicIcon className={styles.micSvg} />
               </button>
             </div>
-            <button type="button" className="ai-assistant-send" onClick={handleSend}>
+            <button type="button" className={styles.send} onClick={handleSend}>
               Отправить
             </button>
           </>
@@ -291,18 +293,18 @@ function AIAssistantWidget({
       </div>
       <button
         type="button"
-        className="ai-assistant-toggle"
+        className={styles.toggle}
         onPointerDown={handlePointerDown}
         onClick={handleToggleClick}
         aria-label={open ? 'Свернуть ИИ-помощник' : 'Открыть ИИ-помощник'}
         title="ИИ-помощник (перетащите для перемещения)"
       >
-        <span className="ai-assistant-avatar-wrap">
-          <img src={`${base}ai-assistent.gif`} alt="" className="ai-assistant-avatar" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling?.classList.add('ai-assistant-avatar-fallback-visible'); }} />
-          <span className="ai-assistant-avatar-fallback">🤖</span>
-          <span className="ai-assistant-dot ai-assistant-dot-btn" title="Онлайн" />
+        <span className={styles.avatarWrap}>
+          <img src={`${base}ai-assistent.gif`} alt="" className={styles.avatar} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling?.classList.add(styles.avatarFallbackVisible); }} />
+          <span className={styles.avatarFallback}>🤖</span>
+          <span className={`${styles.dot} ${styles.dotBtn}`} title="Онлайн" />
         </span>
-        <span className="ai-assistant-toggle-label">ИИ-помощник</span>
+        <span className={styles.toggleLabel}>ИИ-помощник</span>
       </button>
     </div>
   )

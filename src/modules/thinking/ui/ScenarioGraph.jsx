@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import chrome from './thinkingDrawerChrome.module.css'
 import {
   optimalScenarioEdgeKeys,
   optimalScenarioNodeIds,
@@ -549,7 +550,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
 
   return (
     <div className="w-full">
-      <h3 className="app-thinking-drawer-title mb-4">Граф сценария</h3>
+      <h3 className={`${chrome.drawerTitle} ${chrome.drawerTitleSpaced}`}>Граф сценария</h3>
       <div
         ref={containerRef}
         className="relative h-[560px] w-full cursor-grab overflow-hidden rounded-2xl border border-slate-700/50 bg-[#0a0e14] active:cursor-grabbing"

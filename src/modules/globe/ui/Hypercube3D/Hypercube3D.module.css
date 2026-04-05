@@ -1,0 +1,33 @@
+/* Корень: layout страницы гиперкуба */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.visualization {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1rem;
+  align-items: stretch;
+  min-height: 520px;
+}
+
+@media (max-width: 1200px) {
+  .visualization {
+    grid-template-columns: 1fr;
+  }
+}
+
+.instructions {
+  padding: 1rem;
+  background: rgba(45, 90, 135, 0.06);
+  border-left: 4px solid #2d5a87;
+  border-radius: 8px;
+}
+
+.instructions p {
+  margin: 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}

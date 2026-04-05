@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { SCENARIO_STAGE_FILTERS, PERIOD_OPTIONS, generateScenarios, filterScenariosByPeriod, SCENARIO_DIRECTIONS } from '../../../shared/data/scenariosData'
+import { SCENARIO_STAGE_FILTERS, PERIOD_OPTIONS, generateScenarios, filterScenariosByPeriod, SCENARIO_DIRECTIONS } from '../../../core/data/static/scenariosData'
 import './ScenariosList.css'
 
 const ALL_SCENARIOS = generateScenarios()

@@ -1,0 +1,32 @@
+/* Корень LifecycleChart: контейнер и загрузка */
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 200px;
+  color: #5a6c7d;
+  font-size: 1rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2d5a87;
+  border-radius: 50%;
+  animation: lifecycleSpin 0.8s linear infinite;
+}
+
+@keyframes lifecycleSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

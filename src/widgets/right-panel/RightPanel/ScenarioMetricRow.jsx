@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import styles from './RightPanel.module.css'
 
 function formatVal(v, decimals) {
   if (!Number.isFinite(v)) return '—'
@@ -80,16 +81,16 @@ export function ScenarioMetricRow({
   const deltaSuffix = key === 'irrPct' ? ' п.п.' : ` ${unit}`
 
   return (
-    <div className="rp-metric-row">
-      <span className="rp-metric-label">{label}</span>
-      <div className="rp-metric-value-wrap">
-        <span className="rp-metric-value">
+    <div className={styles['rp-metric-row']}>
+      <span className={styles['rp-metric-label']}>{label}</span>
+      <div className={styles['rp-metric-value-wrap']}>
+        <span className={styles['rp-metric-value']}>
           {formatVal(display, decimals)}
-          <span className="rp-metric-unit"> {unit}</span>
+          <span className={styles['rp-metric-unit']}> {unit}</span>
         </span>
         {showChip && (
           <span
-            className={`rp-metric-delta ${good ? 'rp-metric-delta--good' : 'rp-metric-delta--bad'} rp-metric-delta--visible`}
+            className={`${styles['rp-metric-delta']} ${good ? styles['rp-metric-delta--good'] : styles['rp-metric-delta--bad']} ${styles['rp-metric-delta--visible']}`}
           >
             {signStr}
             {formatVal(Math.abs(rawAmt), deltaDecimals)}

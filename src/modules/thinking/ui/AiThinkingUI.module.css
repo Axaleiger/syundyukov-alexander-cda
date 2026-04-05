@@ -1,25 +1,24 @@
-/* Режим мышления ИИ-помощника */
-.ai-thinking-ui {
+.root {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 8px 0;
 }
 
-.ai-thinking-ui-title {
+.title {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
   color: var(--bpm-typo-primary, #002d4d);
 }
 
-.ai-thinking-ui-checklist {
+.checklist {
   margin: 0;
   padding-left: 20px;
   list-style: none;
 }
 
-.ai-thinking-ui-step {
+.step {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -29,21 +28,21 @@
   min-width: 0;
 }
 
-.ai-thinking-ui-step--done {
+.stepDone {
   color: var(--bpm-typo-primary, #002d4d);
 }
 
-.ai-thinking-ui-step-icon {
+.stepIcon {
   flex-shrink: 0;
   width: 16px;
   text-align: center;
 }
 
-.ai-thinking-ui-step--done .ai-thinking-ui-step-icon {
+.stepDone .stepIcon {
   color: #22c55e;
 }
 
-.ai-thinking-ui-step-label {
+.stepLabel {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -51,7 +50,7 @@
   white-space: normal;
 }
 
-.ai-thinking-ui-message {
+.message {
   margin: 0;
   font-size: 13px;
   color: var(--bpm-typo-primary, #002d4d);
@@ -60,13 +59,13 @@
   word-break: break-word;
 }
 
-.ai-thinking-ui-actions {
+.actions {
   display: flex;
   gap: 8px;
   margin-top: 4px;
 }
 
-.ai-thinking-ui-btn {
+.btn {
   padding: 6px 12px;
   border-radius: 8px;
   font-size: 12px;
@@ -76,37 +75,37 @@
   font-family: inherit;
 }
 
-.ai-thinking-ui-btn--stop {
+.btnStop {
   background: #fef2f2;
   color: #b91c1c;
   border-color: #fecaca;
 }
 
-.ai-thinking-ui-btn--stop:hover {
+.btnStop:hover {
   background: #fee2e2;
 }
 
-.ai-thinking-ui-btn--resume {
+.btnResume {
   background: #ecfdf5;
   color: #047857;
   border-color: #a7f3d0;
 }
 
-.ai-thinking-ui-btn--resume:hover {
+.btnResume:hover {
   background: #d1fae5;
 }
 
-.ai-thinking-ui-btn--confirm {
+.btnConfirm {
   background: #eff6ff;
   color: #1d4ed8;
   border-color: #bfdbfe;
 }
 
-.ai-thinking-ui-btn--confirm:hover {
+.btnConfirm:hover {
   background: #dbeafe;
 }
 
-.ai-thinking-ui-btn--confirm:disabled {
+.btnConfirm:disabled {
   background: #e5e7eb;
   color: #9ca3af;
   border-color: #d1d5db;

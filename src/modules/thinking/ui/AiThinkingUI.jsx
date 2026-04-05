@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import './AiThinkingUI.css'
+import styles from './AiThinkingUI.module.css'
+import chrome from './thinkingDrawerChrome.module.css'
 
 function uniqueStepsByLabel(steps) {
   const seen = new Set()
@@ -26,31 +27,31 @@ function AiThinkingUI({
 }) {
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
   return (
-    <div className="ai-thinking-ui">
+    <div className={styles.root}>
       {stepsUnique.length > 0 && (
-        <ul className="ai-thinking-ui-checklist" aria-label="Шаги выполнения">
+        <ul className={styles.checklist} aria-label="Шаги выполнения">
           {stepsUnique.map((item) => (
             <li
               key={item.id}
-              className={`ai-thinking-ui-step ai-thinking-ui-step--${item.status || 'pending'}`}
+              className={`${styles.step} ${(item.status || 'pending') === 'done' ? styles.stepDone : ''}`}
             >
-              <span className="ai-thinking-ui-step-icon">
+              <span className={styles.stepIcon}>
                 {item.status === 'done' ? '✓' : '○'}
               </span>
-              <span className="ai-thinking-ui-step-label">{item.label}</span>
+              <span className={styles.stepLabel}>{item.label}</span>
             </li>
           ))}
         </ul>
       )}
       {currentMessage && (
-        <p className="ai-thinking-ui-message">{currentMessage}</p>
+        <p className={styles.message}>{currentMessage}</p>
       )}
       {(!isFinished || awaitingConfirm) && (
-        <div className="ai-thinking-ui-actions">
+        <div className={styles.actions}>
           {awaitingConfirm && onConfirm ? (
             <button
               type="button"
-              className="app-thinking-drawer-exit app-thinking-drawer-exit--success"
+              className={`${chrome.drawerExit} ${chrome.drawerExitSuccess}`}
               onClick={onConfirm}
             >
               Согласовать предлагаемый сценарий
@@ -60,7 +61,7 @@ function AiThinkingUI({
               {isPaused ? (
                 <button
                   type="button"
-                  className="ai-thinking-ui-btn ai-thinking-ui-btn--resume"
+                  className={`${styles.btn} ${styles.btnResume}`}
                   onClick={onResume}
                 >
                   Продолжить
@@ -68,7 +69,7 @@ function AiThinkingUI({
               ) : (
                 <button
                   type="button"
-                  className="ai-thinking-ui-btn ai-thinking-ui-btn--stop"
+                  className={`${styles.btn} ${styles.btnStop}`}
                   onClick={onStop}
                 >
                   Стоп

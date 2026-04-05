@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
-import { getAssetScenarioComparisonDemo, SCENARIO_METRIC_DEFS } from '../../shared/data/assetScenarioComparison.demo'
+import { getAssetScenarioComparisonDemo, SCENARIO_METRIC_DEFS } from '../../../core/data/demo/assetScenarioComparison.demo'
 import { ScenarioMetricRow } from './ScenarioMetricRow'
-import './RightPanel.css'
+import styles from './RightPanel.module.css'
 
 const DECISIONS = [
   {
@@ -34,19 +34,19 @@ function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
   const showAiDeltas = scenarioComparisonRevision > 0
 
   return (
-    <aside className="right-panel">
-      <section className="right-panel-section">
-        <h3 className="right-panel-heading">Сравнение сценариев развития актива</h3>
-        <p className="right-panel-note">Альтернативные управленческие логики при единых допущениях</p>
-        <div className="right-panel-scenarios">
+    <aside className={styles['right-panel']}>
+      <section className={styles['right-panel-section']}>
+        <h3 className={styles['right-panel-heading']}>Сравнение сценариев развития актива</h3>
+        <p className={styles['right-panel-note']}>Альтернативные управленческие логики при единых допущениях</p>
+        <div className={styles['right-panel-scenarios']}>
           {comparison.scenarios.map((sc, si) => (
             <div
               key={sc.id}
-              className={`right-panel-scenario right-panel-scenario--${sc.role} ${sc.isBest ? 'right-panel-scenario--best' : ''}`}
+              className={`${styles['right-panel-scenario']} ${styles[`right-panel-scenario--${sc.role}`]} ${sc.isBest ? styles['right-panel-scenario--best'] : ''}`}
             >
-              {sc.isBest && <span className="right-panel-scenario-badge">Рекомендуемый</span>}
-              <h4 className="right-panel-scenario-title">{sc.title}</h4>
-              <div className="right-panel-metrics">
+              {sc.isBest && <span className={styles['right-panel-scenario-badge']}>Рекомендуемый</span>}
+              <h4 className={styles['right-panel-scenario-title']}>{sc.title}</h4>
+              <div className={styles['right-panel-metrics']}>
                 {SCENARIO_METRIC_DEFS.map((def, ri) => (
                   <ScenarioMetricRow
                     key={def.key}
@@ -63,33 +63,33 @@ function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
             </div>
           ))}
         </div>
-        <p className="right-panel-footer">
+        <p className={styles['right-panel-footer']}>
           Сценарии сопоставимы по единым допущениям и исходным ограничениям. Выбор сценария определяет дальнейшую логику управления активом.
         </p>
       </section>
 
-      <section className="right-panel-section">
-        <h3 className="right-panel-heading">Контекст текущей стратегии</h3>
-        <p className="right-panel-note">Текущая стратегия сформирована последовательностью управленческих решений</p>
-        <h4 className="right-panel-subheading">Управленческие решения, определившие текущую стратегию</h4>
-        <div className="right-panel-decisions">
+      <section className={styles['right-panel-section']}>
+        <h3 className={styles['right-panel-heading']}>Контекст текущей стратегии</h3>
+        <p className={styles['right-panel-note']}>Текущая стратегия сформирована последовательностью управленческих решений</p>
+        <h4 className={styles['right-panel-subheading']}>Управленческие решения, определившие текущую стратегию</h4>
+        <div className={styles['right-panel-decisions']}>
           {DECISIONS.map((d, i) => (
-            <div key={i} className="right-panel-decision">
-              <h5 className="right-panel-decision-title">{d.title}</h5>
-              <div className="right-panel-decision-row">
-                <span className="right-panel-decision-label">Выбранный</span>
+            <div key={i} className={styles['right-panel-decision']}>
+              <h5 className={styles['right-panel-decision-title']}>{d.title}</h5>
+              <div className={styles['right-panel-decision-row']}>
+                <span className={styles['right-panel-decision-label']}>Выбранный</span>
                 <span>{d.chosen}</span>
               </div>
               {d.alternative && (
-                <div className="right-panel-decision-row right-panel-decision-alternative">
-                  <span className="right-panel-decision-label">Альтернатива</span>
+                <div className={`${styles['right-panel-decision-row']} ${styles['right-panel-decision-alternative']}`}>
+                  <span className={styles['right-panel-decision-label']}>Альтернатива</span>
                   <span>{d.alternative}</span>
                 </div>
               )}
-              {d.detail && <p className="right-panel-decision-detail">{d.detail}</p>}
-              <div className="right-panel-decision-outcome">
-                {d.outcomeIcon === 'check' && <span className="right-panel-outcome-ok">✓</span>}
-                {d.outcomeIcon === 'partial' && <span className="right-panel-outcome-partial">◐</span>}
+              {d.detail && <p className={styles['right-panel-decision-detail']}>{d.detail}</p>}
+              <div className={styles['right-panel-decision-outcome']}>
+                {d.outcomeIcon === 'check' && <span className={styles['right-panel-outcome-ok']}>✓</span>}
+                {d.outcomeIcon === 'partial' && <span className={styles['right-panel-outcome-partial']}>◐</span>}
                 <span>{d.outcome}</span>
               </div>
             </div>

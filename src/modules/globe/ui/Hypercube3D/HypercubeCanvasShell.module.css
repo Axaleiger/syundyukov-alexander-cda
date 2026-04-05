@@ -1,0 +1,116 @@
+/* Окно 3D: оболочка, полноэкранный режим, воронка */
+.window {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 520px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+/* Подсветка при создании кейса (ИИ-помощник) — раньше цеплялась от .hypercube-container */
+.windowCaseHighlight {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6), 0 0 24px rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+  animation: hypercubeCaseGlow 1.5s ease-in-out infinite alternate;
+}
+
+.windowCaseHighlight .canvasWrap {
+  filter: brightness(1.08);
+}
+
+@keyframes hypercubeCaseGlow {
+  from {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.2);
+  }
+  to {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.75), 0 0 32px rgba(59, 130, 246, 0.35);
+  }
+}
+
+.canvasWrap {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.closeFunnelBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2d5a87;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #2d5a87;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.closeFunnelBtn:hover {
+  background: #2d5a87;
+  color: #fff;
+}
+
+.fullscreenBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2d5a87;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #2d5a87;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.fullscreenBtn:hover {
+  background: #2d5a87;
+  color: #fff;
+}
+
+.canvas {
+  width: 100%;
+  flex: 1;
+  min-height: 420px;
+  height: 100%;
+}
+
+.windowFunnelOpen .canvas {
+  min-height: 480px;
+}
+
+.windowFullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  min-height: 100vh;
+  background: #f0f4f8;
+  border-radius: 0;
+}
+
+.windowFullscreen .canvasWrap {
+  min-height: 100%;
+}
+
+.windowFullscreen .canvas {
+  height: calc(100vh - 2rem);
+}
+
+@media (max-width: 1200px) {
+  .canvas {
+    height: 400px;
+  }
+}

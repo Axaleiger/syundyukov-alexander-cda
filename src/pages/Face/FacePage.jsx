@@ -1,19 +1,18 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import appLayoutStyles from "../../app/layouts/AppLayout.module.css"
-import { DEFAULT_OBJECTS, OBJECTS_BY_STAGE, PRODUCTION_STAGES } from "../../shared/data/rosesData"
-import { SCENARIO_STAGE_FILTERS } from "../../shared/data/scenariosData"
-import mapPointsData from "../../shared/data/mapPoints.json"
-import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from "../../shared/data/assetStatus"
+import { DEFAULT_OBJECTS, OBJECTS_BY_STAGE, PRODUCTION_STAGES } from "../../core/data/static/rosesData"
+import { SCENARIO_STAGE_FILTERS } from "../../core/data/static/scenariosData"
+import mapPointsData from "../../core/data/static/mapPoints.json"
+import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from "../../core/data/static/assetStatus"
 import RussiaGlobe from "../../modules/globe/ui/RussiaGlobe"
 import WindRose from "../../modules/globe/ui/WindRose"
-import Hypercube3D from "../../modules/globe/ui/Hypercube3D"
-import LifecycleChart from "../../modules/globe/ui/LifecycleChart"
+import Hypercube3D from "../../modules/globe/ui/Hypercube3D/index.js"
+import LifecycleChart from "../../modules/globe/ui/LifecycleChart/index.js"
 // Секция cash flow отключена в UI (как в main-stand); импорт оставлен для будущего включения блока ниже.
 // eslint-disable-next-line no-unused-vars -- см. закомментированный <CashFlowChart /> ниже
 import CashFlowChart from "../../modules/face/ui/CashFlowChart"
-import RightPanel from "../../widgets/right-panel/RightPanel"
+import RightPanel from "../../widgets/right-panel/RightPanel/index.js"
 
 import styles from "./FacePage.module.css"
 import { useAppStore } from "../../core/store/appStore"
@@ -94,6 +93,14 @@ export const FacePage = () => {
 		setSelectedRightObjectIndex((prev) => (prev === index ? null : index))
 	}
 
+	const assetIconColorClass =
+		assetStatusIcon &&
+		{
+			green: styles.faceAssetStickyIconGreen,
+			orange: styles.faceAssetStickyIconOrange,
+			red: styles.faceAssetStickyIconRed,
+		}[assetStatusIcon.color]
+
 	const handleLifecycleStageClick = (stageName) => {
 		setScenarioStageFilters(
 			SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: name === stageName }), {}),
@@ -106,14 +113,14 @@ export const FacePage = () => {
 		<div className={styles.faceWithPanel}>
 			<div className={styles.faceMainColumn}>
 				{selectedAssetId && selectedAssetPoint && assetStatus && (
-					<div className={appLayoutStyles["app-asset-sticky"]}>
-						<span className={appLayoutStyles["app-asset-sticky-name"]}>
+					<div className={styles.faceAssetSticky}>
+						<span className={styles.faceAssetStickyName}>
 							{selectedAssetPoint.name}
 						</span>
-						<span className={appLayoutStyles["app-asset-sticky-status"]}>{assetStatusLabel}</span>
+						<span className={styles.faceAssetStickyStatus}>{assetStatusLabel}</span>
 						{assetStatusIcon && (
 							<span
-								className={`${appLayoutStyles["app-asset-sticky-icon"]} ${appLayoutStyles[`app-asset-sticky-icon-${assetStatusIcon.color}`]}`}
+								className={`${styles.faceAssetStickyIcon} ${assetIconColorClass || ""}`}
 								title={assetStatusLabel}
 							>
 								{assetStatusIcon.type === "check" && "✓"}
@@ -123,7 +130,7 @@ export const FacePage = () => {
 						)}
 						<button
 							type="button"
-							className={appLayoutStyles["app-asset-sticky-close"]}
+							className={styles.faceAssetStickyClose}
 							onClick={() => setSelectedAssetId(null)}
 							aria-label="Сбросить"
 						>
@@ -196,7 +203,7 @@ export const FacePage = () => {
 				</div>
 			</div>
 			{selectedAssetId && (
-				<aside className={appLayoutStyles["app-right-panel"]}>
+				<aside className={styles.faceRightPanel}>
 					<RightPanel
 						assetId={selectedAssetId}
 						scenarioComparisonRevision={scenarioComparisonRevision}

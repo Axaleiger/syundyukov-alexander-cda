@@ -126,7 +126,9 @@
   font-weight: 600;
   opacity: 0;
   transform: translateX(8px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
   white-space: nowrap;
 }
 
@@ -189,9 +191,15 @@
   color: #f97316;
 }
 
-.right-panel-effect-green { color: #22c55e; }
-.right-panel-effect-yellow { color: #ca8a04; }
-.right-panel-effect-orange { color: #f97316; }
+.right-panel-effect-green {
+  color: #22c55e;
+}
+.right-panel-effect-yellow {
+  color: #ca8a04;
+}
+.right-panel-effect-orange {
+  color: #f97316;
+}
 
 .right-panel-limits {
   font-size: 0.85rem;

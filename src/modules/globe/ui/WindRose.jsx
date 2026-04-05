@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
-import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS, petalColorFromCoverage } from '../../../shared/data/rosesData'
-import './WindRose.css'
+import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS, petalColorFromCoverage } from '../../../core/data/static/rosesData'
+import styles from './WindRose.module.css'
 
 const RADIUS = 100
 const CENTER_X = 160
@@ -57,13 +57,13 @@ function WindRose({
   const labelCenter = WRAPPER_SIZE / 2
 
   return (
-    <div className="wind-rose">
-      <div className="wind-rose-diagram" style={{ width: WRAPPER_SIZE, height: WRAPPER_SIZE }}>
+    <div className={styles.root}>
+      <div className={styles.diagram} style={{ width: WRAPPER_SIZE, height: WRAPPER_SIZE }}>
         <svg
           width={SVG_VIEW_SIZE}
           height={SVG_VIEW_SIZE}
           viewBox={`${SVG_VIEW_MIN} ${SVG_VIEW_MIN} ${SVG_VIEW_SIZE} ${SVG_VIEW_SIZE}`}
-          className="wind-rose-svg"
+          className={styles.roseSvg}
         >
           {/* Сетка: концентрические окружности */}
         {[0.25, 0.5, 0.75, 1].map((scale) => (
@@ -125,7 +125,7 @@ function WindRose({
               strokeWidth={isSelected ? 3.2 : 2.2}
               strokeOpacity={opacity}
               strokeLinecap="round"
-              className="wind-rose-petal"
+              className={styles.petal}
               style={{ pointerEvents: 'none' }}
             />
           )
@@ -137,13 +137,13 @@ function WindRose({
           stroke="rgba(45, 90, 135, 0.38)"
           strokeWidth={1.4}
           strokeLinejoin="round"
-          className="wind-rose-contour"
+          className={styles.contour}
         />
         {/* Центр */}
         <circle cx={CENTER_X} cy={CENTER_Y} r="10" fill="#fff" stroke="#2d5a87" strokeWidth={1.4} opacity={0.98} />
         </svg>
         {/* Подписи за пределами SVG */}
-        <div className="wind-rose-labels-outside">
+        <div className={styles.labelsOutside}>
           {segments.map((seg, index) => {
             const isSelected = selectedIndex === index
             const name = seg.name.length > 14 ? seg.name.slice(0, 12) + '…' : seg.name
@@ -153,7 +153,7 @@ function WindRose({
               <button
                 key={index}
                 type="button"
-                className={`wind-rose-outside-label ${isSelected ? 'wind-rose-outside-label-selected' : ''}`}
+                className={`${styles.outsideLabel} ${isSelected ? styles.outsideLabelSelected : ''}`}
                 style={{
                   left: `${left}px`,
                   top: `${top}px`,
@@ -163,31 +163,31 @@ function WindRose({
                 onClick={() => onSegmentClick(index)}
                 aria-label={seg.name}
               >
-                <span className="wind-rose-outside-name">{name}</span>
-                <span className="wind-rose-outside-value">{seg.value}%</span>
+                <span className={styles.outsideName}>{name}</span>
+                <span className={styles.outsideValue}>{seg.value}%</span>
               </button>
             )
           })}
         </div>
       </div>
-      <div className="wind-rose-legend">
-        <div className="wind-rose-legend-items">
+      <div className={styles.legend}>
+        <div className={styles.legendItems}>
           {data.map((item, index) => {
             const isSelected = selectedIndex === index
             return (
               <button
                 key={index}
                 type="button"
-                className={`legend-item ${isSelected ? 'legend-item-selected' : ''}`}
+                className={`${styles.legendRow} ${isSelected ? styles.legendRowSelected : ''}`}
                 onClick={() => onSegmentClick(index)}
                 aria-label={`${item.name}, ${item.value}%`}
               >
                 <span
-                  className="legend-dot"
+                  className={styles.legendSwatch}
                   style={{ background: petalColorFromCoverage(item.coverage) }}
                 />
-                <span className="legend-name">{item.name}</span>
-                <span className="legend-value">{item.value}%</span>
+                <span className={styles.legendName}>{item.name}</span>
+                <span className={styles.legendMetric}>{item.value}%</span>
               </button>
             )
           })}

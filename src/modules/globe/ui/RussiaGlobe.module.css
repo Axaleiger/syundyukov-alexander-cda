@@ -1,4 +1,5 @@
-.russia-globe-container {
+/* RussiaGlobe — изолированные стили; canvas через :global внутри .viewportClip */
+.container {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -6,14 +7,14 @@
   overflow: hidden;
 }
 
-.globe-controls-row {
+.controlsRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
 }
 
-.globe-toggle {
+.toggle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -23,13 +24,13 @@
   cursor: pointer;
 }
 
-.globe-toggle input {
+.toggle input {
   width: 22px;
   height: 22px;
   cursor: pointer;
 }
 
-.globe-cf-btn {
+.cfBtn {
   padding: 0.5rem 1rem;
   font-size: 1.05rem;
   font-weight: 600;
@@ -38,19 +39,21 @@
   border: 1px solid #2d5a87;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
-.globe-cf-btn:hover {
+.cfBtn:hover {
   background: rgba(45, 90, 135, 0.2);
 }
 
-.globe-cf-btn-active {
+.cfBtnActive {
   background: #2d5a87;
   color: #fff;
 }
 
-.globe-budget-legend {
+.budgetLegend {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -59,7 +62,7 @@
   font-weight: 500;
 }
 
-.globe-legend-gradient {
+.legendGradient {
   width: 140px;
   height: 22px;
   border-radius: 4px;
@@ -67,16 +70,16 @@
   border: 1px solid #e2e8f0;
 }
 
-.globe-legend-gradient--population {
+.legendGradientPopulation {
   background: linear-gradient(to right, #1976d2, #388e3c);
   border-color: #b0bec5;
 }
 
-.globe-legend-label {
+.legendLabel {
   white-space: nowrap;
 }
 
-.globe-wrapper {
+.wrapper {
   width: 100%;
   max-width: 100%;
   background: #f8fafc;
@@ -87,14 +90,14 @@
   overflow: hidden;
 }
 
-.globe-layout {
+.layout {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
 }
 
-.globe-chain-panel {
+.chainPanel {
   min-width: 220px;
   max-width: 280px;
   background: #fff;
@@ -104,20 +107,20 @@
   border: 1px solid #e2e8f0;
 }
 
-.globe-chain-title {
+.chainTitle {
   font-size: 1rem;
   font-weight: 700;
   color: #2c3e50;
   margin-bottom: 0.75rem;
 }
 
-.globe-chain-list {
+.chainList {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.globe-chain-item {
+.chainItem {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -125,11 +128,11 @@
   border-bottom: 1px solid #eee;
 }
 
-.globe-chain-item:last-child {
+.chainItem:last-child {
   border-bottom: none;
 }
 
-.globe-chain-num {
+.chainNum {
   flex-shrink: 0;
   width: 22px;
   height: 22px;
@@ -143,25 +146,25 @@
   justify-content: center;
 }
 
-.globe-chain-link {
+.chainLink {
   color: #2d5a87;
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
 }
 
-.globe-chain-link:hover {
+.chainLink:hover {
   text-decoration: underline;
 }
 
 /* Меньше пикселей = меньше нагрузка; нижняя часть сферы скрыта — меньше перерисовок */
-.globe-wrapper--perf {
+.wrapperPerf {
   background: #020617;
   border-color: #1e293b;
 }
 
 /* Обрезаем нижнюю часть глобуса (южное полушарие / «подошва») */
-.globe-viewport-clip {
+.viewportClip {
   overflow: hidden;
   /* Keep bands away without transforming canvas (preserves click accuracy) */
   clip-path: inset(0 0 0 0);
@@ -171,24 +174,15 @@
   height: 100%;
 }
 
-.globe-viewport-clip canvas {
+/* react-globe.gl монтирует canvas без нашего hashed-класса — только :global под обрезкой */
+.viewportClip :global(canvas) {
   display: block;
   width: 100% !important;
   height: 100% !important;
   /* IMPORTANT: do not transform canvas - it breaks raycasting/picking */
 }
 
-.globe-wrapper--perf .globe-hint {
-  color: #94a3b8;
-}
-
-.globe-hint {
-  margin: 0.5rem 0 0;
-  font-size: 1.05rem;
-  color: #5a6c7d;
-}
-
-.globe-error {
+.error {
   position: absolute;
   top: 12px;
   left: 12px;
@@ -202,4 +196,3 @@
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(45, 90, 135, 0.12);
 }
-

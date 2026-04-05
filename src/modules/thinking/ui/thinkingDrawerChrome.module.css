@@ -1,12 +1,16 @@
-/* Глобальные имена классов для компонентов thinking (строковые className внутри BrainChainView / AiThinkingUI). */
-.app-thinking-drawer-title {
+/* Кнопки/заголовки внутри контента drawer (общие с AppLayout, без глобальных имён) */
+.drawerTitle {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
   color: #1e3a5f;
 }
 
-.app-thinking-drawer-exit {
+.drawerTitleSpaced {
+  margin-bottom: 1rem;
+}
+
+.drawerExit {
   margin-top: 1rem;
   padding: 8px 16px;
   font-size: 0.875rem;
@@ -17,11 +21,11 @@
   cursor: pointer;
 }
 
-.app-thinking-drawer-exit--success {
+.drawerExitSuccess {
   color: #16a34a;
 }
 
-.app-thinking-drawer-exit:disabled {
+.drawerExit:disabled {
   background: #e5e7eb;
   color: #9ca3af;
   border-color: #d1d5db;
@@ -29,6 +33,6 @@
   opacity: 0.85;
 }
 
-.app-thinking-drawer-exit:hover {
+.drawerExit:hover {
   background: #e2e8f0;
 }

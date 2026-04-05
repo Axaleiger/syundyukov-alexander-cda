@@ -3,7 +3,7 @@ import styles from './SecondarySidebar.module.css'
 
 import { useAppStore } from '../../../core/store/appStore'
 
-import { SCENARIO_STAGE_FILTERS } from '../../../shared/data/scenariosData'
+import { SCENARIO_STAGE_FILTERS } from '../../../core/data/static/scenariosData'
 
 const ADMIN_SUB_TABS = [
     { id: 'roles',label: 'Ролевая модель' },

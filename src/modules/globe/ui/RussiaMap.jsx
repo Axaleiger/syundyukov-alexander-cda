@@ -1,9 +1,9 @@
 /** Перенесено из main-stand; не подключено к роутам — архивная копия. */
 import React, { useState, useMemo } from 'react'
 import { ComposableMap, Geographies, Geography, Annotation, ZoomableGroup, Line } from 'react-simple-maps'
-import mapPointsData from '../../../shared/data/mapPoints.json'
-import chainsData from '../../../shared/data/chains.json'
-import { BUDGET_BY_ASSET, budgetToColor, getAssetRegionKey } from '../../../shared/data/mapBudgetData'
+import mapPointsData from '../../../core/data/static/mapPoints.json'
+import chainsData from '../../../core/data/static/chains.json'
+import { BUDGET_BY_ASSET, budgetToColor, getAssetRegionKey } from '../../../core/data/static/mapBudgetData'
 import './RussiaMap.css'
 
 const worldAtlasUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json'

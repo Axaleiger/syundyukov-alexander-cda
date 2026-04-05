@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { getCdPageInfo } from '../../../shared/data/cdEmblems'
+import { getCdPageInfo } from '../../../core/data/static/cdEmblems'
 import './CDPage.css'
 
 const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')

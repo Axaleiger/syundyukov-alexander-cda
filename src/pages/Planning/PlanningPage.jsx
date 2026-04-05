@@ -6,7 +6,7 @@ import BPMBoard from "../../modules/planning/ui/BPMBoard"
 import { getBoardIdForAsset } from "../../modules/planning/lib/planningHelpers"
 import { useAppStore } from "../../core/store/appStore"
 import { bpmToMermaid } from "../../modules/planning/lib/bpmToMermaid"
-import mapPointsData from "../../shared/data/mapPoints.json"
+import mapPointsData from "../../core/data/static/mapPoints.json"
 
 export function PlanningPage() {
 	const navigate = useNavigate()
