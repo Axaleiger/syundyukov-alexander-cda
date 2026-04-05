@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { loadFunnelFromExcel, buildFunnelFromEntities } from '../../../../core/data/static/loadFunnelFromExcel'
-import {
-  getEntityLabel as defaultGetEntityLabel,
-} from '../../../../core/data/static/funnelEntities'
+import { useFunnelData } from '../../model/useFunnelData'
 import { CASE_TREE_STEPS } from './hypercube3DCaseTree'
 import { HypercubeLeverControls } from './HypercubeLeverControls'
 import { HypercubeInfoPanel } from './HypercubeInfoPanel'
@@ -14,6 +11,7 @@ function toMillions(pct, scale) {
 }
 
 function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
+  const { pointsPerLevel, getEntityLabel } = useFunnelData()
   const [npv, setNpv] = useState(50)
   const [reserves, setReserves] = useState(50)
   const [extraction, setExtraction] = useState(50)
@@ -22,7 +20,6 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
   const [filterPlanePoint, setFilterPlanePoint] = useState(null)
   const [filterByStatusKey, setFilterByStatusKey] = useState(null)
   const [filterVariantType, setFilterVariantType] = useState(null)
-  const [getEntityLabel, setGetEntityLabel] = useState(() => defaultGetEntityLabel)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showRisks, setShowRisks] = useState(false)
   const cubeCanvasRef = useRef(null)
@@ -39,15 +36,6 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
       setSelectedPlanePoint({ levelIndex, pointIndex })
     }
   }, [filterPlanePoint])
-
-  useEffect(() => {
-    loadFunnelFromExcel()
-      .then(buildFunnelFromEntities)
-      .then((built) => {
-        if (built && built.getEntityLabel) setGetEntityLabel(() => built.getEntityLabel)
-      })
-      .catch(() => {})
-  }, [])
 
   const [caseTreeRevealStep, setCaseTreeRevealStep] = useState(-1)
 
@@ -96,6 +84,7 @@ function Hypercube3D({ onOpenBpm, highlightCaseTree }) {
     npv,
     reserves,
     extraction,
+    pointsPerLevel,
     onPointClick: setSelectedVariantId,
     selectedVariantId,
     onCloseVariant: closeFunnel,

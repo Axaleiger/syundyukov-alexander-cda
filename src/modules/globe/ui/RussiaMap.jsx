@@ -1,9 +1,7 @@
 /** Перенесено из main-stand; не подключено к роутам — архивная копия. */
 import React, { useState, useMemo } from 'react'
 import { ComposableMap, Geographies, Geography, Annotation, ZoomableGroup, Line } from 'react-simple-maps'
-import mapPointsData from '../../../core/data/static/mapPoints.json'
-import chainsData from '../../../core/data/static/chains.json'
-import { BUDGET_BY_ASSET, budgetToColor, getAssetRegionKey } from '../../../core/data/static/mapBudgetData'
+import { useMapGlobeData } from '../model/useMapGlobeData'
 import './RussiaMap.css'
 
 const worldAtlasUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json'
@@ -23,28 +21,6 @@ const CF_POINTS = [
   { id: 'messoyakha-m', coords: [79.5, 71], name: 'Мессояха (м.)' },
   { id: 'chayandinskoe', coords: [118, 62], name: 'Чаяндинское' },
 ]
-const CF_ARROWS = [
-  { from: 'do-megion', to: 'do-noyabrsk', cf: 185 },
-  { from: 'do-yamal', to: 'do-zapolyarye', cf: 142 },
-  { from: 'do-orenburg', to: 'do-tomsk', cf: 98 },
-  { from: 'do-messoyakha', to: 'do-meretoyakha', cf: 167 },
-  { from: 'do-noyabrsk', to: 'do-meretoyakha', cf: 124 },
-  { from: 'do-zapolyarye', to: 'do-messoyakha', cf: 89 },
-  { from: 'do-tomsk', to: 'do-megion', cf: 76 },
-  { from: 'do-megion', to: 'do-zapolyarye', cf: 112 },
-  { from: 'do-noyabrsk', to: 'do-yamal', cf: 156 },
-  { from: 'do-meretoyakha', to: 'do-yamal', cf: 203 },
-  { from: 'do-meretoyakha', to: 'novy-port', cf: 118 },
-  { from: 'do-yamal', to: 'messoyakha-m', cf: 95 },
-  { from: 'do-noyabrsk', to: 'do-megion', cf: 134 },
-  { from: 'prirazlomnoe', to: 'do-orenburg', cf: 88 },
-  { from: 'novy-port', to: 'do-meretoyakha', cf: 156 },
-  { from: 'do-megion', to: 'do-tomsk', cf: 67 },
-  { from: 'chayandinskoe', to: 'do-tomsk', cf: 142 },
-  { from: 'do-zapolyarye', to: 'do-noyabrsk', cf: 178 },
-  { from: 'do-messoyakha', to: 'do-yamal', cf: 92 },
-  { from: 'do-orenburg', to: 'do-megion', cf: 76 },
-]
 function getCFArrowCoords(arr) {
   const fromP = CF_POINTS.find((p) => p.id === arr.from)
   const toP = CF_POINTS.find((p) => p.id === arr.to)
@@ -58,17 +34,7 @@ function cfLabelOffset(i, from, to) {
   const dy = -Math.sin(perp) * (12 + (i % 4) * 3) * sign
   return { dx: Math.round(dx * 10) / 10, dy: Math.round(dy * 10) / 10 }
 }
-const cfArrowsResolved = CF_ARROWS.map(getCFArrowCoords).filter(Boolean)
-const cfArrowsMidpoints = cfArrowsResolved.map((a) => [
-  (a.from[0] + a.to[0]) / 2,
-  (a.from[1] + a.to[1]) / 2,
-])
 const LABEL_OVERLAP_DEG = 1.8
-const cfLabelOverlaps = cfArrowsMidpoints.map((mid, i) =>
-  cfArrowsMidpoints.some(
-    (other, j) => i !== j && Math.hypot(mid[0] - other[0], mid[1] - other[1]) < LABEL_OVERLAP_DEG
-  )
-)
 function CFArrowsLayer({ show, arrows, hoveredIndex, setHoveredIndex }) {
   if (!show) return null
   return (
@@ -123,6 +89,34 @@ function getCdPageUrl(nodeName) {
 }
 
 function RussiaMap({ onAssetSelect }) {
+  const {
+    mapPointsData,
+    chainsData,
+    cfArrows: CF_ARROWS,
+    budgetByAsset: BUDGET_BY_ASSET,
+    budgetToColor,
+    getAssetRegionKey,
+  } = useMapGlobeData()
+
+  const cfArrowsResolved = useMemo(
+    () => CF_ARROWS.map(getCFArrowCoords).filter(Boolean),
+    [CF_ARROWS],
+  )
+  const cfArrowsMidpoints = useMemo(
+    () =>
+      cfArrowsResolved.map((a) => [(a.from[0] + a.to[0]) / 2, (a.from[1] + a.to[1]) / 2]),
+    [cfArrowsResolved],
+  )
+  const cfLabelOverlaps = useMemo(
+    () =>
+      cfArrowsMidpoints.map((mid, i) =>
+        cfArrowsMidpoints.some(
+          (other, j) => i !== j && Math.hypot(mid[0] - other[0], mid[1] - other[1]) < LABEL_OVERLAP_DEG,
+        ),
+      ),
+    [cfArrowsMidpoints],
+  )
+
   const [selectedId, setSelectedId] = useState(null)
   const [hoveredId, setHoveredId] = useState(null)
   const [showBudgetFill, setShowBudgetFill] = useState(false)

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { loadLifecycleFromExcel } from '../../../../core/data/static/loadLifecycleExcel'
-import { getLifecycleStreamData } from '../../../../core/data/static/lifecycleData'
+import React, { useState, useMemo } from 'react'
+import { useLifecycleData } from '../../model/useLifecycleData'
 import { stages } from './lifecycleChartConstants'
 import { buildCumulative, smoothSeries } from './lifecycleChartData'
 import { LifecycleStreamGraphPanel } from './LifecycleStreamGraphPanel'
@@ -8,17 +7,10 @@ import { LifecycleStagesPanel } from './LifecycleStagesPanel'
 import styles from './LifecycleChart.module.css'
 
 function LifecycleChart({ onStageClick, faceSeed = 0 }) {
+  const { streamData } = useLifecycleData()
   const [selectedStage, setSelectedStage] = useState(null)
-  const [streamData, setStreamData] = useState(null)
   const [viewMode, setViewMode] = useState('sum')
   const [legendOnly, setLegendOnly] = useState(null)
-
-  useEffect(() => {
-    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
-    loadLifecycleFromExcel(base)
-      .then(setStreamData)
-      .catch(() => setStreamData(getLifecycleStreamData()))
-  }, [])
 
   const chartData = useMemo(() => {
     if (!streamData || streamData.length === 0) return []

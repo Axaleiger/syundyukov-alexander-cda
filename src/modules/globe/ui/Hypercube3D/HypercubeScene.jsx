@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { OrbitControls, Html } from '@react-three/drei'
 import * as THREE from 'three'
-import { POINTS_PER_LEVEL } from '../../../../core/data/static/funnelEntities'
 import { VARIANT_COLORS } from './hypercube3DLegendData'
 import { CASE_TREE_STEPS } from './hypercube3DCaseTree'
 import overlayStyles from './HypercubeScene.module.css'
@@ -34,18 +33,18 @@ function getPlaneY(levelIndex) {
   return -CUBE_HALF - 0.75 - levelIndex * PLANE_SPACING
 }
 
-function getPlaneSize(levelIndex) {
-  const n = POINTS_PER_LEVEL[levelIndex]
+function getPlaneSize(pointsPerLevel, levelIndex) {
+  const n = pointsPerLevel[levelIndex]
   const cols = Math.ceil(Math.sqrt(n))
   const cell = 0.095
   const size = Math.max(0.55, cols * cell)
   return size
 }
 
-function getPlanePointPosition(levelIndex, pointIndex) {
+function getPlanePointPosition(pointsPerLevel, levelIndex, pointIndex) {
   const y = getPlaneY(levelIndex)
-  const n = POINTS_PER_LEVEL[levelIndex]
-  const size = getPlaneSize(levelIndex)
+  const n = pointsPerLevel[levelIndex]
+  const size = getPlaneSize(pointsPerLevel, levelIndex)
   const half = size / 2 - 0.02
   const cols = Math.ceil(Math.sqrt(n))
   const rows = Math.ceil(n / cols)
@@ -436,10 +435,10 @@ function getPointRadius(n) {
   return n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025
 }
 
-function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
+function FunnelLevel({ pointsPerLevel, levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50 }) {
   const planeY = getPlaneY(levelIndex)
-  const size = getPlaneSize(levelIndex)
-  const n = POINTS_PER_LEVEL[levelIndex]
+  const size = getPlaneSize(pointsPerLevel, levelIndex)
+  const n = pointsPerLevel[levelIndex]
   const planeGeom = useMemo(() => new THREE.PlaneGeometry(size, size), [size])
   const points = useMemo(() => Array.from({ length: n }, (_, i) => i), [n])
   const isSelected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex
@@ -474,7 +473,7 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
 
   const selectedPointIdx = isSelected && selectedPlanePoint ? selectedPlanePoint.pointIndex : null
   const cylinderSegments = selectedPointIdx != null ? getCylinderSegments(levelIndex, selectedPointIdx) : []
-  const [pointX, , pointZ] = selectedPointIdx != null ? getPlanePointPosition(levelIndex, selectedPointIdx) : [0, 0, 0]
+  const [pointX, , pointZ] = selectedPointIdx != null ? getPlanePointPosition(pointsPerLevel, levelIndex, selectedPointIdx) : [0, 0, 0]
   const cylinderBaseY = POINT_SPHERE_TOP
   const pointRadius = getPointRadius(n)
   const [hoveredSegmentIndex, setHoveredSegmentIndex] = useState(null)
@@ -497,7 +496,7 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
       </mesh>
       {points.map((idx) => {
         if (!showPoint(idx)) return null
-        const [x, , z] = getPlanePointPosition(levelIndex, idx)
+        const [x, , z] = getPlanePointPosition(pointsPerLevel, levelIndex, idx)
         const selected = selectedPlanePoint && selectedPlanePoint.levelIndex === levelIndex && selectedPlanePoint.pointIndex === idx
         const planeStatus = getPlanePointStatus(levelIndex, idx)
         const pointColor = selected ? (PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok) : BASE_PLANE_POINT_COLOR
@@ -592,17 +591,17 @@ function FunnelLevel({ levelIndex, levelTitle, color, onPointClick, onOpenBpm, s
   )
 }
 
-function getCaseTreePosition(key) {
+function getCaseTreePosition(pointsPerLevel, key) {
   if (key === 'cube') return getVariantBasePosition(0)
-  return getPlanePointPosition(key[0], key[1])
+  return getPlanePointPosition(pointsPerLevel, key[0], key[1])
 }
 
-function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50, highlightCaseTree, caseTreeRevealStep }) {
-  const n0 = POINTS_PER_LEVEL[0]
+function FunnelOfScenarios({ pointsPerLevel, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, onOpenBpm, getEntityLabel, showRisks, npv = 50, reserves = 50, extraction = 50, highlightCaseTree, caseTreeRevealStep }) {
+  const n0 = pointsPerLevel[0]
   const fullCaseTreeSteps = useMemo(() => {
     const steps = [...CASE_TREE_STEPS]
-    const n1 = POINTS_PER_LEVEL[1] || 10
-    const n2 = POINTS_PER_LEVEL[2] || 30
+    const n1 = pointsPerLevel[1] || 10
+    const n2 = pointsPerLevel[2] || 30
     const toLevel1 = Array.from({ length: Math.min(6, n1) }, (_, k) => ({ from: [0, 1], to: [1, k] }))
     steps.push(toLevel1)
     const toLevel2 = []
@@ -611,68 +610,68 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
     }
     steps.push(toLevel2)
     return steps
-  }, [])
+  }, [pointsPerLevel])
 
   const caseTreeSegments = useMemo(() => {
     if (!highlightCaseTree || caseTreeRevealStep == null || caseTreeRevealStep < 0) return []
     const out = []
     for (let s = 0; s <= Math.min(caseTreeRevealStep, fullCaseTreeSteps.length - 1); s++) {
       fullCaseTreeSteps[s].forEach((seg) => {
-        const start = getCaseTreePosition(seg.from)
-        const end = getCaseTreePosition(seg.to)
+        const start = getCaseTreePosition(pointsPerLevel, seg.from)
+        const end = getCaseTreePosition(pointsPerLevel, seg.to)
         out.push({ start, end })
       })
     }
     return out
-  }, [highlightCaseTree, caseTreeRevealStep, fullCaseTreeSteps])
+  }, [highlightCaseTree, caseTreeRevealStep, fullCaseTreeSteps, pointsPerLevel])
 
   const fullCaseTreeSegmentsAll = useMemo(() => {
     const out = []
     fullCaseTreeSteps.forEach((stepList) => {
       stepList.forEach((seg) => {
         out.push({
-          start: getCaseTreePosition(seg.from),
-          end: getCaseTreePosition(seg.to),
+          start: getCaseTreePosition(pointsPerLevel, seg.from),
+          end: getCaseTreePosition(pointsPerLevel, seg.to),
         })
       })
     })
     return out
-  }, [fullCaseTreeSteps])
+  }, [fullCaseTreeSteps, pointsPerLevel])
 
   const fluxCurvesCubeToL0 = useMemo(() => {
     return Array.from({ length: Math.min(NUM_FLUX_CURVES, n0 * 7) }, (_, i) => {
       const idx = (i * 17) % NUM_POINTS
       const start = getVariantBasePosition(idx)
-      const end = getPlanePointPosition(0, idx % n0)
+      const end = getPlanePointPosition(pointsPerLevel, 0, idx % n0)
       return { start: [start[0], start[1], start[2]], end }
     })
-  }, [n0])
+  }, [n0, pointsPerLevel])
 
   const fluxCurvesBetweenLevels = useMemo(() => {
     const pairs = []
     for (let l = 0; l < FUNNEL_LEVELS.length - 1; l++) {
-      const nFrom = POINTS_PER_LEVEL[l]
-      const nTo = POINTS_PER_LEVEL[l + 1]
+      const nFrom = pointsPerLevel[l]
+      const nTo = pointsPerLevel[l + 1]
       for (let j = 0; j < nFrom; j++) {
         const jTo = Math.floor((j * nTo) / nFrom) % nTo
         pairs.push({
-          start: getPlanePointPosition(l, j),
-          end: getPlanePointPosition(l + 1, jTo),
+          start: getPlanePointPosition(pointsPerLevel, l, j),
+          end: getPlanePointPosition(pointsPerLevel, l + 1, jTo),
         })
       }
     }
     return pairs
-  }, [])
+  }, [pointsPerLevel])
 
   const selectedPathPoints = useMemo(() => {
     if (selectedVariantId == null && !highlightCaseTree) return []
     const pts = [getVariantBasePosition(selectedVariantId ?? 0)]
     for (let l = 0; l < FUNNEL_LEVELS.length; l++) {
-      const idx = (selectedVariantId ?? 0) % POINTS_PER_LEVEL[l]
-      pts.push(getPlanePointPosition(l, idx))
+      const idx = (selectedVariantId ?? 0) % pointsPerLevel[l]
+      pts.push(getPlanePointPosition(pointsPerLevel, l, idx))
     }
     return pts
-  }, [selectedVariantId, highlightCaseTree])
+  }, [selectedVariantId, highlightCaseTree, pointsPerLevel])
 
   const showFunnel = selectedVariantId != null || highlightCaseTree
   if (!showFunnel) return null
@@ -708,6 +707,7 @@ function FunnelOfScenarios({ selectedVariantId, onCloseVariant, selectedPlanePoi
       {FUNNEL_LEVELS.map((level, idx) => (
         <FunnelLevel
           key={level.title}
+          pointsPerLevel={pointsPerLevel}
           levelIndex={idx}
           levelTitle={level.title}
           color={PLANE_LEVEL_COLORS[idx]}
@@ -739,7 +739,7 @@ const axisLabelPositions = [
   { position: [AXIS_ORIGIN, AXIS_ORIGIN, AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
-export function HypercubeR3FScene({ npv, reserves, extraction, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep }) {
+export function HypercubeR3FScene({ npv, reserves, extraction, pointsPerLevel, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
 
   return (
@@ -766,6 +766,7 @@ export function HypercubeR3FScene({ npv, reserves, extraction, onPointClick, onO
       </group>
 
       <FunnelOfScenarios
+        pointsPerLevel={pointsPerLevel}
         selectedVariantId={selectedVariantId}
         onCloseVariant={onCloseVariant}
         selectedPlanePoint={selectedPlanePoint}

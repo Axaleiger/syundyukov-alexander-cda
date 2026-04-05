@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { SCENARIO_STAGE_FILTERS, PERIOD_OPTIONS, generateScenarios, filterScenariosByPeriod, SCENARIO_DIRECTIONS } from '../../../core/data/static/scenariosData'
+import { useScenariosData } from '../model/useScenariosData'
 import './ScenariosList.css'
-
-const ALL_SCENARIOS = generateScenarios()
 
 const SUBCATEGORY_TITLES = ['Название подкатегории', 'Название подкатегории', 'Название подкатегории', 'Название подкатегории']
 
@@ -12,6 +10,14 @@ function scenarioDisplayName(name) {
 }
 
 function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onStageFilterToggle, onScenarioClick }) {
+  const {
+    scenarioStageFilters: SCENARIO_STAGE_FILTERS,
+    periodOptions: PERIOD_OPTIONS,
+    scenarioDirections: SCENARIO_DIRECTIONS,
+    allScenarios: ALL_SCENARIOS,
+    filterScenariosByPeriod,
+  } = useScenariosData()
+
   const [internalFilters, setInternalFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
   const stageFilters = controlledFilters != null ? controlledFilters : internalFilters
   const setStageFilters = onStageFilterToggle != null ? (name) => onStageFilterToggle(name) : (name) => setInternalFilters((prev) => ({ ...prev, [name]: !prev[name] }))
@@ -34,7 +40,10 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     return ALL_SCENARIOS.filter((s) => effectiveFilters[s.stageType])
   }, [effectiveFilters])
 
-  const filteredByPeriod = useMemo(() => filterScenariosByPeriod(filteredByStage, period), [filteredByStage, period])
+  const filteredByPeriod = useMemo(
+    () => filterScenariosByPeriod(filteredByStage, period),
+    [filteredByStage, period, filterScenariosByPeriod],
+  )
   const filteredScenarios = useMemo(() => filteredByPeriod, [filteredByPeriod])
 
   return (

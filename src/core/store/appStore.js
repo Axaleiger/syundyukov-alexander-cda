@@ -1,6 +1,8 @@
 import { create } from "zustand"
 import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap"
-import { SCENARIO_STAGE_FILTERS } from "../data/static/scenariosData"
+import { getRepositories } from "../data/repositories/registry.js"
+
+const SCENARIO_STAGE_FILTERS = getRepositories().scenarios.getScenarioStageFilters()
 
 export const useAppStore = create((set) => ({
 	// UI
@@ -26,54 +28,6 @@ export const useAppStore = create((set) => ({
 			scenarioComparisonRevision: s.scenarioComparisonRevision + 1,
 		})),
 
-	// thinking
-	thinkingPanelOpen: false,
-	setThinkingPanelOpen: (v) => set({ thinkingPanelOpen: v }),
-
-	thinkingSteps: [],
-	setThinkingSteps: (v) =>
-		set((state) => ({
-			thinkingSteps: typeof v === "function" ? v(state.thinkingSteps) : v,
-		})),
-
-	thinkingCurrentMessage: "",
-	setThinkingCurrentMessage: (v) => set({ thinkingCurrentMessage: v }),
-
-	thinkingPaused: false,
-	setThinkingPaused: (v) => set({ thinkingPaused: v }),
-
-	thinkingConfirmPhase: null,
-	setThinkingConfirmPhase: (v) => set({ thinkingConfirmPhase: v }),
-
-	thinkingAwaitingConfirm: false,
-	setThinkingAwaitingConfirm: (v) => set({ thinkingAwaitingConfirm: v }),
-
-	thinkingGraphNodes: [],
-	setThinkingGraphNodes: (v) =>
-		set((state) => ({
-			thinkingGraphNodes:
-				typeof v === "function" ? v(state.thinkingGraphNodes) : v,
-		})),
-
-	resetThinkingChain: () => set({ thinkingGraphNodes: [] }),
-
-	brainPanelOpenKey: 0,
-	setBrainPanelOpenKey: (v) =>
-		set((state) => ({
-			brainPanelOpenKey:
-				typeof v === "function" ? v(state.brainPanelOpenKey) : v,
-		})),
-
-	selectedDecisionPathId: null,
-	setSelectedDecisionPathId: (v) => set({ selectedDecisionPathId: v }),
-
-	appliedDecisionPathId: null,
-	setAppliedDecisionPathId: (v) => set({ appliedDecisionPathId: v }),
-
-	// results
-	resultsDashboardFocus: null,
-	setResultsDashboardFocus: (v) => set({ resultsDashboardFocus: v }),
-
 	// face / AI
 	hypercubeCaseIntro: false,
 	setHypercubeCaseIntro: (v) => set({ hypercubeCaseIntro: v }),
@@ -96,10 +50,6 @@ export const useAppStore = create((set) => ({
 
 	scenariosStageFilter: null,
 	setScenariosStageFilter: (v) => set({ scenariosStageFilter: v }),
-
-	// admin
-	adminSubTab: "roles",
-	setAdminSubTab: (v) => set({ adminSubTab: v }),
 
 	// ---------- PLANNING ----------
 

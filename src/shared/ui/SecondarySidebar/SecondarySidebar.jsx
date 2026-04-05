@@ -2,8 +2,8 @@ import { useLocation } from 'react-router-dom'
 import styles from './SecondarySidebar.module.css'
 
 import { useAppStore } from '../../../core/store/appStore'
-
-import { SCENARIO_STAGE_FILTERS } from '../../../core/data/static/scenariosData'
+import { useAdminStore } from '../../../modules/admin/model/adminStore'
+import { useScenariosData } from '../../../modules/scenarios/model/useScenariosData'
 
 const ADMIN_SUB_TABS = [
     { id: 'roles',label: 'Ролевая модель' },
@@ -16,15 +16,15 @@ const ADMIN_SUB_TABS = [
 export function SecondarySidebar() {
     const location = useLocation()
     const path = location.pathname
+    const { scenarioStageFilters: SCENARIO_STAGE_FILTERS } = useScenariosData()
 
     const {
         scenarioStageFilters,
         setScenarioStageFilters,
         scenariosStageFilter,
         setScenariosStageFilter,
-        adminSubTab,
-        setAdminSubTab,
     } = useAppStore()
+    const { adminSubTab, setAdminSubTab } = useAdminStore()
 
     if (path.startsWith('/scenarios')) {
         return (

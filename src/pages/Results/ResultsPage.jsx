@@ -1,8 +1,8 @@
 import ResultsTab from '../../modules/results/ui/ResultsTab'
-import { useAppStore } from '../../core/store/appStore'
+import { useResultsStore } from '../../modules/results/model/resultsStore'
 
 export const ResultPage = () => {
-    const { resultsDashboardFocus } = useAppStore()
+    const { resultsDashboardFocus } = useResultsStore()
 
     return (
         <ResultsTab

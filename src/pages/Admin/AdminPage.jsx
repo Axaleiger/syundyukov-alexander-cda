@@ -1,11 +1,8 @@
 import AdminTab from '../../modules/admin/ui/AdminTab'
-import { useAppStore } from '../../core/store/appStore'
+import { useAdminStore } from '../../modules/admin/model/adminStore'
 
 export function AdminPage() {
-    const {
-        adminSubTab,
-        setAdminSubTab,
-    } = useAppStore()
+    const { adminSubTab } = useAdminStore()
 
     return <AdminTab activeSub={adminSubTab} />
 }

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { getAssetScenarioComparisonDemo, SCENARIO_METRIC_DEFS } from '../../../core/data/demo/assetScenarioComparison.demo'
+import React from 'react'
+import { useAssetScenarioComparison } from './model/useAssetScenarioComparison'
 import { ScenarioMetricRow } from './ScenarioMetricRow'
 import styles from './RightPanel.module.css'
 
@@ -30,7 +30,7 @@ const DECISIONS = [
 ]
 
 function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
-  const comparison = useMemo(() => getAssetScenarioComparisonDemo(assetId), [assetId])
+  const { metricDefs: SCENARIO_METRIC_DEFS, comparison } = useAssetScenarioComparison(assetId)
   const showAiDeltas = scenarioComparisonRevision > 0
 
   return (

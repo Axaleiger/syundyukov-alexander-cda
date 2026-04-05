@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Globe from 'react-globe.gl'
 import * as THREE from 'three'
-import mapPointsData from '../../../core/data/static/mapPoints.json'
-import { CF_ARROWS } from '../../../core/data/static/cfArrows'
-import { getBudgetForAssetId } from '../../../core/data/static/mapBudgetData'
-import chainsData from '../../../core/data/static/chains.json'
+import { useMapGlobeData } from '../model/useMapGlobeData'
 import styles from './RussiaGlobe.module.css'
 import { simplifyFeatures } from '../../../shared/lib/simplifyGeoJsonRing'
 import { geojsonFeaturesToPaths } from '../../../shared/lib/geojsonToPaths'
@@ -74,6 +71,8 @@ function canCreateWebGLContext() {
 }
 
 export default function RussiaGlobe({ onAssetSelect }) {
+  const { mapPointsData, cfArrows: CF_ARROWS, chainsData, getBudgetForAssetId } = useMapGlobeData()
+
   const globeRef = useRef(null)
   const containerRef = useRef(null)
   const arrowGeomRef = useRef(null)
@@ -330,7 +329,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
         label: `${from.name} → ${to.name}`,
       }
     }).filter(Boolean)
-  }, [])
+  }, [mapPointsData, CF_ARROWS])
 
   // Arrowheads for CF arcs (3D cones placed at arc end).
   const arrowHeadsData = useMemo(() => {
@@ -373,7 +372,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
 
   const budgetZoneFeatures = useMemo(
     () => buildAssetVoronoiFeatures(mapPointsData, ASSET_VORONOI_BBOX, getBudgetForAssetId),
-    [],
+    [mapPointsData, getBudgetForAssetId],
   )
 
   const polygonCapColor = useCallback((feat) => {
@@ -399,7 +398,7 @@ export default function RussiaGlobe({ onAssetSelect }) {
       { ...p, __ringIdx: 0 },
       { ...p, __ringIdx: 1 },
     ])
-  }, [])
+  }, [mapPointsData])
 
   const polygonLabel = useCallback((feat) => {
     const name = feat?.properties?.name ?? 'Актив'

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS, petalColorFromCoverage } from '../../../core/data/static/rosesData'
+import { useRosesData } from '../model/useRosesData'
 import styles from './WindRose.module.css'
 
 const RADIUS = 100
@@ -19,6 +19,7 @@ function WindRose({
   onSegmentClick,
   type = 'left',
 }) {
+  const { petalColorFromCoverage } = useRosesData()
   const numItems = data.length
   const angleStep = (2 * Math.PI) / numItems
 
@@ -198,5 +199,3 @@ function WindRose({
 }
 
 export default WindRose
-
-export { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS }

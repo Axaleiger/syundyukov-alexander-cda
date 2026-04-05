@@ -2,6 +2,9 @@ import React, { Suspense, useEffect, useCallback, useMemo } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import styles from "./AppLayout.module.css"
 import { useAppStore } from "../../core/store/appStore"
+import { useResultsStore } from "../../modules/results/model/resultsStore"
+import { useAdminStore } from "../../modules/admin/model/adminStore"
+import { useThinkingStore } from "../../modules/thinking/model/thinkingStore"
 import CDPage from "../../modules/cd/ui/CDPage"
 import BPMBoard from "../../modules/planning/ui/BPMBoard"
 import { getBoardIdForAsset } from "../../modules/planning/lib/planningHelpers"
@@ -19,20 +22,6 @@ export const AppLayout = () => {
 	const location = useLocation()
 	const navigate = useNavigate()
 	const {
-		cdPageNode,
-		setCdPageNode,
-		showBpm,
-		setShowBpm,
-		bpmHighlight,
-		setBpmHighlight,
-		selectedScenarioName,
-		selectedAssetId,
-		bpmStages,
-		bpmTasks,
-		bpmCommand,
-		aiMode,
-		setAiMode,
-		setBpmCommand,
 		thinkingPanelOpen,
 		setThinkingPanelOpen,
 		thinkingSteps,
@@ -47,25 +36,43 @@ export const AppLayout = () => {
 		setThinkingConfirmPhase,
 		thinkingGraphNodes,
 		setThinkingGraphNodes,
-		setScenarioComparisonRevision,
 		brainPanelOpenKey,
 		setBrainPanelOpenKey,
 		selectedDecisionPathId,
 		setSelectedDecisionPathId,
 		appliedDecisionPathId,
 		setAppliedDecisionPathId,
+	} = useThinkingStore()
+
+	const {
+		cdPageNode,
+		setCdPageNode,
+		showBpm,
+		setShowBpm,
+		bpmHighlight,
+		setBpmHighlight,
+		selectedScenarioName,
+		selectedAssetId,
+		bpmStages,
+		bpmTasks,
+		bpmCommand,
+		aiMode,
+		setAiMode,
+		setBpmCommand,
+		setScenarioComparisonRevision,
 		flowCode,
 		setFlowCode,
 		openConfiguratorFromPlanning,
 		setOpenConfiguratorFromPlanning,
 		setConfiguratorInitialNodes,
 		setConfiguratorInitialEdges,
-		setResultsDashboardFocus,
 		setHypercubeCaseIntro,
 		setConfiguratorNodeCommand,
-		setAdminSubTab,
 		setServicePageName,
 	} = useAppStore()
+
+	const setResultsDashboardFocus = useResultsStore((s) => s.setResultsDashboardFocus)
+	const setAdminSubTab = useAdminStore((s) => s.setAdminSubTab)
 
 	useLegacyHashNavigation({
 		location,

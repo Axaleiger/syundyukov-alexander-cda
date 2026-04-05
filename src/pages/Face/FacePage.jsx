@@ -1,16 +1,12 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-import { DEFAULT_OBJECTS, OBJECTS_BY_STAGE, PRODUCTION_STAGES } from "../../core/data/static/rosesData"
-import { SCENARIO_STAGE_FILTERS } from "../../core/data/static/scenariosData"
-import mapPointsData from "../../core/data/static/mapPoints.json"
-import { getAssetStatus, getAssetStatusLabel, getAssetStatusIcon } from "../../core/data/static/assetStatus"
+import { useFaceData } from "../../modules/face/model/useFaceData"
 import RussiaGlobe from "../../modules/globe/ui/RussiaGlobe"
 import WindRose from "../../modules/globe/ui/WindRose"
 import Hypercube3D from "../../modules/globe/ui/Hypercube3D/index.js"
 import LifecycleChart from "../../modules/globe/ui/LifecycleChart/index.js"
 // Секция cash flow отключена в UI (как в main-stand); импорт оставлен для будущего включения блока ниже.
-// eslint-disable-next-line no-unused-vars -- см. закомментированный <CashFlowChart /> ниже
 import CashFlowChart from "../../modules/face/ui/CashFlowChart"
 import RightPanel from "../../widgets/right-panel/RightPanel/index.js"
 
@@ -19,6 +15,16 @@ import { useAppStore } from "../../core/store/appStore"
 
 export const FacePage = () => {
 	const navigate = useNavigate()
+	const {
+		mapPointsData,
+		productionStages: PRODUCTION_STAGES,
+		objectsByStage: OBJECTS_BY_STAGE,
+		defaultObjects: DEFAULT_OBJECTS,
+		scenarioStageFilters: SCENARIO_STAGE_FILTERS,
+		getAssetStatus,
+		getAssetStatusLabel,
+		getAssetStatusIcon,
+	} = useFaceData()
 	const {
 		selectedAssetId,
 		setSelectedAssetId,
@@ -41,7 +47,7 @@ export const FacePage = () => {
 
 	const selectedAssetPoint = useMemo(
 		() => (selectedAssetId ? mapPointsData.find((p) => p.id === selectedAssetId) : null),
-		[selectedAssetId],
+		[selectedAssetId, mapPointsData],
 	)
 	const assetStatus = selectedAssetId ? getAssetStatus(selectedAssetId) : null
 	const assetStatusLabel = assetStatus ? getAssetStatusLabel(assetStatus) : null
@@ -66,7 +72,7 @@ export const FacePage = () => {
 			value: Math.max(50, Math.min(99, item.value + r(i, 0))),
 			coverage: Math.max(50, Math.min(99, (item.coverage || item.value) + r(i, 1))),
 		}))
-	}, [selectedLeftStageIndex, faceSeed])
+	}, [selectedLeftStageIndex, faceSeed, OBJECTS_BY_STAGE, PRODUCTION_STAGES, DEFAULT_OBJECTS])
 
 	const leftRoseData = useMemo(() => {
 		if (faceSeed === 0) return PRODUCTION_STAGES
@@ -76,7 +82,7 @@ export const FacePage = () => {
 			value: Math.max(50, Math.min(99, item.value + r(i, 0))),
 			coverage: Math.max(50, Math.min(99, (item.coverage || item.value) + r(i, 1))),
 		}))
-	}, [faceSeed])
+	}, [faceSeed, PRODUCTION_STAGES])
 
 	const handleLeftSegmentClick = (index) => {
 		setSelectedLeftStageIndex((prev) => (prev === index ? null : index))
