@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Globe from 'react-globe.gl'
 import * as THREE from 'three'
-import mapPointsData from '../data/mapPoints.json'
-import { CF_ARROWS } from '../data/cfArrows'
-import { getBudgetForAssetId } from '../data/mapBudgetData'
-import chainsData from '../data/chains.json'
+import mapPointsData from '../../../shared/data/mapPoints.json'
+import { CF_ARROWS } from '../../../shared/data/cfArrows'
+import { getBudgetForAssetId } from '../../../shared/data/mapBudgetData'
+import chainsData from '../../../shared/data/chains.json'
 import './RussiaGlobe.css'
-import { simplifyFeatures } from '../lib/simplifyGeoJsonRing'
-import { geojsonFeaturesToPaths } from '../lib/geojsonToPaths'
-import { buildAssetVoronoiFeatures } from '../lib/assetVoronoiZones'
+import { simplifyFeatures } from '../../../shared/lib/simplifyGeoJsonRing'
+import { geojsonFeaturesToPaths } from '../../../shared/lib/geojsonToPaths'
+import { buildAssetVoronoiFeatures } from '../../../shared/lib/assetVoronoiZones'
 
 /** Макс. размер canvas (пиксели) — снижает нагрузку на GPU */
 const MAX_GLOBE_W = 1200

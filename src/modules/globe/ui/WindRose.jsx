@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS, petalColorFromCoverage } from '../data/rosesData'
+import { PRODUCTION_STAGES, OBJECTS_BY_STAGE, DEFAULT_OBJECTS, petalColorFromCoverage } from '../../../shared/data/rosesData'
 import './WindRose.css'
 
 const RADIUS = 100

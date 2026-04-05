@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Customized } from 'recharts'
-import { loadLifecycleFromExcel } from '../data/loadLifecycleExcel'
-import { getLifecycleStreamData } from '../data/lifecycleData'
+import { loadLifecycleFromExcel } from '../../../shared/data/loadLifecycleExcel'
+import { getLifecycleStreamData } from '../../../shared/data/lifecycleData'
 import './LifecycleChart.css'
 
 const CURRENT_YEAR = 2026

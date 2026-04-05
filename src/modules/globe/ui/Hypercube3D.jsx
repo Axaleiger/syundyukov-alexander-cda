@@ -5,8 +5,8 @@ import * as THREE from 'three'
 import {
   POINTS_PER_LEVEL,
   getEntityLabel as defaultGetEntityLabel,
-} from '../data/funnelEntities'
-import { loadFunnelFromExcel, buildFunnelFromEntities } from '../data/loadFunnelFromExcel'
+} from '../../../shared/data/funnelEntities'
+import { loadFunnelFromExcel, buildFunnelFromEntities } from '../../../shared/data/loadFunnelFromExcel'
 import './Hypercube3D.css'
 
 const CUBE_HALF = 1.15
