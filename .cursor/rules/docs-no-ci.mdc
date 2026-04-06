@@ -1,0 +1,11 @@
+---
+description: Не класть в docs/ документацию по CI/GitHub Actions
+globs: docs/**
+alwaysApply: false
+---
+
+# Каталог `docs/`
+
+Сюда не добавляют инструкции по GitHub Actions, секретам CI, деплою на сервер и настройке `workflow` — такие материалы ведут **вне** этой папки (например `GITHUB_ACTIONS_SETUP.md`, `GITHUB_SECRETS.md`, `SERVER_SETUP.md` в домашнем каталоге на сервере или в корне проекта вне `docs/`).
+
+В `docs/` оставляют документацию по продукту/домену (описание проекта, BPM и т.п.).

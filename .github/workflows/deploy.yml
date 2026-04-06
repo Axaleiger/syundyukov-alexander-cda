@@ -1,5 +1,5 @@
 # Деплой на сервер по SSH. Секреты: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH
-# Секреты: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH. Инструкция: docs/GITHUB_ACTIONS_SETUP.md
+# Секреты: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH. Документация CI — вне репозитория (файлы GITHUB_*.md у оператора).
 
 name: Deploy
 
