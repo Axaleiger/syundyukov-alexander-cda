@@ -1,19 +1,18 @@
 # syntax=docker/dockerfile:1
-# Статика фронта + образ nginx:alpine. Конфиг подключается через volume в compose (local/server).
+# Сборка статики из frontend/ + nginx:alpine. Конфиг монтируется в compose.
 
 FROM node:20-alpine AS frontend-build
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY frontend/ .
 ARG VITE_GROQ_API_KEY
 ENV VITE_GROQ_API_KEY=$VITE_GROQ_API_KEY
 RUN npm run build
 
 FROM nginx:alpine
 COPY --from=frontend-build /app/dist /usr/share/nginx/html
-# Fallback, если в compose не смонтирован свой conf
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

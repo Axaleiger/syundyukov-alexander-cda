@@ -1,7 +1,31 @@
-# Сервер 158.160.149.143: nginx + статика, server.conf.
-# Запуск: docker compose -f docker-compose.yml -f docker-compose.server.yml --env-file .env up -d --build
+# Продакшен-сервер: PostgreSQL + FastAPI + nginx (статика из frontend/). Один файл.
+# Запуск: docker compose -f docker-compose.server.yml --env-file .env up -d --build
 
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cda_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-cda}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cda}:${POSTGRES_PASSWORD:-cda_change_me}@db:5432/${POSTGRES_DB:-cda}
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     build:
       context: .
@@ -16,6 +40,8 @@ services:
       - api
     volumes:
       - ./docker/nginx/server.conf:/etc/nginx/conf.d/default.conf:ro
-      # HTTP-01 для Let's Encrypt (IP / shortlived)
       - /var/www/certbot:/var/www/certbot:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
+
+volumes:
+  pgdata:
