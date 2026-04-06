@@ -24,22 +24,11 @@
 
 ---
 
-## Шаг 1. SSH-ключ только для GitHub Actions → сервер
+## Шаг 1. SSH-ключ для GitHub Actions → сервер
 
-На **локальной машине** (не на сервере), отдельная пара ключей:
+Подробная инструкция (генерация пары, `authorized_keys`, что вставлять в секрет): **[GITHUB_SECRETS.md → GitHub Actions SSH key setup](./GITHUB_SECRETS.md#github-actions-ssh-key-setup)**.
 
-```bash
-ssh-keygen -t ed25519 -f ./gha_deploy -N '' -C "github-actions-deploy"
-```
-
-1. Файл **`gha_deploy.pub`** — **одной строкой** в `~/.ssh/authorized_keys` пользователя деплоя на сервере (например `yc-user`).
-2. Содержимое **`gha_deploy`** (приватный ключ, включая `BEGIN` / `END`) — в секрет репозитория **`SSH_PRIVATE_KEY`**.
-
-Проверка с вашего ПК:
-
-```bash
-ssh -i ./gha_deploy yc-user@<SSH_HOST>
-```
+Это ключ **от runner’а GitHub к вашей ВМ**. Отдельно на сервере должен быть настроен доступ к **GitHub для `git pull`** (deploy key или PAT) — см. раздел «Что уже должно быть на сервере» выше.
 
 ---
 
