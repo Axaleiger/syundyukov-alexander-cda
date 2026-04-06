@@ -10,6 +10,8 @@ RUN npm ci
 COPY frontend/ .
 ARG VITE_GROQ_API_KEY
 ENV VITE_GROQ_API_KEY=$VITE_GROQ_API_KEY
+# Vite/rollup на большом бандле упирается в дефолтный heap Node (~2 GiB) — без этого build падает на малопамятных хостах.
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
 
 FROM nginx:alpine
