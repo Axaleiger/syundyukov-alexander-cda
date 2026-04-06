@@ -1,5 +1,7 @@
 # GitHub Actions: автоматический деплой на сервер
 
+Список имён секретов и готовые значения для этого проекта: **[GITHUB_SECRETS.md](./GITHUB_SECRETS.md)**.
+
 Кратко: после настройки секретов и SSH каждый **push** (в том числе после **merge PR**) в выбранные ветки запускает workflow **Deploy**, который по SSH заходит на ВМ, делает `git pull` и поднимает стек `docker compose` с прод-конфигом.
 
 Текущий workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
