@@ -1,0 +1,32 @@
+# Локальная развёртка с HMR: db + api + Vite (без nginx).
+# Фронт: http://localhost:${DEV_PORT:-3000} — API проксируется с /api на FastAPI.
+# Запуск: docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env up --build
+# Остановка: docker compose -f docker-compose.yml -f docker-compose.local.yml down
+
+name: cda-local
+
+services:
+  db:
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+
+  vite:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 3000"
+    ports:
+      - "${DEV_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      VITE_DOCKER: "1"
+      VITE_GROQ_API_KEY: ${VITE_GROQ_API_KEY:-}
+    volumes:
+      - .:/app
+      - vite_node_modules:/app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  pgdata_local:
+  vite_node_modules:

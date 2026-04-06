@@ -30,7 +30,9 @@ yarn-error.log*
 *.swp
 *.swo
 *~
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # Excel lock files
 ~$*.xlsx

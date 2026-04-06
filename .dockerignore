@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.gitignore
+*.md
+.env
+.env.*
+!.env.example
+coverage
+.vscode
+.idea
+.cursor
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.venv
+venv
