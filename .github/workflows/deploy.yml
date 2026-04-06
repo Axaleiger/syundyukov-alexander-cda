@@ -9,6 +9,11 @@ on:
       - dev
       - main
 
+# Одна активная сборка/деплой на сервер (все ветки в одной очереди — без параллельных docker build на хосте).
+concurrency:
+  group: deploy-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
