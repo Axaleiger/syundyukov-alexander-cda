@@ -1,8 +1,9 @@
 import { create } from "zustand"
-import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap"
+import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap.js"
 import { getRepositories } from "../data/repositories/registry.js"
 
-const SCENARIO_STAGE_FILTERS = getRepositories().scenarios.getScenarioStageFilters()
+const SCENARIO_STAGE_FILTERS =
+	getRepositories().scenarios.getScenarioStageFilters()
 
 export const useAppStore = create((set) => ({
 	// UI
@@ -15,8 +16,7 @@ export const useAppStore = create((set) => ({
 
 	/** Выбранный заголовок сценария на демо-face (dock); main /face не использует */
 	faceSelectedScenarioTitle: null,
-	setFaceSelectedScenarioTitle: (v) =>
-		set({ faceSelectedScenarioTitle: v }),
+	setFaceSelectedScenarioTitle: (v) => set({ faceSelectedScenarioTitle: v }),
 
 	/** Строка «влияние» на демо-face после подтверждения thinking brain */
 	agreedInfluenceLine: null,
