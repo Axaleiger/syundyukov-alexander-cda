@@ -8,4 +8,5 @@
 export const STAND_ROUTE_CONFIGS = [
 	{ standId: "main", routePrefix: "" },
 	{ standId: "demo", routePrefix: "/demo" },
+	{ standId: "newDemo", routePrefix: "/new-demo" },
 ]

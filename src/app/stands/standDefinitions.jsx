@@ -3,8 +3,10 @@ import { STAND_ROUTE_CONFIGS } from "./standsConfig.js"
 import { standHref } from "./standPathUtils.js"
 import { AppLayout } from "../layouts/AppLayout"
 import DemoLayout from "../layouts/DemoLayout"
+import NewDemoLayout from "../layouts/NewDemoLayout"
 import FacePage from "../../pages/Face/FacePage"
 import DemoFacePage from "../../pages/demo/DemoFacePage"
+import NewDemoFacePage from "../../pages/new-demo/NewDemoFacePage"
 import PlanningPage from "../../pages/Planning/PlanningPage"
 import ScenariosPage from "../../pages/Scenarios/ScenariosPage"
 import OntologyPage from "../../pages/Ontology/OntologyPage"
@@ -15,12 +17,14 @@ import AdminPage from "../../pages/Admin/AdminPage"
 const SHELL_BY_STAND_ID = {
 	main: AppLayout,
 	demo: DemoLayout,
+	newDemo: NewDemoLayout,
 }
 
 /** Только сегменты, где страница отличается от main. */
 const PAGE_OVERRIDES_BY_STAND_ID = {
 	main: {},
 	demo: { face: DemoFacePage },
+	newDemo: { face: NewDemoFacePage },
 }
 
 export const STANDS = STAND_ROUTE_CONFIGS.map((c) => ({

@@ -1,0 +1,88 @@
+.page {
+	display: grid;
+	grid-template-rows: minmax(0, 1fr) auto;
+	min-height: 100%;
+}
+
+.sceneFrame {
+	position: relative;
+	min-height: calc(100vh - 100px);
+	height: calc(100vh - 100px);
+	display: grid;
+	grid-template-rows: 1fr 2fr;
+	overflow: hidden;
+}
+
+.topArea {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 14px 12px 8px;
+	z-index: 2;
+}
+
+.topCardsRow {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 16px;
+}
+
+.topPlaceholderCard {
+	width: 313px;
+	height: 322px;
+	border-radius: 10px;
+	border: 1px solid rgba(147, 197, 253, 0.28);
+	background: linear-gradient(
+		180deg,
+		rgba(15, 23, 42, 0.4) 0%,
+		rgba(15, 23, 42, 0.22) 56%,
+		rgba(15, 23, 42, 0.12) 100%
+	);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	display: flex;
+	align-items: flex-start;
+	padding: 16px;
+}
+
+.topPlaceholderTitle {
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.25;
+	font-weight: 600;
+	color: rgba(226, 232, 240, 0.92);
+}
+
+.planetArea {
+	position: relative;
+	min-height: 0;
+}
+
+.sceneLayer {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+}
+
+.selectedAssetBadge {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border: 1px solid rgba(34, 211, 238, 0.35);
+	border-radius: 10px;
+	background: rgba(15, 23, 42, 0.82);
+}
+
+.selectedAssetLabel {
+	color: #93c5fd;
+	font-size: 12px;
+}
+
+.selectedAssetName {
+	color: #e2e8f0;
+	font-weight: 600;
+}

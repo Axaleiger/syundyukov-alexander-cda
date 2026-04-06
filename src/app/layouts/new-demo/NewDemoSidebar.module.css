@@ -1,0 +1,90 @@
+.sidebar {
+	position: fixed;
+	left: 0;
+	top: max(116px, calc(50vh - 241.5px));
+	width: 48px;
+	height: 483px;
+	display: flex;
+	justify-content: center;
+	align-items: stretch;
+	border-top-right-radius: 10px;
+	border-bottom-right-radius: 10px;
+	background:
+		linear-gradient(180deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
+		linear-gradient(180deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
+		linear-gradient(180deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border-top: 1px solid rgba(224, 242, 254, 0.18);
+	border-right: 1px solid rgba(103, 232, 249, 0.3);
+	border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+	border-left: 1px solid rgba(5, 15, 30, 0.24);
+	box-shadow:
+		0 1px 8px 0 #0000001a,
+		0 0 2px 0 #0000001a,
+		0 0 22px 0 #eafaff29 inset,
+		0 0 1px 1px #0f2e4f inset,
+		0 0 1px 1px #d8f6ff36 inset,
+		-1px -1px 1px 0.5px #f2fdff66 inset,
+		1px 1px 1px 0.5px #dff8ff4a inset,
+		3px 3px 0.5px -3.5px #e8faff4a inset,
+		3px 3px 0.5px -3.5px #daf6ff3d inset,
+		0 0 24px rgba(56, 189, 248, 0.18);
+	z-index: 120;
+	overflow: hidden;
+}
+
+.nav {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: space-evenly;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+
+.navItem {
+	width: 20px;
+	height: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: 0;
+	color: #ffffff;
+	opacity: 0.98;
+	text-decoration: none;
+	transition:
+		color 0.2s ease,
+		opacity 0.2s ease,
+		filter 0.2s ease;
+}
+
+.navItem:hover {
+	color: #ffffff;
+	opacity: 1;
+	filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.28));
+}
+
+.navItemActive {
+	color: #ec712a;
+	opacity: 1;
+	filter: drop-shadow(0 0 7px rgba(236, 113, 42, 0.45));
+}
+
+.iconGlyph {
+	width: 20px;
+	height: 20px;
+	display: block;
+	background-color: currentColor;
+	mask-image: var(--icon-url);
+	mask-repeat: no-repeat;
+	mask-position: center;
+	mask-size: contain;
+	-webkit-mask-image: var(--icon-url);
+	-webkit-mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	-webkit-mask-size: contain;
+}

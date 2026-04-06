@@ -1,0 +1,253 @@
+.healthCard {
+	position: relative;
+	width: 313px;
+	height: 322px;
+	border-radius: 10px;
+	border: 1px solid rgba(147, 197, 253, 0.28);
+	background: linear-gradient(
+		180deg,
+		rgba(15, 23, 42, 0.44) 0%,
+		rgba(15, 23, 42, 0.24) 58%,
+		rgba(15, 23, 42, 0.14) 100%
+	);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	display: block;
+	padding: 16px;
+	text-align: left;
+	cursor: pointer;
+	transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.healthCard:hover {
+	border-color: rgba(249, 115, 22, 0.6);
+}
+
+.healthCardActive {
+	border-color: rgba(249, 115, 22, 0.88);
+	box-shadow:
+		0 0 0 1px rgba(249, 115, 22, 0.3),
+		inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.healthCardTitle {
+	margin: 0;
+	font-size: 15px;
+	line-height: 1.25;
+	font-weight: 600;
+	color: rgba(226, 232, 240, 0.94);
+	padding-right: 36px;
+}
+
+.healthCardIndex {
+	position: absolute;
+	top: 58px;
+	left: 16px;
+	color: #f97316;
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.healthCardRadar {
+	position: absolute;
+	left: 50%;
+	top: 56%;
+	transform: translate(-50%, -50%);
+}
+
+.healthLabel {
+	position: absolute;
+	font-size: 10px;
+	color: rgba(226, 232, 240, 0.76);
+	letter-spacing: 0.04em;
+}
+
+.healthLabel0 { top: -12px; left: 53px; }
+.healthLabel1 { top: 16px; right: -24px; }
+.healthLabel2 { top: 84px; right: -22px; }
+.healthLabel3 { bottom: -14px; left: 55px; }
+.healthLabel4 { top: 84px; left: -26px; }
+.healthLabel5 { top: 16px; left: -28px; }
+
+.healthCardTriangle {
+	position: absolute;
+	right: 12px;
+	bottom: 10px;
+	width: 0;
+	height: 0;
+	border-style: solid;
+	border-width: 0 0 16px 16px;
+	border-color: transparent transparent #f97316 transparent;
+	opacity: 0.92;
+}
+
+.radarWrap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.radarWrapSmall {
+	width: 124px;
+	height: 124px;
+}
+
+.radarWrapLarge {
+	width: 210px;
+	height: 210px;
+}
+
+.radarSvg {
+	width: 100%;
+	height: 100%;
+}
+
+.radarRing {
+	fill: none;
+	stroke: rgba(148, 163, 184, 0.24);
+	stroke-width: 1;
+}
+
+.radarAxis {
+	stroke: rgba(148, 163, 184, 0.2);
+	stroke-width: 1;
+}
+
+.radarArea {
+	fill: rgba(249, 115, 22, 0.24);
+	stroke: rgba(251, 146, 60, 0.96);
+	stroke-width: 1.5;
+}
+
+.radarCore {
+	fill: rgba(251, 146, 60, 0.98);
+}
+
+.expandedRoot {
+	position: absolute;
+	inset: 0;
+	z-index: 4;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	pointer-events: none;
+}
+
+.expandedPanel {
+	position: relative;
+	width: min(1020px, 92vw);
+	min-height: 610px;
+	border-radius: 18px;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	background: linear-gradient(
+		168deg,
+		rgba(15, 23, 42, 0.82) 0%,
+		rgba(15, 23, 42, 0.72) 52%,
+		rgba(15, 23, 42, 0.62) 100%
+	);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	box-shadow:
+		0 26px 64px rgba(2, 8, 23, 0.45),
+		inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	padding: 30px 32px 24px;
+	pointer-events: auto;
+}
+
+.closeButton {
+	position: absolute;
+	top: 10px;
+	right: 14px;
+	width: 34px;
+	height: 34px;
+	border: none;
+	border-radius: 8px;
+	color: rgba(226, 232, 240, 0.94);
+	background: rgba(15, 23, 42, 0.56);
+	font-size: 26px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.expandedTitle {
+	margin: 0 0 22px;
+	font-size: 28px;
+	font-weight: 600;
+	color: rgba(226, 232, 240, 0.98);
+}
+
+.expandedRadars {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 28px;
+}
+
+.expandedRadarBlock {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+}
+
+.expandedBlockTitle {
+	margin: 0;
+	align-self: stretch;
+	font-size: 16px;
+	font-weight: 500;
+	color: rgba(203, 213, 225, 0.96);
+}
+
+.expandedMetrics {
+	margin-top: 28px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 22px;
+}
+
+.metricsList {
+	display: flex;
+	flex-direction: column;
+	gap: 11px;
+}
+
+.metricRow {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.metricRowHead {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.metricLabel {
+	font-size: 13px;
+	color: rgba(226, 232, 240, 0.9);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.metricValue {
+	font-size: 12px;
+	color: rgba(251, 146, 60, 0.96);
+	font-weight: 600;
+}
+
+.metricTrack {
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(51, 65, 85, 0.7);
+	overflow: hidden;
+}
+
+.metricFill {
+	display: block;
+	height: 100%;
+	background: linear-gradient(90deg, rgba(249, 115, 22, 0.88), rgba(251, 191, 36, 0.88));
+}
