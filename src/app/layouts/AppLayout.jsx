@@ -17,8 +17,11 @@ import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { useLegacyHashNavigation } from "./hooks/useLegacyHashNavigation"
 import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController"
 import { useBpmCommandBridge } from "./hooks/useBpmCommandBridge"
+import { useStand } from "../stands/standContext"
+import { standHref } from "../stands/standPathUtils"
 
 export const AppLayout = () => {
+	const { routePrefix } = useStand()
 	const location = useLocation()
 	const navigate = useNavigate()
 	const {
@@ -129,14 +132,14 @@ export const AppLayout = () => {
 
 	const setActiveTab = useCallback(
 		(tab) => {
-			if (tab === "face") navigate("/face")
-			else if (tab === "scenarios") navigate("/scenarios")
-			else if (tab === "planning") navigate("/planning")
-			else if (tab === "ontology") navigate("/ontology")
-			else if (tab === "results") navigate("/results")
-			else if (tab === "admin") navigate("/admin")
+			if (tab === "face") navigate(standHref(routePrefix, "face"))
+			else if (tab === "scenarios") navigate(standHref(routePrefix, "scenarios"))
+			else if (tab === "planning") navigate(standHref(routePrefix, "planning"))
+			else if (tab === "ontology") navigate(standHref(routePrefix, "ontology"))
+			else if (tab === "results") navigate(standHref(routePrefix, "results"))
+			else if (tab === "admin") navigate(standHref(routePrefix, "admin"))
 		},
-		[navigate],
+		[navigate, routePrefix],
 	)
 
 	const path = (location.pathname || "").replace(/\/$/, "") || "/"

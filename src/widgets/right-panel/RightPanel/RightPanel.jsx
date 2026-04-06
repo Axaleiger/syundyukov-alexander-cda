@@ -29,12 +29,15 @@ const DECISIONS = [
   },
 ]
 
-function RightPanel({ assetId, scenarioComparisonRevision = 0 }) {
+function RightPanel({ assetId, scenarioComparisonRevision = 0, tone }) {
   const { metricDefs: SCENARIO_METRIC_DEFS, comparison } = useAssetScenarioComparison(assetId)
   const showAiDeltas = scenarioComparisonRevision > 0
 
   return (
-    <aside className={styles['right-panel']}>
+    <aside
+      className={styles['right-panel']}
+      {...(tone === 'demo' ? { 'data-panel-tone': 'demo' } : {})}
+    >
       <section className={styles['right-panel-section']}>
         <h3 className={styles['right-panel-heading']}>Сравнение сценариев развития актива</h3>
         <p className={styles['right-panel-note']}>Альтернативные управленческие логики при единых допущениях</p>

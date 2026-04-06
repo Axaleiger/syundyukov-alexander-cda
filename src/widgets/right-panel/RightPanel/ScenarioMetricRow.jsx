@@ -19,6 +19,8 @@ export function ScenarioMetricRow({
   rowIndex,
   scenarioStaggerMs,
   revision,
+  /** Тёмный фон карточки (демо-dock) */
+  dockOnDark = false,
 }) {
   const { label, unit, decimals, key } = metricDef
   const final = base + (delta && showAiDeltas ? delta.amount : 0)
@@ -81,7 +83,9 @@ export function ScenarioMetricRow({
   const deltaSuffix = key === 'irrPct' ? ' п.п.' : ` ${unit}`
 
   return (
-    <div className={styles['rp-metric-row']}>
+    <div
+      className={`${styles['rp-metric-row']} ${dockOnDark ? styles.rpDock : ''}`}
+    >
       <span className={styles['rp-metric-label']}>{label}</span>
       <div className={styles['rp-metric-value-wrap']}>
         <span className={styles['rp-metric-value']}>

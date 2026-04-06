@@ -288,3 +288,71 @@
 .right-panel-outcome-partial {
   color: #eab308;
 }
+
+/* Демо-плавающая панель: тёмный тон поверх градиента (только tone="demo") */
+.right-panel[data-panel-tone="demo"] {
+  width: 100%;
+  max-width: none;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  padding: 0.5rem 0.35rem;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-heading {
+  color: #f8fafc;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-note,
+.right-panel[data-panel-tone="demo"] .right-panel-subheading {
+  color: #94a3b8;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-scenario {
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-scenario-title {
+  color: #f1f5f9;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-footer {
+  color: #94a3b8;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-decision-title {
+  color: #e2e8f0;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-decision-row {
+  color: #cbd5e1;
+}
+
+.right-panel[data-panel-tone="demo"] .right-panel-decision-label {
+	color: #94a3b8;
+}
+
+/* Метрики на тёмном фоне (dock FaceScenarioOverlay) */
+.rpDock .rp-metric-label {
+	font-size: 0.58rem;
+	color: rgba(255, 255, 255, 0.65);
+}
+
+.rpDock .rp-metric-value {
+	font-size: 0.68rem;
+	color: #fff;
+}
+
+.rpDock .rp-metric-unit {
+	font-size: 0.58rem;
+	color: rgba(255, 255, 255, 0.65);
+}
+
+.rpDock .rp-metric-delta--good {
+	color: #86efac;
+}
+
+.rpDock .rp-metric-delta--bad {
+	color: #fca5a5;
+}

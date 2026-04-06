@@ -14,13 +14,14 @@ export function HypercubeCanvasShell({
   onCloseFunnel,
   onToggleFullscreen,
   sceneProps,
+  hudCompact = false,
 }) {
   return (
     <div
-      className={`${styles.window} ${isFullscreen ? styles.windowFullscreen : ''} ${selectedVariantId != null ? styles.windowFunnelOpen : ''} ${highlightCaseTree ? styles.windowCaseHighlight : ''}`}
+      className={`${styles.window} ${hudCompact ? styles.windowHudCompact : ''} ${isFullscreen ? styles.windowFullscreen : ''} ${selectedVariantId != null ? styles.windowFunnelOpen : ''} ${highlightCaseTree ? styles.windowCaseHighlight : ''}`}
       ref={cubeCanvasRef}
     >
-      <div className={styles.canvasWrap}>
+      <div className={`${styles.canvasWrap} ${hudCompact ? styles.canvasWrapHudCompact : ''}`}>
         {selectedVariantId != null && (
           <button
             type="button"
@@ -34,14 +35,14 @@ export function HypercubeCanvasShell({
         )}
         <button
           type="button"
-          className={styles.fullscreenBtn}
+          className={`${styles.fullscreenBtn} ${hudCompact ? styles.fullscreenBtnHudCompact : ''}`}
           onClick={onToggleFullscreen}
           aria-label={isFullscreen ? 'Выйти из полноэкранного режима' : 'Развернуть на весь экран'}
           title={isFullscreen ? 'Выйти из полноэкранного режима' : 'Развернуть на весь экран'}
         >
           {isFullscreen ? '✕ Свернуть' : '⛶ На весь экран'}
         </button>
-        <div className={styles.canvas}>
+        <div className={`${styles.canvas} ${hudCompact ? styles.canvasHudCompact : ''}`}>
           <Canvas camera={{ position: [4, 4, 4], fov: 50 }}>
             <HypercubeR3FScene {...sceneProps} />
           </Canvas>

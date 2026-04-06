@@ -114,3 +114,55 @@
     height: 400px;
   }
 }
+
+/* demo-stand HUD: тёмное стекло как `.app-demo-float-hud .hypercube-window` */
+.windowHudCompact {
+  min-height: 0;
+  flex: 1;
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+}
+
+.windowHudCompact.windowCaseHighlight {
+  border-color: rgba(59, 130, 246, 0.55);
+}
+
+.canvasWrapHudCompact {
+  min-height: 0;
+  flex: 1;
+}
+
+.canvasHudCompact {
+  min-height: 140px;
+}
+
+.fullscreenBtnHudCompact {
+  padding: 0.28rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.95);
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.fullscreenBtnHudCompact:hover {
+  background: rgba(30, 41, 59, 0.88);
+  color: #fff;
+  border-color: rgba(186, 230, 253, 0.45);
+}
+
+.windowHudCompact .closeFunnelBtn {
+  font-size: 0.72rem;
+  padding: 0.28rem 0.5rem;
+  color: rgba(226, 232, 240, 0.95);
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.windowHudCompact .closeFunnelBtn:hover {
+  background: rgba(45, 90, 135, 0.95);
+  color: #fff;
+}

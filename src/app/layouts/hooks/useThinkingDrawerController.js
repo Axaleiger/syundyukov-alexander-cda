@@ -17,6 +17,8 @@ export function useThinkingDrawerController({
 	selectedDecisionPathId,
 	setBrainPanelOpenKey,
 	setBpmCommand,
+	/** Вызывается после resolver; phase — значение фазы до закрытия панели */
+	onAfterThinkingConfirm,
 }) {
 	const thinkingConfirmResolverRef = useRef(null)
 	const thinkingConfirmPhaseRef = useRef(null)
@@ -73,12 +75,14 @@ export function useThinkingDrawerController({
 	)
 
 	const handleThinkingConfirm = useCallback(() => {
+		const phaseSnapshot = thinkingConfirmPhaseRef.current
 		if (selectedDecisionPathIdRef.current) {
 			setAppliedDecisionPathId(selectedDecisionPathIdRef.current)
 		}
 		if (thinkingConfirmResolverRef.current) {
 			thinkingConfirmResolverRef.current()
 		}
+		onAfterThinkingConfirm?.({ phase: phaseSnapshot })
 		setThinkingPanelOpen(false)
 		setThinkingCurrentMessage("")
 		setThinkingPaused(false)
@@ -89,6 +93,7 @@ export function useThinkingDrawerController({
 		setThinkingCurrentMessage,
 		setThinkingPaused,
 		setThinkingConfirmPhase,
+		onAfterThinkingConfirm,
 	])
 
 	const handleRecalculateDecision = useCallback(() => {

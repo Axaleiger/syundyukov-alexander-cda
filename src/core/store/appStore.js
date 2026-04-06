@@ -13,6 +13,21 @@ export const useAppStore = create((set) => ({
 	selectedAssetId: null,
 	setSelectedAssetId: (id) => set({ selectedAssetId: id }),
 
+	/** Выбранный заголовок сценария на демо-face (dock); main /face не использует */
+	faceSelectedScenarioTitle: null,
+	setFaceSelectedScenarioTitle: (v) =>
+		set({ faceSelectedScenarioTitle: v }),
+
+	/** Строка «влияние» на демо-face после подтверждения thinking brain */
+	agreedInfluenceLine: null,
+	setAgreedInfluenceLine: (v) => set({ agreedInfluenceLine: v }),
+
+	resetDemoFaceScenarioWorkflow: () =>
+		set({
+			faceSelectedScenarioTitle: null,
+			agreedInfluenceLine: null,
+		}),
+
 	cdPageNode: null,
 	setCdPageNode: (v) => set({ cdPageNode: v }),
 

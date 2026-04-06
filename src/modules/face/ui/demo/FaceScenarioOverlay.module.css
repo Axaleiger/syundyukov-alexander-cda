@@ -1,0 +1,109 @@
+.overlay {
+	pointer-events: auto;
+	animation: faceOverlayEnter 0.42s ease-out both;
+}
+
+@keyframes faceOverlayEnter {
+	from {
+		opacity: 0;
+		transform: translateY(22px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.inner {
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+	max-height: min(40vh, 440px);
+	overflow-y: auto;
+	padding: 0.15rem 0.1rem;
+	-webkit-overflow-scrolling: touch;
+}
+
+.cards {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	gap: 0.35rem;
+	justify-content: center;
+}
+
+.card {
+	flex: 1 1 0;
+	min-width: 0;
+	text-align: left;
+	cursor: pointer;
+	border-radius: 10px;
+	padding: 0.4rem 0.45rem;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: rgba(0, 64, 119, 0.48);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	color: #fff;
+	transition:
+		border-color 0.2s,
+		background 0.2s,
+		box-shadow 0.2s,
+		transform 0.2s;
+	box-shadow: none;
+	font: inherit;
+}
+
+.card:hover {
+	background: rgba(0, 112, 186, 0.4);
+	border-color: rgba(47, 180, 233, 0.35);
+}
+
+.cardSelected {
+	box-shadow: 0 0 0 1px rgba(47, 180, 233, 0.55);
+	background: rgba(0, 112, 186, 0.45);
+}
+
+.cardAggressive {
+	border-left: 3px solid #e65907;
+}
+
+.cardRisky {
+	border-left: 3px solid #0070ba;
+}
+
+.cardConsensus {
+	border-left: 3px solid #2fb4e9;
+}
+
+.badge {
+	font-size: 0.5rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: #2fb4e9;
+	display: block;
+	margin-bottom: 0.25rem;
+}
+
+.cardTitle {
+	font-size: clamp(0.65rem, 0.9vw, 0.8rem);
+	font-weight: 600;
+	margin: 0 0 0.25rem;
+	line-height: 1.2;
+	color: #fff;
+}
+
+.metrics {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+}
+
+.strategyGlass {
+	border-radius: 10px;
+	padding: 0.45rem 0.55rem;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(0, 64, 119, 0.35);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+}

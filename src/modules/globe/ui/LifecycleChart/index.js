@@ -1,1 +1,1 @@
-export { default } from "./LifecycleChart.jsx"
+export { default } from "./MainLifecycleChart.jsx"

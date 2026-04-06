@@ -13,9 +13,10 @@ export function HypercubeInfoPanel({
   setFilterVariantType,
   showRisks,
   setShowRisks,
+  hudCompact = false,
 }) {
   return (
-    <div className={styles.panel}>
+    <div className={[styles.panel, hudCompact && styles.panelHudCompact].filter(Boolean).join(' ')}>
       <h3>Гиперкуб рычагов влияния (параметры в млн)</h3>
       <div className={styles.metrics}>
         <div className={styles.metric}>

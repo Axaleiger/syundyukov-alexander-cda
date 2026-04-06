@@ -14,9 +14,11 @@ export function HypercubeLeverControls({
   npvMillions,
   reservesMillions,
   extractionMillions,
+  /** Только `/demo/face`: как `.app-demo-float-hud .hypercube-controls` */
+  floatHud = false,
 }) {
   return (
-    <div className={styles.controls}>
+    <div className={[styles.controls, floatHud && styles.controlsFloatHud].filter(Boolean).join(' ')}>
       <div className={styles.controlRow}>
         <label className={styles.label} title="NPV — оперативный рычаг, деньги за год (млн руб)">
           NPV (оперативный рычаг — деньги за год): {npv}% ({npvMillions} млн руб)

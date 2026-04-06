@@ -60,6 +60,7 @@ function LifecycleSegmentLines(props) {
 
 /**
  * Режимы просмотра + streamgraph + легенда периодов (верхняя визуальная зона LifecycleChart).
+ * compactOverlay / hudExpanded — как demo-stand LifecycleChart в HUD (?demo=stand#face).
  */
 export function LifecycleStreamGraphPanel({
   viewMode,
@@ -69,42 +70,77 @@ export function LifecycleStreamGraphPanel({
   chartData,
   visibleStages,
   onStageClick,
+  compactOverlay = false,
+  hudExpanded = false,
 }) {
   const handleAreaClick = (dataKey) => {
     const stage = stages.find((s) => s.key === dataKey)
     if (stage) onStageClick?.(stage.name)
   }
 
+  const chartHeight = compactOverlay ? (hudExpanded ? 220 : 200) : 380
+  const chartMargin = compactOverlay
+    ? { top: 4, right: 4, left: 4, bottom: 0 }
+    : { top: 20, right: 24, left: 32, bottom: 8 }
+  const axisTickFill = compactOverlay ? 'rgba(255,255,255,0.72)' : '#5a6c7d'
+
+  const tooltipContentStyle = compactOverlay
+    ? {
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        border: '1px solid #004077',
+        borderRadius: 12,
+        boxShadow: '0 8px 24px rgba(0, 64, 119, 0.2)',
+      }
+    : {
+        backgroundColor: '#fff',
+        border: '1px solid #e2e8f0',
+        borderRadius: 12,
+        boxShadow: '0 8px 24px rgba(45, 90, 135, 0.12)',
+      }
+
+  const tooltipLabelStyle = compactOverlay
+    ? { color: '#004077', fontWeight: 600 }
+    : { color: '#2d5a87', fontWeight: 600 }
+
   return (
     <>
-      <div className={styles.viewToggle}>
-        {VIEW_MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className={`${styles.toggleBtn} ${viewMode === m.id ? styles.toggleBtnActive : ''}`}
-            onClick={() => onViewModeChange(m.id)}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-      <div className={styles.chartWrap}>
-        <div className={styles.legendRow}>
-          {stages.map((s) => (
+      {!compactOverlay ? (
+        <div className={styles.viewToggle}>
+          {VIEW_MODES.map((m) => (
             <button
-              key={s.key}
+              key={m.id}
               type="button"
-              className={`${styles.legendItem} ${legendOnly === s.key ? styles.legendItemSolo : ''}`}
-              onClick={() => onLegendClick(s.key)}
+              className={`${styles.toggleBtn} ${viewMode === m.id ? styles.toggleBtnActive : ''}`}
+              onClick={() => onViewModeChange(m.id)}
             >
-              <span className={styles.legendSwatch} style={{ background: s.color }} />
-              <span className={styles.legendCaption}>{s.name}</span>
+              {m.label}
             </button>
           ))}
         </div>
-        <ResponsiveContainer width="100%" height={380}>
-          <AreaChart data={chartData} margin={{ top: 20, right: 24, left: 32, bottom: 8 }} isAnimationActive={false} stackOffset={viewMode === 'sum' ? undefined : undefined}>
+      ) : null}
+      <div className={[styles.chartWrap, compactOverlay && styles.chartWrapCompact].filter(Boolean).join(' ')}>
+        {!compactOverlay ? (
+          <div className={styles.legendRow}>
+            {stages.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                className={`${styles.legendItem} ${legendOnly === s.key ? styles.legendItemSolo : ''}`}
+                onClick={() => onLegendClick(s.key)}
+              >
+                <span className={styles.legendSwatch} style={{ background: s.color }} />
+                <span className={styles.legendCaption}>{s.name}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <AreaChart
+            data={chartData}
+            margin={chartMargin}
+            isAnimationActive={false}
+            stackOffset={viewMode === 'sum' ? undefined : undefined}
+          >
             <defs>
               {stages.map((s) => (
                 <linearGradient key={s.key} id={`grad-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -116,37 +152,46 @@ export function LifecycleStreamGraphPanel({
             <ReferenceLine x={String(CURRENT_YEAR)} stroke="#fca5a5" strokeWidth={2} strokeOpacity={0.9} />
             <XAxis
               dataKey="year"
-              axisLine={{ stroke: '#e2e8f0' }}
+              axisLine={{ stroke: compactOverlay ? 'rgba(255,255,255,0.2)' : '#e2e8f0' }}
               tickLine={false}
               interval="preserveStartEnd"
-              minTickGap={32}
+              minTickGap={compactOverlay ? 18 : 32}
               tick={({ x, y, payload }) => (
                   <g transform={`translate(${x},${y})`}>
-                    <text x={0} y={14} textAnchor="middle" fill="#5a6c7d" fontSize={10}>{payload.value}</text>
+                    <text x={0} y={14} textAnchor="middle" fill={axisTickFill} fontSize={compactOverlay ? 9 : 10}>
+                      {payload.value}
+                    </text>
                   </g>
                 )}
             />
             <YAxis
               domain={[0, 'auto']}
               allowDataOverflow
-              tick={{ fontSize: 10 }}
-              label={{ value: viewMode === 'cumulative' ? 'Накопленный объём затрат, млрд руб.' : 'Объём затрат, млрд руб.', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
+              tick={{ fontSize: compactOverlay ? 9 : 10, fill: axisTickFill }}
+              label={
+                compactOverlay
+                  ? undefined
+                  : {
+                      value:
+                        viewMode === 'cumulative'
+                          ? 'Накопленный объём затрат, млрд руб.'
+                          : 'Объём затрат, млрд руб.',
+                      angle: -90,
+                      position: 'insideLeft',
+                      style: { textAnchor: 'middle' },
+                    }
+              }
             />
             <Tooltip
-              contentStyle={{
-                backgroundColor: '#fff',
-                border: '1px solid #e2e8f0',
-                borderRadius: 12,
-                boxShadow: '0 8px 24px rgba(45, 90, 135, 0.12)',
-              }}
-              labelStyle={{ color: '#2d5a87', fontWeight: 600 }}
-              formatter={(value, name) => [typeof value === 'number' ? value.toFixed(1) : value, stages.find((s) => s.key === name)?.name ?? name]}
+              contentStyle={tooltipContentStyle}
+              labelStyle={tooltipLabelStyle}
+              formatter={(value, name) => [
+                typeof value === 'number' ? value.toFixed(1) : value,
+                stages.find((s) => s.key === name)?.name ?? name,
+              ]}
               labelFormatter={(label) => `Год ${label}`}
             />
-            {(viewMode === 'sum' && legendOnly == null
-              ? stages
-              : visibleStages
-            ).map((s) => (
+            {(viewMode === 'sum' && legendOnly == null ? stages : visibleStages).map((s) => (
               <Area
                 key={s.key}
                 type="monotone"
@@ -166,11 +211,28 @@ export function LifecycleStreamGraphPanel({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <div className={styles.periodLegend}>
-        <span className={styles.periodHistory} style={{ color: LIFECYCLE_HISTORY_COLOR }}>● История (до {CURRENT_YEAR})</span>
-        <span className={styles.periodForecast} style={{ color: LIFECYCLE_FORECAST_COLOR }}>● Прогнозный период (после {CURRENT_YEAR})</span>
-      </div>
-      <p className={styles.redlineHint}>Красная линия — текущий срез {CURRENT_YEAR} г.</p>
+      {!compactOverlay ? (
+        <>
+          <div className={styles.periodLegend}>
+            <span className={styles.periodHistory} style={{ color: LIFECYCLE_HISTORY_COLOR }}>
+              ● История (до {CURRENT_YEAR})
+            </span>
+            <span className={styles.periodForecast} style={{ color: LIFECYCLE_FORECAST_COLOR }}>
+              ● Прогнозный период (после {CURRENT_YEAR})
+            </span>
+          </div>
+          <p className={styles.redlineHint}>Красная линия — текущий срез {CURRENT_YEAR} г.</p>
+        </>
+      ) : null}
+      {compactOverlay && hudExpanded ? (
+        <div className={styles.hudExpandedDesc}>
+          <p>
+            Жизненный цикл актива охватывает этапы от геологоразведки до добычи. На графике — динамика затрат по
+            этапам; синяя ось времени отделяет историю и прогноз. На вкладке «Главная» доступны переключение вида и
+            детализация по этапам.
+          </p>
+        </div>
+      ) : null}
     </>
   )
 }

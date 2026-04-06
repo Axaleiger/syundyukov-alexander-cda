@@ -109,3 +109,28 @@
 .segmentLinesRoot {
   pointer-events: none;
 }
+
+/* demo-stand HUD: только график, без карточки «бумаги» */
+.chartWrapCompact {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hudExpandedDesc {
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.25rem 0;
+  flex-shrink: 0;
+}
+
+.hudExpandedDesc p {
+  margin: 0;
+  font-size: clamp(0.58rem, 0.72vw, 0.68rem);
+  line-height: 1.35;
+  color: rgba(241, 245, 249, 0.88);
+}

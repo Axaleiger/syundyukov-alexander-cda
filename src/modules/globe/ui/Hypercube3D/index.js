@@ -1,1 +1,1 @@
-export { default } from "./Hypercube3D.jsx"
+export { default } from "./MainHypercube3D.jsx"

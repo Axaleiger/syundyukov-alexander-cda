@@ -170,3 +170,89 @@
   color: #475569;
   margin-bottom: 0.25rem;
 }
+
+/* demo-stand HUD: тёмная колонка как у `.app-demo-float-hud .hypercube-controls` */
+.panelHudCompact {
+  padding: 0.45rem 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  min-height: 0;
+  max-height: 100%;
+}
+
+.panelHudCompact h3 {
+  font-size: clamp(0.62rem, 0.75vw, 0.72rem);
+  margin-bottom: 0.35rem;
+  color: rgba(248, 250, 252, 0.96);
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.panelHudCompact .metrics {
+  gap: 0.35rem;
+}
+
+.panelHudCompact .metric {
+  gap: 0.15rem;
+}
+
+.panelHudCompact .metricLabel {
+  font-size: 0.58rem;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.panelHudCompact .metricValue {
+  font-size: 0.72rem;
+  color: #f8fafc;
+}
+
+.panelHudCompact .pointsLegend,
+.panelHudCompact .planeLegend {
+  border-top-color: rgba(255, 255, 255, 0.12);
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+}
+
+.panelHudCompact .legendTitle {
+  font-size: 0.58rem;
+  color: rgba(226, 232, 240, 0.92);
+  margin-bottom: 0.25rem;
+}
+
+.panelHudCompact .legendItems {
+  font-size: 0.55rem;
+  gap: 0.2rem 0.45rem;
+}
+
+.panelHudCompact .paletteHint {
+  margin-top: 0.45rem;
+  font-size: 0.55rem;
+  color: rgba(203, 213, 225, 0.9);
+}
+
+.panelHudCompact .paletteLegend {
+  margin-top: 0.35rem;
+  font-size: 0.55rem;
+  color: rgba(203, 213, 225, 0.9);
+}
+
+.panelHudCompact .legendGradient {
+  height: 12px;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.panelHudCompact .risksToggle {
+  margin-top: 0.45rem;
+  font-size: 0.58rem;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.panelHudCompact .indicatorBasketName {
+  font-size: 0.58rem;
+  color: rgba(203, 213, 225, 0.95);
+}
+
+.panelHudCompact .legendItem {
+  font-size: 0.52rem;
+}
