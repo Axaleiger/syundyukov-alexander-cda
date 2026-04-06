@@ -1,14 +1,12 @@
 # Деплой на сервер по SSH. Секреты: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH
-# Инструкция по секретам — вне репозитория: см. GITHUB_ACTIONS_DEPLOY.md в каталоге Sin/
+# Секреты: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY, DEPLOY_PATH. Инструкция: docs/GITHUB_ACTIONS_SETUP.md
 
 name: Deploy
 
 on:
   push:
     branches:
-      - dev
-      - main
-      - dev_docker
+      - server
 
 # Одна активная сборка/деплой на сервер (все ветки в одной очереди — без параллельных docker build на хосте).
 concurrency:

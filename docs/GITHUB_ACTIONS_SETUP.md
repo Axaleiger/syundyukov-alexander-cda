@@ -4,11 +4,10 @@
 
 Текущий workflow: [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
 
-**Триггеры веток** (меняются в `deploy.yml`):
+**Триггеры:**
 
-- `main`
-- `dev`
-- `dev_docker`
+- **Сервер (SSH):** только ветка **`server`** — см. [`deploy.yml`](../.github/workflows/deploy.yml).
+- **GitHub Pages:** только ветка **`main`** — см. [`deploy-pages.yml`](../.github/workflows/deploy-pages.yml).
 
 Очередь деплоев: **`concurrency`** с `cancel-in-progress: false` — параллельных сборок на сервере нет, лишние запуски ждут в очереди.
 
@@ -59,9 +58,10 @@ ssh -i ./gha_deploy yc-user@<SSH_HOST>
 
 ## Шаг 3. Как запускается деплой
 
-1. Разработка в feature-ветке → **Pull Request** → **Merge** в `dev_docker` / `dev` / `main` (целевая ветка должна быть в списке в `deploy.yml`).
-2. После merge GitHub делает **push** в целевую ветку → срабатывает **`on.push.branches`**.
-3. Job **Deploy** на сервере (упрощённо):
+1. **Сайт на GitHub Pages:** merge в **`main`** → сборка и публикация Pages.
+2. **Деплой на сервер:** merge в **`server`** (или push в `server`) → SSH-деплой на ВМ.
+3. После push срабатывает соответствующий workflow (`deploy-pages.yml` или `deploy.yml`).
+4. Job **Deploy** на сервере (упрощённо):
 
    ```bash
    cd "$DEPLOY_PATH"
