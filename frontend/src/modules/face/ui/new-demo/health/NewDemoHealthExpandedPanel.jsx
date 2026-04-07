@@ -1,17 +1,22 @@
-import { NewDemoHealthRadar } from "./NewDemoHealthRadar"
-import { NewDemoHealthMetricList } from "./NewDemoHealthMetricList"
+import { NewDemoWindRoseMetricList } from "./NewDemoWindRoseMetricList"
+import { NewDemoExpandedLeftWindRoseRadar } from "./NewDemoExpandedLeftWindRoseRadar"
+import { NewDemoExpandedRightWindRoseRadar } from "./NewDemoExpandedRightWindRoseRadar"
 import styles from "./NewDemoHealth.module.css"
 
 export function NewDemoHealthExpandedPanel({
+	PRODUCTION_STAGES,
 	leftData,
 	rightData,
-	leftMetrics,
-	rightMetrics,
+	selectedLeftStageIndex,
+	selectedRightObjectIndex,
+	onLeftSegmentClick,
+	onRightSegmentClick,
 	onClose,
 }) {
 	return (
 		<div className={styles.expandedRoot}>
 			<section className={styles.expandedPanel} aria-label="Карта здоровья ЦД">
+				<div className={styles.expandedPanelGlow} aria-hidden />
 				<button
 					type="button"
 					className={styles.closeButton}
@@ -20,21 +25,49 @@ export function NewDemoHealthExpandedPanel({
 				>
 					×
 				</button>
-				<h2 className={styles.expandedTitle}>Карта здоровья ЦД</h2>
-				<div className={styles.expandedRadars}>
-					<div className={styles.expandedRadarBlock}>
+				<header className={styles.expandedHeader}>
+					<p className={styles.expandedTitle}>Карта здоровья ЦД</p>
+				</header>
+				<div className={styles.expandedWindRoseContainer}>
+					<section className={styles.expandedWindRoseItem}>
 						<h3 className={styles.expandedBlockTitle}>1. ЦД производственных этапов</h3>
-						<NewDemoHealthRadar data={leftData} />
-					</div>
-					<div className={styles.expandedRadarBlock}>
+						<div className={styles.expandedChartBox}>
+							<NewDemoExpandedLeftWindRoseRadar
+								data={leftData}
+								selectedIndex={selectedLeftStageIndex}
+								onSegmentClick={onLeftSegmentClick}
+							/>
+						</div>
+						<div className={styles.expandedWindRoseContent}>
+							<NewDemoWindRoseMetricList
+								data={leftData}
+								selectedIndex={selectedLeftStageIndex}
+								onSegmentClick={onLeftSegmentClick}
+							/>
+						</div>
+					</section>
+					<section className={styles.expandedWindRoseItem}>
 						<h3 className={styles.expandedBlockTitle}>2. ЦД объектов</h3>
-						<NewDemoHealthRadar data={rightData} />
-					</div>
+						<div className={styles.expandedChartBox}>
+							<NewDemoExpandedRightWindRoseRadar
+								data={rightData}
+								selectedIndex={selectedRightObjectIndex}
+								onSegmentClick={onRightSegmentClick}
+							/>
+						</div>
+						<div className={styles.expandedWindRoseContent}>
+							<NewDemoWindRoseMetricList
+								data={rightData}
+								selectedIndex={selectedRightObjectIndex}
+								onSegmentClick={onRightSegmentClick}
+							/>
+						</div>
+					</section>
 				</div>
-				<div className={styles.expandedMetrics}>
-					<NewDemoHealthMetricList rows={leftMetrics} />
-					<NewDemoHealthMetricList rows={rightMetrics} />
-				</div>
+				<span
+					className={`${styles.expandedPanelTriangle}`}
+					aria-hidden
+				/>
 			</section>
 		</div>
 	)

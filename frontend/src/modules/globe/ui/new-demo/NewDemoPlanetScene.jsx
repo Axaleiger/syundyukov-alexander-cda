@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Canvas } from "@react-three/fiber"
+import { Canvas, useThree } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import * as THREE from "three"
 import styles from "./NewDemoPlanetScene.module.css"
-import EARTH_JSON_OBJECT from "../../../../shared/assets/project4.json"
+import EARTH_JSON_OBJECT from "../../../../shared/assets/Earth.json"
 
 const EARTH_RADIUS = 10
-const PLANET_CENTER_TARGET = [0, 10, 0]
+const PLANET_CENTER_TARGET = [0, 8, 0]
 const CAMERA_POSITION = [0, 0, 0]
 const CAMERA_FOV = 41
 const FIXED_POLAR_ANGLE = 1.05
@@ -121,6 +121,9 @@ function PlanetPoint({ point, isSelected, onSelect }) {
 
 function PlanetSceneContent({ sceneRoot, points, selectedAssetId, onSelectAsset }) {
 	const groupRef = useRef(null)
+	const runtimeScene = useThree((state) => state.scene)
+	const gl = useThree((state) => state.gl)
+	const envTargetRef = useRef(null)
 
 	useEffect(() => {
 		document.body.style.cursor = "default"
@@ -129,11 +132,38 @@ function PlanetSceneContent({ sceneRoot, points, selectedAssetId, onSelectAsset 
 		}
 	}, [])
 
+	useEffect(() => {
+		// Three.js Editor applies environment/background on the active renderer scene.
+		// The imported JSON is a nested THREE.Scene; its env/background won't affect the parent Canvas scene
+		// unless we explicitly apply them.
+		if (!sceneRoot) return
+
+		const prevEnvironment = runtimeScene.environment
+
+		// Keep canvas transparent: preserve env lighting, but do not paint runtime background.
+		// eslint-disable-next-line
+		runtimeScene.background = null
+
+		const importedEnv = sceneRoot.environment
+		if (importedEnv) {
+			const pmrem = new THREE.PMREMGenerator(gl)
+			pmrem.compileEquirectangularShader()
+			const envTarget = pmrem.fromEquirectangular(importedEnv)
+			pmrem.dispose()
+			envTargetRef.current = envTarget
+			runtimeScene.environment = envTarget.texture
+		}
+
+		return () => {
+			runtimeScene.background = null
+			runtimeScene.environment = prevEnvironment
+			envTargetRef.current?.dispose()
+			envTargetRef.current = null
+		}
+	}, [gl, runtimeScene, sceneRoot])
+
 	return (
 		<>
-			<ambientLight intensity={0.65} />
-			<directionalLight position={[14, 8, 10]} intensity={1.2} />
-			<directionalLight position={[-10, -6, -8]} intensity={0.25} />
 			<group ref={groupRef} rotation={[0, PLANET_ROTATION_Y, 0]} scale={1.8}>
 				<primitive object={sceneRoot} />
 				{points.map((point) => (
@@ -182,6 +212,15 @@ export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 				camera={{ position: CAMERA_POSITION, fov: CAMERA_FOV, near: 0.1, far: 2000 }}
 				gl={{ antialias: true, alpha: true }}
 				dpr={[1, 1.5]}
+				onCreated={({ gl }) => {
+					// Align with Earth.json project settings + Editor defaults.
+					gl.toneMapping = THREE.NeutralToneMapping
+					gl.toneMappingExposure = 1
+					gl.outputColorSpace = THREE.SRGBColorSpace
+					gl.physicallyCorrectLights = true
+					gl.setClearColor(0x000000, 0)
+				}}
+				style={{ background: "transparent" }}
 			>
 				<PlanetSceneContent
 					sceneRoot={sceneRoot}
