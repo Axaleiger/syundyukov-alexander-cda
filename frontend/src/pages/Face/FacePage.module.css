@@ -1,0 +1,160 @@
+/* Оболочка страницы «Главная» (липкая панель актива + колонка под правую панель) */
+.faceRightPanel {
+  width: 320px;
+  flex-shrink: 0;
+  overflow: auto;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.faceAssetSticky {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 0.95rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.faceAssetStickyName {
+  font-weight: 600;
+  color: #1e3a5f;
+}
+
+.faceAssetStickyStatus {
+  color: #5a6c7d;
+}
+
+.faceAssetStickyIcon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.faceAssetStickyIconGreen {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.faceAssetStickyIconOrange {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.faceAssetStickyIconRed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.faceAssetStickyClose {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.faceAssetStickyClose:hover {
+  color: #1e3a5f;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.faceWithPanel {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.faceMainColumn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content-face {
+  max-width: none;
+  margin: 0;
+}
+
+.app-content {
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 2rem 2.25rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.section h2 {
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+  color: #1e3a5f;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.hypercube-section.hypercube-case-intro {
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 2px 16px rgba(59, 130, 246, 0.12), 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.wind-rose-section {
+  padding: 2rem;
+}
+
+.wind-rose-section-title {
+  margin-bottom: 1.25rem;
+  font-size: 1.5rem;
+}
+
+.wind-rose-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+.wind-rose-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wind-rose-item h3 {
+  font-size: 1.45rem;
+  margin-bottom: 1.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+@media (max-width: 1200px) {
+  .wind-rose-container {
+    grid-template-columns: 1fr;
+  }
+}

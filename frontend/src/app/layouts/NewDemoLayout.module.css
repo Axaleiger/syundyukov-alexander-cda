@@ -1,0 +1,31 @@
+.shell {
+	height: 100vh;
+	display: grid;
+	grid-template-rows: 100px minmax(0, 1fr);
+	background-image:
+		linear-gradient(180deg, rgba(2, 9, 20, 0.46) 0%, rgba(2, 9, 20, 0.58) 100%),
+		url("../../shared/assets/background.png");
+	background-size: cover;
+	background-position: center;
+	background-repeat: no-repeat;
+	color: #e2e8f0;
+	overflow: hidden;
+}
+
+.body {
+	min-height: 0;
+	position: relative;
+	display: block;
+}
+
+.main {
+	min-height: 0;
+	overflow: auto;
+}
+
+.mainInner {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	min-height: calc(100vh - 114px);
+}

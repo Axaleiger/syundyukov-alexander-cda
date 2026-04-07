@@ -1,0 +1,341 @@
+/* RussiaGlobe — изолированные стили; canvas через :global внутри .viewportClip */
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+}
+
+.controlsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #2c3e50;
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.cfBtn {
+  padding: 0.5rem 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #2d5a87;
+  background: rgba(45, 90, 135, 0.1);
+  border: 1px solid #2d5a87;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.cfBtn:hover {
+  background: rgba(45, 90, 135, 0.2);
+}
+
+.cfBtnActive {
+  background: #2d5a87;
+  color: #fff;
+}
+
+.budgetLegend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.05rem;
+  color: #5a6c7d;
+  font-weight: 500;
+}
+
+.legendGradient {
+  width: 140px;
+  height: 22px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #c76b5a, #2e9d7a);
+  border: 1px solid #e2e8f0;
+}
+
+.legendGradientPopulation {
+  background: linear-gradient(to right, #1976d2, #388e3c);
+  border-color: #b0bec5;
+}
+
+.legendLabel {
+  white-space: nowrap;
+}
+
+.wrapper {
+  width: 100%;
+  max-width: 100%;
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  position: relative;
+  overflow: hidden;
+}
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.chainPanel {
+  min-width: 220px;
+  max-width: 280px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e2e8f0;
+}
+
+.chainTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 0.75rem;
+}
+
+.chainList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chainItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.chainItem:last-child {
+  border-bottom: none;
+}
+
+.chainNum {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #2d5a87;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chainLink {
+  color: #2d5a87;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.chainLink:hover {
+  text-decoration: underline;
+}
+
+/* Меньше пикселей = меньше нагрузка; нижняя часть сферы скрыта — меньше перерисовок */
+.wrapperPerf {
+  background: #020617;
+  border-color: #1e293b;
+}
+
+/* Обрезаем нижнюю часть глобуса (южное полушарие / «подошва») */
+.viewportClip {
+  overflow: hidden;
+  /* Keep bands away without transforming canvas (preserves click accuracy) */
+  clip-path: inset(0 0 0 0);
+  border-radius: 12px;
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+}
+
+/* react-globe.gl монтирует canvas без нашего hashed-класса — только :global под обрезкой */
+.viewportClip :global(canvas) {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  /* IMPORTANT: do not transform canvas - it breaks raycasting/picking */
+}
+
+.error {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: #7a2630;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(45, 90, 135, 0.12);
+}
+
+/* --- Иммерсив / stand-face (опциональные пропсы RussiaGlobe) --- */
+
+.containerImmersive {
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	min-height: 100%;
+	flex: 1 1 auto;
+	align-self: stretch;
+	gap: 0;
+	overflow: visible;
+}
+
+.containerStandGlobe {
+	width: 100%;
+	max-width: none;
+}
+
+.wrapperImmersiveBg {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	min-height: 100%;
+	flex: 1 1 auto;
+	max-width: none;
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	padding: 0 !important;
+	overflow: visible !important;
+	box-shadow: none !important;
+}
+
+.viewportClipStand {
+	overflow: visible;
+}
+
+.viewportClipImmersive {
+	border-radius: 0 !important;
+	margin: 0 !important;
+	overflow: visible !important;
+	clip-path: none !important;
+	width: 100% !important;
+	max-width: none !important;
+	min-height: 100%;
+}
+
+.viewportClipStandFace {
+	overflow: visible !important;
+	clip-path: none !important;
+	width: 100% !important;
+	max-width: none !important;
+	margin: 0 !important;
+}
+
+.immersiveHud {
+	position: absolute;
+	left: 16px;
+	bottom: 20px;
+	z-index: 8;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	pointer-events: auto;
+}
+
+.hudIconBtn {
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 10px;
+	background: rgba(15, 23, 42, 0.55);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	color: rgba(226, 232, 240, 0.92);
+	cursor: pointer;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	transition:
+		background 0.15s,
+		border-color 0.15s,
+		color 0.15s;
+}
+
+.hudIconBtn:hover {
+	background: rgba(30, 41, 59, 0.72);
+	border-color: rgba(148, 163, 184, 0.35);
+}
+
+.hudIconBtnActive {
+	background: rgba(14, 165, 233, 0.28);
+	border-color: rgba(56, 189, 248, 0.55);
+	color: #e0f2fe;
+}
+
+.hudIconBtnInner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+}
+
+.hudSvg {
+	width: 24px;
+	height: 24px;
+	display: block;
+}
+
+.chainPanelImmersive {
+	position: absolute;
+	left: 72px;
+	bottom: 20px;
+	right: auto;
+	z-index: 8;
+	min-width: 220px;
+	max-width: min(300px, calc(100vw - 400px));
+	max-height: min(52vh, 420px);
+	overflow: auto;
+	pointer-events: auto;
+	background: rgba(15, 23, 42, 0.55) !important;
+	border: 1px solid rgba(255, 255, 255, 0.12) !important;
+	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35) !important;
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+}
+
+.chainTitleImmersive {
+	color: #f1f5f9;
+}
+
+.chainItemImmersive {
+	border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+
+.chainLinkImmersive {
+	color: #7dd3fc;
+}
+
+.chainLinkImmersive:hover {
+	color: #bae6fd;
+}

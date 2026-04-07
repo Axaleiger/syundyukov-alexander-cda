@@ -1,0 +1,149 @@
+/* Компонент WindRose — только локальные классы (без глобальных legend-*) */
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.diagram {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Бывший `.wind-rose svg` — стили на самом `<svg>`, без широкого потомка */
+.roseSvg {
+  display: block;
+  background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 50%;
+  padding: 0.5rem;
+  border: 1px solid rgba(45, 90, 135, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+}
+
+.labelsOutside {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.labelsOutside .outsideLabel {
+  pointer-events: auto;
+}
+
+.outsideLabel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(45, 90, 135, 0.28);
+  background: #fff;
+  font-size: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: none;
+}
+
+.outsideLabel:hover {
+  background: #f8fafc;
+  border-color: #2d5a87;
+}
+
+.outsideLabelSelected {
+  background: rgba(45, 90, 135, 0.1);
+  border-color: #2d5a87;
+}
+
+.outsideName {
+  font-size: 9px;
+  font-weight: 600;
+  color: #1e3a5f;
+  line-height: 1.2;
+}
+
+.outsideValue {
+  font-size: 10px;
+  font-weight: 700;
+  color: #2d5a87;
+}
+
+.petal {
+  transition: none;
+}
+
+.contour {
+  pointer-events: none;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.legendItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: none;
+}
+
+.legendRow:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.legendRowSelected {
+  background: rgba(45, 90, 135, 0.08);
+  border-color: #2d5a87;
+}
+
+.legendRowSelected:hover {
+  background: rgba(45, 90, 135, 0.12);
+}
+
+.legendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendName {
+  flex: 1;
+  color: #2c3e50;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendMetric {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  flex-shrink: 0;
+}

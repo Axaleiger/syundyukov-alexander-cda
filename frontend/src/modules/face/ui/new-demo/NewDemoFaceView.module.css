@@ -1,0 +1,110 @@
+.page {
+	display: grid;
+	grid-template-rows: minmax(0, 1fr) auto;
+	min-height: 100%;
+}
+
+.sceneFrame {
+	position: relative;
+	min-height: calc(100vh - 100px);
+	height: calc(100vh - 100px);
+	display: grid;
+	grid-template-rows: 1fr 2fr;
+	overflow: hidden;
+}
+
+.topArea {
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 14px 12px 8px;
+	z-index: 2;
+}
+
+.topCardsRow {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	gap: 16px;
+	min-height: 322px;
+}
+
+.topPlaceholderCard {
+	position: relative;
+	width: 313px;
+	height: 322px;
+	border-radius: 10px;
+	border: 1px solid rgba(147, 197, 253, 0.28);
+	background: linear-gradient(
+		180deg,
+		rgba(15, 23, 42, 0.4) 0%,
+		rgba(15, 23, 42, 0.22) 56%,
+		rgba(15, 23, 42, 0.12) 100%
+	);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+	display: flex;
+	align-items: flex-start;
+	padding: 16px;
+}
+
+.topPlaceholderCardCompact {
+	height: 35px;
+	box-sizing: border-box;
+	align-items: center;
+	padding: 5px 12px;
+}
+
+.topPlaceholderTitle {
+	margin: 0;
+	font-size: 14px;
+	color: rgba(226, 232, 240, 0.92);
+}
+
+.topPlaceholderTriangle {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	width: 12px;
+	height: 10px;
+	background-color: #E65907;
+	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+}
+
+.topPlaceholderCardActive .topPlaceholderTriangle {
+	background-color: rgba(47, 180, 233, 1);
+	transform: rotate(180deg);
+}
+
+.planetArea {
+	position: relative;
+	min-height: 0;
+}
+
+.sceneLayer {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+}
+
+.selectedAssetBadge {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 12px;
+	border: 1px solid rgba(34, 211, 238, 0.35);
+	border-radius: 10px;
+	background: rgba(15, 23, 42, 0.82);
+}
+
+.selectedAssetLabel {
+	color: #93c5fd;
+	font-size: 12px;
+}
+
+.selectedAssetName {
+	color: #e2e8f0;
+	font-weight: 600;
+}

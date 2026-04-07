@@ -1,0 +1,267 @@
+.expandedRoot {
+	position: absolute;
+	inset: 0;
+	z-index: 4;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 338px 70px 20px;
+	pointer-events: none;
+}
+
+.modal {
+	position: relative;
+	width: min(1000px, 95vw);
+	max-height: calc(100vh - 140px);
+	padding: 34px 34px 22px;
+	border-radius: 12px;
+	overflow: auto;
+	pointer-events: auto;
+	background:
+		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
+		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
+		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border-top: 1px solid rgba(224, 242, 254, 0.18);
+	border-right: 1px solid rgba(103, 232, 249, 0.3);
+	border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+	border-left: 1px solid rgba(5, 15, 30, 0.24);
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+}
+
+.title {
+	margin: 0;
+	font-size: 22px;
+	font-weight: 500;
+	color: #fff;
+}
+
+.closeBtn {
+	width: 34px;
+	height: 34px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.08);
+	color: rgba(255, 255, 255, 0.92);
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.closeBtn:hover {
+	border-color: rgba(47, 180, 233, 0.6);
+	background: rgba(255, 255, 255, 0.13);
+}
+
+.tabs {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 26px;
+}
+
+.tab {
+	padding: 8px 20px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 8px;
+	background: transparent;
+	color: rgba(255, 255, 255, 0.85);
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.tabActive {
+	border-color: #e66b21;
+	background: rgba(230, 107, 33, 0.12);
+	color: #fff;
+}
+
+.stagesNav {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+	padding-bottom: 12px;
+	margin-bottom: 20px;
+}
+
+.stageItem {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: none;
+	background: transparent;
+	color: rgba(255, 255, 255, 0.62);
+	font-size: 13px;
+	cursor: pointer;
+	padding: 0 0 2px;
+}
+
+.stageDot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.3);
+}
+
+.stageItemActive {
+	color: #fff;
+}
+
+.stageItemActive .stageDot {
+	background: #e66b21;
+	box-shadow: 0 0 10px rgba(230, 107, 33, 0.85);
+}
+
+.stageItemActive::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -14px;
+	height: 2px;
+	background: #e66b21;
+}
+
+.chartArea {
+	position: relative;
+	padding-top: 128px;
+}
+
+.tooltip {
+	position: absolute;
+	top: -24px;
+	width: 340px;
+	z-index: 5;
+	background: rgba(13, 33, 53, 0.95);
+	border: 1px solid rgba(78, 155, 205, 0.4);
+	border-radius: 12px;
+	padding: 18px 16px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	pointer-events: none;
+}
+
+.tooltipYear {
+	margin: 0 0 14px;
+	font-size: 26px;
+	font-weight: 700;
+	color: #fff;
+}
+
+.tooltipRow {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	margin-bottom: 7px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.82);
+}
+
+.tooltipRow span:last-child {
+	font-weight: 700;
+}
+
+.tooltipRowActive {
+	border-bottom-color: rgba(230, 107, 33, 0.9);
+}
+
+.chartWrap {
+	position: relative;
+	z-index: 1;
+	height: 410px;
+	padding-top: 50px;
+}
+
+.axisTitle {
+	position: absolute;
+	left: 2px;
+	top: 6px;
+	z-index: 2;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	color: rgba(255, 255, 255, 0.95);
+	font-size: 11px;
+	line-height: 1.2;
+	pointer-events: none;
+}
+
+.timelineLabel {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	margin-top: 8px;
+	padding: 0 8px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.legendRow {
+	display: flex;
+	gap: 24px;
+	padding: 40px 60px 4px;
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.66);
+}
+
+.legendItem {
+	display: flex;
+	flex-direction: column;
+	align-items: self-start;
+	gap: 8px;
+	width: 108px;
+}
+
+.legendLineBlue,
+.legendLineOrange,
+.legendDashed {
+	display: inline-block;
+	width: 100%;
+	height: 2px;
+}
+
+.legendLineBlue {
+	background: #4e9bcd;
+}
+
+.legendLineOrange {
+	background: #e66b21;
+}
+
+.legendDashed {
+	border-bottom: 2px dashed rgba(0, 112, 186, 1);
+	height: 0;
+}
+
+.cornerIndicator {
+	position: absolute;
+	right: 20px;
+	bottom: 18px;
+	width: 12px;
+	height: 10px;
+	background-color: #e66b21;
+	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+}
+
+@media (max-width: 1200px) {
+	.tooltip {
+		position: static;
+		width: auto;
+		margin: 0 0 10px;
+	}
+
+	.stagesNav {
+		flex-wrap: wrap;
+	}
+}

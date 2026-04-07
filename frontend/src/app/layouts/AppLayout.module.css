@@ -1,0 +1,104 @@
+.app {
+  width: 100%;
+  min-height: 100vh;
+  background: #f5f5f7;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-with-sidebar .app-body {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 88px);
+}
+
+.bpm-loading {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #5a6c7d;
+  font-size: 1rem;
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.app-content {
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.app-content-bpm {
+  padding: 0.5rem;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+}
+
+.app-content-service {
+  padding: 2rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content-ontology {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  max-width: none;
+}
+
+.service-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.service-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: rgba(0, 57, 92, 0.8);
+  color: #0078d2;
+  cursor: pointer;
+}
+
+.service-page-back:hover {
+  text-decoration: underline;
+}
+
+.service-page-back-arrow {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 9 2 L 4 6 L 9 10'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 12px 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 9 2 L 4 6 L 9 10'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 12px 12px;
+}
+
+.service-page-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #002033;
+  margin: 0;
+}

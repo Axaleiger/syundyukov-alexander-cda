@@ -1,0 +1,2542 @@
+/* Планирование — дизайн из figma.txt (1.6 Планировщик производственных задач) */
+
+/* Design tokens из Figma */
+:root {
+  --bpm-bg-default: #FFFFFF;
+  --bpm-bg-secondary: #ECF1F4;
+  --bpm-typo-primary: #002033;
+  --bpm-typo-secondary: rgba(0, 32, 51, 0.6);
+  --bpm-control-ghost-bg: rgba(0, 66, 105, 0.07);
+  --bpm-control-ghost-typo: rgba(0, 57, 92, 0.8);
+  --bpm-shadow-group: 0px 2px 2px rgba(0, 32, 51, 0.02), 0px 2px 8px rgba(0, 32, 51, 0.16);
+  --bpm-success: #24C38E;
+  --bpm-control-primary: #0078D2;
+  --bpm-radius: 4px;
+  --bpm-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Основной контейнер */
+.bpm-board-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  gap: 0;
+  padding: 8px;
+  font-family: var(--bpm-font);
+  box-sizing: border-box;
+}
+
+.bpm-board-wrap.bpm-loading-wrap {
+  background: #FDFDFD;
+  padding: 16px;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 80px;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.bpm-loading-text {
+  font-size: 12px;
+  line-height: 150%;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-loading-gif {
+  width: 42vmin;
+  height: 42vmin;
+  max-width: 280px;
+  max-height: 280px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.bpm-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--bpm-bg-secondary);
+  border-top-color: var(--bpm-control-ghost-typo);
+  border-radius: 50%;
+  animation: bpm-spin 0.8s linear infinite;
+}
+
+@keyframes bpm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.bpm-loading-back-wrap {
+  position: relative;
+  z-index: 10;
+}
+
+.bpm-loading-wrap .bpm-btn-back {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Header — компактный */
+.bpm-board-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  height: 40px;
+  min-height: 40px;
+  background: var(--bpm-bg-secondary);
+  border-radius: var(--bpm-radius) var(--bpm-radius) 0 0;
+  flex-shrink: 0;
+}
+
+.bpm-board-header-in-scroll {
+  width: 100%;
+}
+
+.bpm-header-left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bpm-board-header h2 {
+  margin: 0;
+  font-family: var(--bpm-font);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 150%;
+  color: var(--bpm-control-ghost-typo);
+}
+
+.bpm-btn-back {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Галочка влево: только левая и правая грань, без заливки (контур) */
+.bpm-icon-arrow-left {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background-color: var(--bpm-control-ghost-typo);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 9 2 L 4 6 L 9 10'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 12px 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 9 2 L 4 6 L 9 10'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 12px 12px;
+}
+
+.bpm-header-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Кнопка ghost — control-ghost/bg, border-radius 4px */
+.bpm-board-close,
+.bpm-upload-btn,
+.bpm-btn {
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  height: 32px;
+  min-height: 32px;
+  font-family: var(--bpm-font);
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 150%;
+  color: var(--bpm-control-ghost-typo);
+  background: var(--bpm-control-ghost-bg);
+  border: none;
+  border-radius: var(--bpm-radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bpm-upload-btn:hover,
+.bpm-btn:hover,
+.bpm-board-close:hover {
+  background: rgba(0, 66, 105, 0.12);
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-btn-primary {
+  color: #FFFFFF;
+  background: var(--bpm-control-primary);
+}
+
+.bpm-btn-primary:hover {
+  background: #006cbd;
+  color: #FFFFFF;
+}
+
+/* Toolbar — в стиле секции: padding, gap 8px */
+.bpm-toolbar,
+.bpm-toolbar-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 6px 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--bpm-bg-secondary);
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.bpm-toolbar-row {
+  width: 100%;
+}
+
+/* Figma Frame 4351: тумблер Упрощенный/Подробный — flex row, gap 12px, height 17px */
+.bpm-view-toggle {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  height: 17px;
+}
+
+.bpm-toggle-label {
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  line-height: 140%;
+  color: var(--bpm-typo-secondary);
+  cursor: pointer;
+}
+
+.bpm-toggle-label.active {
+  color: var(--bpm-typo-primary);
+  font-weight: 500;
+}
+
+.bpm-toggle-switch {
+  width: 28px;
+  height: 16px;
+  background: rgba(0, 66, 105, 0.2);
+  border-radius: 100px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bpm-toggle-switch[aria-checked="true"] {
+  background: var(--bpm-control-primary);
+}
+
+.bpm-toggle-switch-thumb {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+}
+
+.bpm-toggle-switch[aria-checked="true"] .bpm-toggle-switch-thumb {
+  transform: translateX(12px);
+}
+
+.bpm-btn-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Figma IconFilter 12×12 */
+.bpm-icon-filter {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bpm-icon-filter::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 3px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.bpm-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  line-height: 150%;
+  color: var(--bpm-typo-primary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bpm-radio input {
+  margin: 0;
+}
+
+.bpm-filters-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bpm-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-select-inline,
+.bpm-select {
+  min-width: 120px;
+  height: 32px;
+  padding: 0 8px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+  background: var(--bpm-bg-default);
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+}
+
+.bpm-error {
+  padding: 12px 16px;
+  background: rgba(184, 28, 28, 0.1);
+  border: 1px solid rgba(184, 28, 28, 0.3);
+  border-radius: var(--bpm-radius);
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+/* Панель «Взаимосвязи этапов» — как в Figma */
+.bpm-relations-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  min-height: 48px;
+  border: 1px solid rgba(0, 65, 102, 0.2);
+  border-radius: var(--bpm-radius);
+  background: var(--bpm-bg-default);
+  cursor: pointer;
+}
+
+.bpm-relations-title {
+  font-family: var(--bpm-font);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 140%;
+  text-transform: uppercase;
+  color: var(--bpm-control-ghost-typo);
+}
+
+.bpm-relations-toggle {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--bpm-radius);
+  cursor: pointer;
+}
+
+.bpm-relations-arrow {
+  display: inline-block;
+  width: 12px;
+  height: 8px;
+  border-left: 2px solid var(--bpm-typo-primary);
+  border-bottom: 2px solid var(--bpm-typo-primary);
+  transform: rotate(-45deg);
+}
+
+.bpm-relations-arrow-down {
+  transform: rotate(-225deg);
+  margin-top: -4px;
+}
+
+.bpm-relations-arrow-up {
+  transform: rotate(-45deg);
+  margin-bottom: -4px;
+}
+
+/* Итерации (под панелью взаимосвязей) */
+.bpm-iterations {
+  position: relative;
+  min-height: 180px;
+  margin-top: 4px;
+}
+
+.bpm-iteration-bar {
+  position: absolute;
+  height: 24px;
+  border-radius: var(--bpm-radius);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--bpm-font);
+  font-size: 10px;
+  color: var(--bpm-bg-default);
+}
+
+/* Область скролла: заголовок, тулбар, панель взаимосвязей и доска листаются вместе */
+/* Верхний блок: заголовок, тулбар, панель взаимосвязей — на всю ширину, правые кнопки видны сразу */
+.bpm-board-top-fixed {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.bpm-board-scroll-area {
+  margin-top: 0;
+}
+
+.bpm-board-top-in-scroll {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: min-content;
+}
+
+.bpm-toolbar-top-panel-divider-wrap {
+  margin-top: -4px;
+}
+
+.bpm-board-header-divider {
+  height: 0;
+  border-bottom: 1px solid rgba(0, 65, 102, 0.2);
+  margin: 0;
+}
+
+.bpm-divider-flush-top {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Скролл только у доски */
+.bpm-board-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+}
+
+.bpm-board-scroll-area .bpm-board-container {
+  flex: 0 0 auto;
+  min-width: min-content;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.bpm-board-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
+  min-width: min-content;
+  gap: 4px;
+}
+
+.bpm-top-panel-in-scroll {
+  flex-shrink: 0;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.bpm-top-panel-compact {
+  padding: 6px 12px;
+  margin-bottom: 0;
+  margin-top: 0;
+  border-top: 1px solid rgba(0, 65, 102, 0.2);
+}
+
+/* Верхняя панель над этапами — top_panel.txt */
+.bpm-top-panel {
+  background: var(--bpm-bg-default);
+  border: 1px solid rgba(0, 65, 102, 0.2);
+  border-top: none;
+  border-radius: 0 0 var(--bpm-radius) var(--bpm-radius);
+  padding: 8px 16px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.bpm-top-panel-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.bpm-top-panel-title {
+  font-family: var(--bpm-font);
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 150%;
+  text-transform: uppercase;
+  color: var(--bpm-control-ghost-typo);
+}
+
+.bpm-top-panel-arrow {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: var(--bpm-typo-primary);
+  clip-path: polygon(50% 20%, 100% 80%, 0 80%);
+}
+
+.bpm-top-panel-arrow-down {
+  clip-path: polygon(0 20%, 100% 20%, 50% 80%);
+}
+
+.bpm-top-panel-iterations {
+  position: relative;
+  min-height: 80px;
+  margin-top: 12px;
+}
+
+.bpm-top-panel-iteration {
+  position: absolute;
+  height: 24px;
+  border-radius: var(--bpm-radius);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+}
+
+.bpm-top-panel-iteration-label {
+  position: relative;
+  z-index: 1;
+  color: rgba(0, 32, 51, 0.6);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 140%;
+}
+
+.bpm-top-panel-create-link {
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-control-ghost-typo);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto;
+}
+
+.bpm-top-panel-create-link:hover {
+  color: var(--bpm-control-primary);
+  text-decoration: underline;
+}
+
+.bpm-top-panel-chevron .bpm-card-collapse-arrow {
+  display: inline-block;
+}
+
+.bpm-top-panel-iterations {
+  position: relative;
+  min-height: 96px;
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+.bpm-top-panel-iterations-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.bpm-top-panel-iteration-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.bpm-iter-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid rgba(0, 45, 77, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bpm-iter-icon-btn:hover {
+  background: rgba(0, 66, 105, 0.08);
+  border-color: rgba(0, 45, 77, 0.4);
+}
+
+.bpm-iter-icon-btn .bpm-iter-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.bpm-iter-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.9;
+}
+
+.bpm-iter-icon-eye {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002d4d' stroke-width='2'%3E%3Cpath d='M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+}
+
+.bpm-iter-icon-eye-slash {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002d4d' stroke-width='2'%3E%3Cpath d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24'/%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3C/svg%3E");
+}
+
+.bpm-iter-icon-gear {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002d4d' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/%3E%3C/svg%3E");
+}
+
+.bpm-iter-icon-dash {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002d4d' stroke-width='2' stroke-linecap='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E");
+}
+
+.bpm-iter-icon-refresh {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002d4d' stroke-width='2'%3E%3Cpolyline points='23 4 23 10 17 10'/%3E%3Cpolyline points='1 20 1 14 7 14'/%3E%3Cpath d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/%3E%3C/svg%3E");
+}
+
+.bpm-iter-icon-dots {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23002d4d'%3E%3Ccircle cx='12' cy='12' r='1.5'/%3E%3Ccircle cx='6' cy='12' r='1.5'/%3E%3Ccircle cx='18' cy='12' r='1.5'/%3E%3C/svg%3E");
+}
+
+.bpm-top-panel-iteration-bar-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.bpm-top-panel-iteration {
+  position: absolute;
+  left: 0;
+  height: 24px;
+  border-radius: var(--bpm-radius);
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  font-family: var(--bpm-font);
+  font-size: 11px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.bpm-top-panel-iteration .bpm-top-panel-iteration-label {
+  color: rgba(0, 32, 51, 0.6);
+}
+
+.bpm-top-panel-stage-dividers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bpm-top-panel-stage-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgba(0, 45, 77, 0.25);
+  transform: translateX(-50%);
+}
+
+/* Контейнер доски + вертикальная кнопка «Добавить этап» */
+.bpm-board-container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.bpm-add-stage-vertical {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 10px 8px;
+  height: auto;
+  min-height: 80px;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--bpm-control-ghost-typo);
+  background: var(--bpm-control-ghost-bg);
+  border: none;
+  border-radius: var(--bpm-radius);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.bpm-add-stage-vertical:hover {
+  background: rgba(0, 66, 105, 0.12);
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-btn-ghost {
+  background: transparent;
+  padding: 0 6px;
+  min-width: 32px;
+  height: 32px;
+}
+
+/* Оверлей связей — линии между карточками */
+.bpm-connections-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bpm-connections-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bpm-drop-zone-bottom {
+  min-height: 24px;
+  flex-shrink: 0;
+}
+
+/* Доска — колонки по Figma 318px, горизонтальный скролл при необходимости */
+.bpm-board {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px;
+  padding-left: 4px;
+  background: var(--bpm-bg-default);
+  border-radius: var(--bpm-radius);
+}
+
+/* Колонка этапа — Figma: 334px, bg #ECF1F4, серая полоса на всю высоту */
+.bpm-stage-column {
+  flex: 0 0 318px;
+  min-width: 318px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 12px 8px 8px;
+  gap: 4px;
+  background: #ECF1F4;
+  border-radius: var(--bpm-radius);
+  min-height: 200px;
+  align-self: stretch;
+  box-shadow: 0 0 0 1px rgba(0, 65, 102, 0.08);
+}
+
+.bpm-stage-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: grab;
+  flex-shrink: 0;
+  min-height: 52px;
+  height: 52px;
+  border-bottom: 1px solid rgba(0, 65, 102, 0.2);
+  padding-bottom: 6px;
+  margin-bottom: 0;
+}
+
+.bpm-stage-header:active {
+  cursor: grabbing;
+}
+
+.bpm-stage-column-dragging .bpm-stage-header {
+  opacity: 0.7;
+}
+
+/* Заголовок этапа — Regular/Headline_2: 12px 700 uppercase, control-ghost/typo */
+.bpm-stage-title {
+  font-family: var(--bpm-font);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 140%;
+  text-transform: uppercase;
+  color: var(--bpm-control-ghost-typo);
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.bpm-stage-title-clickable {
+  cursor: pointer;
+}
+
+.bpm-stage-title-clickable:hover {
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-stage-delete {
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.bpm-stage-header input.bpm-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.bpm-stage-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.bpm-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  height: 24px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--bpm-control-ghost-typo);
+  background: var(--bpm-control-ghost-bg);
+  border: none;
+  border-radius: var(--bpm-radius);
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.bpm-btn-icon:hover {
+  background: rgba(0, 66, 105, 0.12);
+}
+
+.bpm-input {
+  padding: 0 8px;
+  height: 32px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+  background: var(--bpm-bg-default);
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+  min-width: 100px;
+}
+
+.bpm-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  height: 28px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--bpm-control-ghost-typo);
+  background: var(--bpm-control-ghost-bg);
+  border: none;
+  border-radius: var(--bpm-radius);
+  cursor: pointer;
+}
+
+.bpm-btn-sm:hover {
+  background: rgba(0, 66, 105, 0.12);
+}
+
+.bpm-btn-danger:hover {
+  background: rgba(184, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+/* Карточки списка — единый gap 8px между кнопкой и карточками и между карточками */
+.bpm-stage-cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  margin-top: 8px;
+}
+
+.bpm-stage-cards > .bpm-drop-zone-first,
+.bpm-stage-cards > .bpm-card,
+.bpm-stage-cards > .bpm-drop-zone,
+.bpm-stage-cards > .bpm-drop-zone-bottom {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.bpm-stage-cards > * + * {
+  margin-top: 0;
+}
+
+/* Card — Figma: 318px, padding 12px, gap 8px */
+.bpm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 12px;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--bpm-bg-default);
+  box-shadow: var(--bpm-shadow-group);
+  border-radius: var(--bpm-radius);
+  cursor: grab;
+  transition: box-shadow 0.15s;
+  border: none;
+}
+
+.bpm-card:hover {
+  box-shadow: 0px 2px 4px rgba(0, 32, 51, 0.08), 0px 4px 12px rgba(0, 32, 51, 0.12);
+}
+
+.bpm-card:active {
+  cursor: grabbing;
+}
+
+.bpm-card-highlight {
+  box-shadow: 0 0 0 2px var(--bpm-success);
+  background: rgba(36, 195, 142, 0.08);
+}
+
+/* Верхняя строка карточки: № + Badge + удалить — Figma: 16px высота, gap 8px */
+.bpm-card-top-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 16px;
+  flex-wrap: nowrap;
+}
+
+.bpm-card-id {
+  font-family: var(--bpm-font);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 120%;
+  color: var(--bpm-typo-secondary);
+  flex-shrink: 0;
+}
+
+/* Badge статуса — Figma: 16px высота */
+.bpm-card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  height: 16px;
+  min-width: 0;
+  font-family: var(--bpm-font);
+  font-weight: 600;
+  font-size: 8px;
+  line-height: 16px;
+  text-transform: uppercase;
+  border-radius: var(--bpm-radius);
+  background: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.bpm-card-badge-in-work {
+  background: rgba(0, 61, 92, 0.2);
+  color: #003d5c;
+}
+
+.bpm-card-badge-success {
+  background: rgba(36, 195, 142, 0.1);
+  color: var(--bpm-success);
+}
+
+.bpm-card-badge-error {
+  background: rgba(184, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+.bpm-card-badge-pause {
+  background: rgba(0, 32, 51, 0.1);
+  color: var(--bpm-typo-secondary);
+}
+
+/* Название задачи — Figma: 12px 700, line-height 140% */
+.bpm-card-name {
+  font-family: var(--bpm-font);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 140%;
+  color: var(--bpm-typo-primary);
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.bpm-card-name-input {
+  font-family: var(--bpm-font);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 140%;
+  color: var(--bpm-typo-primary);
+  width: 100%;
+  min-width: 0;
+  padding: 2px 6px;
+  border: 1px solid rgba(0, 66, 105, 0.28);
+  border-radius: var(--bpm-radius);
+  background: var(--bpm-bg-default);
+  box-sizing: border-box;
+}
+
+.bpm-card-name-input:focus {
+  outline: none;
+  border-color: var(--bpm-control-primary);
+}
+
+/* Мета: Исполнитель, Согласующий и др. — Figma: Caption_2 10px, строки 20px */
+.bpm-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.bpm-card-meta-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.bpm-card-meta-label {
+  font-family: var(--bpm-font);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 120%;
+  color: var(--bpm-typo-secondary);
+  flex-shrink: 0;
+  width: 72px;
+  white-space: nowrap;
+}
+
+.bpm-card-meta-label-wrap {
+  white-space: normal;
+  width: 72px;
+  line-height: 130%;
+}
+
+.bpm-card-meta-value {
+  font-family: var(--bpm-font);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 120%;
+  color: var(--bpm-typo-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* Avatar — 20px, border-radius 16px, Figma: executor #2196F3, approver #31B72A */
+.bpm-card-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--bpm-font);
+  font-weight: 600;
+  font-size: 6px;
+  line-height: 20px;
+  color: #FFFFFF;
+}
+
+.bpm-card-avatar-executor {
+  background: #2196F3;
+}
+
+.bpm-card-avatar-approver {
+  background: #31B72A;
+}
+
+.bpm-card-avatar-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  padding: 0;
+  background: none;
+}
+
+.bpm-card-delete {
+  margin-left: auto;
+  padding: 0 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.bpm-card-delete:hover {
+  opacity: 1;
+}
+
+.bpm-drop-zone {
+  min-height: 8px;
+  flex-shrink: 0;
+}
+
+.bpm-drop-zone-first {
+  min-height: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.bpm-drop-zone-inline {
+  min-height: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.bpm-drop-zone:empty:hover,
+.bpm-drop-zone-inline:hover {
+  background: rgba(0, 66, 105, 0.08);
+  border-radius: 2px;
+}
+
+.bpm-add-task-top {
+  margin-top: 8px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.bpm-stage-cards {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bpm-stage-cards > .bpm-drop-zone:first-child {
+  margin-bottom: 0;
+}
+
+/* Разделитель — единая толщина как над «Используемые системы» */
+.bpm-card-divider {
+  width: 100%;
+  height: 1px;
+  min-height: 1px;
+  max-height: 1px;
+  margin: 0;
+  padding: 0;
+  background: rgba(0, 65, 102, 0.2);
+  flex-shrink: 0;
+}
+
+.bpm-card-body .bpm-card-divider,
+.bpm-card-ai-suggestion .bpm-card-divider {
+  height: 1px;
+  min-height: 1px;
+  max-height: 1px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Collapse: Системы и данные */
+.bpm-card-collapse {
+  width: 100%;
+}
+
+.bpm-card-collapse-trigger {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 4px 0;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  line-height: 150%;
+  color: var(--bpm-typo-primary);
+  text-align: left;
+}
+
+/* Галочка разворачивания: только левая и правая грань, без заливки (контур), не треугольник */
+.bpm-card-collapse-arrow {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background-color: var(--bpm-typo-primary);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 2 5 L 6 10 L 10 5'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 12px 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 2 5 L 6 10 L 10 5'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 12px 12px;
+}
+
+.bpm-card-collapse-arrow-down {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 2 5 L 6 10 L 10 5'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 12px 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 2 5 L 6 10 L 10 5'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 12px 12px;
+}
+
+.bpm-card-collapse-arrow-up {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 2 7 L 6 2 L 10 7'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 12px 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M 2 7 L 6 2 L 10 7'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 12px 12px;
+}
+
+.bpm-card-collapse-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.bpm-card-collapse-add {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* Блок «Название данных» — 2XS */
+.bpm-card-data-list {
+  padding: 0 0 8px;
+}
+
+.bpm-card-data-list-title {
+  font-family: var(--bpm-font);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 150%;
+  color: var(--bpm-typo-secondary);
+  margin-bottom: 4px;
+}
+
+.bpm-card-data-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bpm-card-data-item {
+  font-family: var(--bpm-font);
+  font-weight: 400;
+  font-size: 10px;
+  line-height: 150%;
+  color: var(--bpm-typo-primary);
+  padding: 2px 0;
+}
+
+.bpm-card-data-empty {
+  font-family: var(--bpm-font);
+  font-size: 10px;
+  line-height: 150%;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-card-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 65, 102, 0.12);
+}
+
+.bpm-card-body {
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 32, 51, 0.12);
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  line-height: 140%;
+  color: var(--bpm-typo-secondary);
+  width: 100%;
+}
+
+.bpm-card-body p {
+  margin: 0.25rem 0;
+  color: var(--bpm-typo-primary);
+}
+
+/* Превью при перетаскивании колонки */
+.bpm-stage-column-drag-preview {
+  background: var(--bpm-bg-default);
+  border-radius: var(--bpm-radius);
+  box-shadow: var(--bpm-shadow-group);
+  padding: 12px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-stage-column-drag-preview .bpm-stage-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--bpm-control-ghost-typo);
+}
+
+.bpm-stage-column-drag-preview .bpm-stage-cards {
+  margin-top: 8px;
+  color: var(--bpm-typo-secondary);
+  font-size: 10px;
+}
+
+/* Кнопка «Добавить задачу» — как ghost кнопка с иконкой */
+.bpm-add-task {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+  height: 24px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 150%;
+  color: var(--bpm-control-ghost-typo);
+  background: var(--bpm-control-ghost-bg);
+  border: none;
+  border-radius: var(--bpm-radius);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.bpm-add-task:hover {
+  background: rgba(0, 66, 105, 0.12);
+}
+
+/* Поиск — в стиле control */
+.bpm-search {
+  padding: 0 12px;
+  height: 32px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+  background: var(--bpm-bg-default);
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+  min-width: 180px;
+}
+
+.bpm-search::placeholder {
+  color: var(--bpm-typo-secondary);
+}
+
+/* Селектор доски */
+.bpm-board-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bpm-board-selector-label {
+  font-family: var(--bpm-font);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-board-option {
+  padding: 0 10px;
+  height: 32px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+  background: var(--bpm-bg-default);
+  cursor: pointer;
+  color: var(--bpm-control-ghost-typo);
+}
+
+.bpm-board-option:hover {
+  background: var(--bpm-control-ghost-bg);
+}
+
+.bpm-board-option.active {
+  background: var(--bpm-control-ghost-typo);
+  border-color: var(--bpm-control-ghost-typo);
+  color: var(--bpm-bg-default);
+}
+
+/* Рассчитать — граф и аналитика */
+.bpm-calculate-wrap .bpm-board-header {
+  margin-bottom: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.bpm-calculate-wrap .bpm-board-header h2 {
+  flex: 1;
+}
+
+.bpm-calculate-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 16px;
+  margin-top: 16px;
+  min-height: calc(100vh - 120px);
+}
+
+.bpm-calculate-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.bpm-infographics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.bpm-infographic-card {
+  background: var(--bpm-bg-default);
+  border: 1px solid rgba(0, 65, 102, 0.12);
+  border-radius: var(--bpm-radius);
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0, 32, 51, 0.06);
+}
+
+.bpm-infographic-card-title-main {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.bpm-infographic-subtitle {
+  margin: 0 0 8px;
+  font-size: 10px;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-infographic-card-compact {
+  padding: 8px 10px;
+}
+
+.bpm-infographic-card-compact h4 {
+  margin: 0 0 6px;
+  font-size: 10px;
+}
+
+.bpm-infographic-card-compact .bpm-infographic-bar-row {
+  min-height: 20px;
+}
+
+.bpm-infographic-card h4 {
+  margin: 0 0 10px;
+  font-family: var(--bpm-font);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-infographic-histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 64px;
+}
+
+.bpm-histogram-bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 12px;
+}
+
+.bpm-histogram-bar {
+  width: 100%;
+  min-height: 2px;
+  background: #0078D2;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.2s ease;
+}
+
+.bpm-histogram-label {
+  font-size: 9px;
+  color: var(--bpm-typo-secondary);
+  margin-top: 4px;
+}
+
+.bpm-infographic-caption {
+  margin: 8px 0 0;
+  font-size: 10px;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-infographic-bars,
+.bpm-infographic-top-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bpm-infographic-bar-row,
+.bpm-top-node-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bpm-infographic-bar-label,
+.bpm-top-node-label {
+  font-size: 10px;
+  color: var(--bpm-typo-secondary);
+  width: 72px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bpm-infographic-bar-track,
+.bpm-top-node-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(0, 65, 102, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bpm-infographic-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.bpm-infographic-bar-1 { background: #FF6B6B; }
+.bpm-infographic-bar-2 { background: #4ECDC4; }
+.bpm-infographic-bar-3 { background: #118AB2; }
+
+.bpm-infographic-bar-value,
+.bpm-top-node-degree {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--bpm-typo-primary);
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.bpm-top-node-bar {
+  height: 100%;
+  background: #0078D2;
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.bpm-top-node-label {
+  width: 120px;
+  font-size: 10px;
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-calculate-graph {
+  background: var(--bpm-bg-default);
+  border-radius: var(--bpm-radius);
+  box-shadow: var(--bpm-shadow-group);
+  overflow: hidden;
+}
+
+.bpm-calculate-graph iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 560px;
+  border: 0;
+}
+
+.bpm-calculate-analytics {
+  background: var(--bpm-bg-default);
+  border-radius: var(--bpm-radius);
+  box-shadow: var(--bpm-shadow-group);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.bpm-calculate-analytics h3 {
+  margin: 0 0 16px;
+  font-family: var(--bpm-font);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 140%;
+  text-transform: uppercase;
+  color: var(--bpm-control-ghost-typo);
+}
+
+.bpm-calculate-analytics h4 {
+  margin: 16px 0 8px;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-analytics-row {
+  margin: 4px 0;
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-analytics-top {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-analytics-label {
+  display: inline-block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+/* Итерации */
+.bpm-iterations {
+  position: relative;
+  height: 180px;
+  margin-top: 8px;
+}
+
+.bpm-iteration-bar {
+  position: absolute;
+  height: 24px;
+  border-radius: var(--bpm-radius);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--bpm-font);
+  font-size: 10px;
+  color: var(--bpm-bg-default);
+}
+
+/* Форма редактирования задачи */
+.bpm-task-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.bpm-task-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--bpm-font);
+  font-size: 10px;
+  line-height: 120%;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bpm-entry-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.bpm-entry-row input {
+  flex: 1;
+  padding: 0 8px;
+  height: 32px;
+  font-size: 12px;
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+}
+
+.bpm-edit-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Рассчитать — граф inline */
+.bpm-calculate-graph-inline {
+  flex: 1;
+  min-height: 0;
+  background: var(--bpm-bg-default);
+  border-radius: var(--bpm-radius);
+  overflow: auto;
+}
+
+.bpm-graph-svg {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+}
+
+.bpm-graph-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  border: none;
+  border-radius: var(--bpm-radius);
+  background: #f8fafc;
+}
+
+.bpm-analytics-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.bpm-chart-bar {
+  height: 12px;
+  background: var(--bpm-control-primary);
+  border-radius: 2px;
+  min-width: 4px;
+}
+
+.bpm-chart-bar-2 { background: var(--bpm-success); }
+.bpm-chart-bar-3 { background: #94a3b8; }
+
+/* Период в одну строку — фиксированные ширины, чтобы не налезало */
+.bpm-card-schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bpm-card-schedule-row .bpm-card-meta-label {
+  flex-shrink: 0;
+}
+
+.bpm-card-period-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.bpm-card-period-row .bpm-card-meta-label {
+  width: 100%;
+  flex: 0 0 100%;
+  margin-bottom: 2px;
+}
+
+.bpm-card-period-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Современный datepicker — даты влезают, элегантный вид */
+.bpm-input-date {
+  font-family: var(--bpm-font);
+  font-size: 12px;
+  color: var(--bpm-typo-primary);
+  background: var(--bpm-bg-default);
+  border: 1px solid rgba(0, 66, 105, 0.28);
+  border-radius: var(--bpm-radius);
+  padding: 6px 10px;
+  height: 32px;
+  min-width: 120px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.bpm-input-date:hover { border-color: rgba(0, 66, 105, 0.4); }
+.bpm-input-date:focus {
+  outline: none;
+  border-color: var(--bpm-control-primary);
+  box-shadow: 0 0 0 2px rgba(0, 120, 210, 0.2);
+}
+
+.bpm-card-period-inputs .bpm-input-date {
+  width: 115px;
+  min-width: 90px;
+  max-width: 130px;
+  padding: 4px 8px;
+  height: 28px;
+  font-size: 11px;
+  flex: 1 1 auto;
+}
+
+.bpm-card-collapse-trigger-inline {
+  flex-shrink: 0;
+  padding: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bpm-card-period-sep {
+  color: var(--bpm-typo-secondary);
+  font-size: 12px;
+}
+
+.bpm-select-tiny {
+  min-width: 0;
+  max-width: 100%;
+  font-size: 10px;
+  padding: 0 6px;
+  height: 24px;
+}
+
+/* Селекты/инпуты внутри карточки не вылезают за границы */
+.bpm-card .bpm-select-inline,
+.bpm-card .bpm-select,
+.bpm-card .bpm-select-tiny {
+  max-width: 100%;
+}
+
+/* Секции карточки */
+.bpm-card-section {
+  margin-top: 8px;
+}
+
+.bpm-card-section-block {
+  margin-top: 2px;
+  padding: 2px 0;
+}
+
+.bpm-card-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.bpm-card-section-chevron {
+  flex-shrink: 0;
+}
+
+.bpm-card-section-header .bpm-card-section-title {
+  flex: 1;
+  margin: 0;
+  margin-bottom: 0;
+}
+
+.bpm-add-system-inline {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.bpm-card-section-title {
+  font-family: var(--bpm-font);
+  font-size: 10px;
+  line-height: 150%;
+  color: var(--bpm-typo-secondary);
+  margin-bottom: 4px;
+}
+
+.bpm-card-systems-list {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.bpm-card-system-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  min-width: 0;
+}
+
+.bpm-card-system-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0078D2;
+  font-size: 11px;
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bpm-card-system-link:hover {
+  text-decoration: underline;
+}
+
+.bpm-card-system-link:hover .bpm-icon-open-in-new {
+  text-decoration: underline;
+}
+
+.bpm-card-system-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0078D2;
+  font-size: 11px;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.bpm-card-system-link-btn:hover {
+  text-decoration: underline;
+}
+
+.bpm-card-system-link-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bpm-icon-external {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  background: linear-gradient(135deg, transparent 50%, currentColor 50%);
+  opacity: 0.7;
+}
+
+/* IconOpenInNew 12×12, голубой */
+.bpm-icon-open-in-new {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230078D2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.bpm-add-system-btn {
+  margin-top: 2px;
+}
+
+/* Плашки файлов */
+.bpm-card-file-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bpm-file-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(36, 195, 142, 0.1);
+  border-radius: var(--bpm-radius);
+  font-size: 11px;
+  color: var(--bpm-typo-primary);
+  min-width: 0;
+}
+
+.bpm-file-pill-minimal {
+  background: none;
+  padding: 2px 0;
+  gap: 6px;
+}
+
+.bpm-file-pill-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bpm-file-pill-result {
+  background: rgba(0, 32, 51, 0.06);
+}
+
+.bpm-icon-file {
+  width: 14px;
+  height: 16px;
+  background: var(--bpm-success);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.bpm-icon-file-sm {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background-size: 12px 12px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Цвет файла ok = как статус ЗАВЕРШЕН #31B72A */
+.bpm-icon-file-sm.bpm-icon-file-ok {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2331B72A'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4z'/%3E%3C/svg%3E");
+}
+
+.bpm-icon-file-sm.bpm-icon-file-missing {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dc3545'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4z'/%3E%3C/svg%3E");
+}
+
+.bpm-icon-file-sm.bpm-icon-file-warning {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fd7e14'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4z'/%3E%3C/svg%3E");
+}
+
+.bpm-icon-file-outline {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 66, 105, 0.35);
+  border-radius: 2px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23002d4d' stroke-width='1.5'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E") center/12px 12px no-repeat;
+  cursor: pointer;
+}
+
+/* Иконка «Скачать» справа: серый документ со стрелкой вниз, светлое скруглённое обрамление */
+.bpm-icon-file-outline-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: rgba(0, 65, 102, 0.08);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bpm-icon-file-download,
+.bpm-icon-arrow-down {
+  width: 14px;
+  height: 14px;
+  background: #5a6c7d;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
+.bpm-icon-file-filled {
+  width: 14px;
+  height: 14px;
+  background: #5a6c7d;
+  border-radius: 2px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4z'/%3E%3Cpath d='M12 16l-4-4h3V9h2v3h3l-4 4z'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 14px 14px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4z'/%3E%3Cpath d='M12 16l-4-4h3V9h2v3h3l-4 4z'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 14px 14px;
+}
+.bpm-icon-arrow-up {
+  width: 14px;
+  height: 14px;
+  background: #5a6c7d;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M5 15h4v4h6v-4h4l-7-7-7 7zM5 4v2h14V4H5z'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M5 15h4v4h6v-4h4l-7-7-7 7zM5 4v2h14V4H5z'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
+
+.bpm-icon-file-outline-btn:hover {
+  background: rgba(0, 65, 102, 0.12);
+}
+
+.bpm-icon-file-outline-btn:hover .bpm-icon-file-filled {
+  background: #002d4d;
+}
+
+.bpm-file-pill .bpm-icon-file-sm {
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  background-color: transparent;
+  background-size: 14px 14px;
+}
+
+.bpm-file-pill-date {
+  font-size: 10px;
+  color: var(--bpm-typo-secondary);
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.bpm-file-pill-ai {
+  position: relative;
+}
+.bpm-file-pill-ai-icon {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #00BFFF;
+  border-radius: 50%;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: 10px 10px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: 10px 10px;
+  background-color: #00BFFF;
+}
+
+.bpm-card-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bpm-result-line {
+  font-family: var(--bpm-font);
+  font-size: 11px;
+  color: var(--bpm-typo-primary);
+  padding: 2px 0;
+}
+
+.bpm-card-meta-placeholder {
+  color: var(--bpm-typo-secondary);
+  font-style: italic;
+  cursor: pointer;
+}
+
+.bpm-card-meta-placeholder:hover {
+  color: var(--bpm-control-primary);
+  text-decoration: underline;
+}
+
+.bpm-icon-excel {
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230078D2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2 5 5h-5V4zm-3 8 2 3-2 3h2l1.5-2 1.5 2h2l-2-3 2-3h-2l-1.5 2L12 12h-2z'/%3E%3C/svg%3E") center/contain no-repeat;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bpm-file-pill-name { flex: 1; min-width: 0; }
+
+.bpm-ai-dona-btn {
+  font-size: 11px;
+  color: #0078D2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+.bpm-ai-dona-btn:hover { text-decoration: underline; }
+
+/* ИИ-автопредложение: до нажатия СОГЛАСОВАТЬ — серая заливка и голубая обводка; после — без серого, зелёная обводка */
+.bpm-card-ai-suggestion {
+  background: #e5e7eb;
+  border: 2px solid #00BFFF;
+  border-radius: var(--bpm-radius);
+  padding: 12px 14px;
+  min-height: 48px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.bpm-card-ai-suggestion .bpm-card-ai-agree-badge {
+  border: 2px solid #00BFFF;
+  border-radius: 4px;
+}
+.bpm-card-ai-suggestion.bpm-card-ai-agreed {
+  background: #fff;
+  border-color: #22c55e;
+}
+.bpm-card-ai-suggestion.bpm-card-ai-agreed .bpm-card-ai-agree-badge {
+  border-color: #22c55e;
+}
+.bpm-stage-header-ai .bpm-stage-agree-badge {
+  border: 2px solid #00BFFF;
+  border-radius: 4px;
+}
+.bpm-stage-header-ai.bpm-stage-agreed .bpm-stage-agree-badge,
+.bpm-card-ai-suggestion.bpm-card-ai-agreed .bpm-card-ai-agree-badge {
+  border-color: #22c55e;
+}
+.bpm-card-ai-agree-btn {
+  font-size: 10px;
+  padding: 2px 6px;
+  margin-left: 4px;
+}
+
+.bpm-card-ai-suggestion-badge-wrap {
+  margin-top: 4px;
+}
+
+.bpm-card-ai-suggestion-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: rgba(0, 32, 51, 0.7);
+  letter-spacing: 0.02em;
+}
+
+.bpm-stage-ai-suggestion {
+  background: #ECF1F4;
+  border: 2px solid #00BFFF;
+  min-width: 200px;
+}
+
+.bpm-stage-ai-suggestion.bpm-stage-column-agreed {
+  border-color: #22c55e;
+}
+
+.bpm-stage-header-ai {
+  cursor: default;
+}
+
+.bpm-card-ai-suggestion-stage {
+  margin-top: 4px;
+}
+
+/* Модалка ИИ-автовзаимосвязи: регламенты */
+.bpm-modal-autosvyazi .bpm-modal-section {
+  margin-bottom: 16px;
+}
+
+.bpm-modal-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bpm-typo-primary);
+  margin-bottom: 8px;
+}
+
+.bpm-modal-regulations-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.bpm-modal-regulation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.bpm-modal-regulation-cb {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--bpm-control-primary);
+}
+
+.bpm-modal-regulation-link {
+  font-size: 12px;
+  color: #0078D2;
+  text-decoration: underline;
+}
+
+.bpm-modal-regulation-link:hover {
+  color: #005a9e;
+}
+
+.bpm-modal-add-reg-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--bpm-control-ghost-typo);
+  margin-top: 8px;
+}
+
+.bpm-modal-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.bpm-modal-add-reg-btn {
+  padding: 4px 0;
+}
+
+.bpm-modal-add-reg-btn:hover {
+  color: var(--bpm-control-primary);
+  text-decoration: underline;
+}
+
+/* Карточка Реинжениринг — мятный */
+.bpm-card-reinjing {
+  background: rgba(200, 242, 220, 0.5);
+  border: 1px solid rgba(36, 195, 142, 0.3);
+}
+
+/* Режим связей */
+.bpm-connection-hint {
+  padding: 6px 12px;
+  background: rgba(0, 120, 210, 0.15);
+  border-radius: var(--bpm-radius);
+  font-size: 12px;
+  color: var(--bpm-control-primary);
+  margin-bottom: 4px;
+}
+
+.bpm-card-connection-from {
+  outline: 2px solid var(--bpm-control-primary);
+  outline-offset: 2px;
+}
+
+/* Модальное окно ИИ */
+.bpm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 32, 51, 0.4);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bpm-modal {
+  background: var(--bpm-bg-default);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 12px 28px rgba(0, 32, 51, 0.2);
+}
+
+.bpm-modal-title {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--bpm-typo-primary);
+}
+
+.bpm-modal-prompt {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+  font-size: 12px;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.bpm-modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ИИ-помощник плавающий */
+.bpm-ai-assistant {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+}
+
+.bpm-ai-assistant-toggle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bpm-control-primary);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 120, 210, 0.4);
+}
+
+.bpm-ai-assistant-panel {
+  position: absolute;
+  bottom: 56px;
+  right: 0;
+  width: 320px;
+  background: var(--bpm-bg-default);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 32, 51, 0.15);
+}
+
+.bpm-ai-assistant-greeting {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--bpm-typo-secondary);
+}
+
+.bpm-ai-assistant-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 32, 51, 0.2);
+  border-radius: var(--bpm-radius);
+  font-size: 12px;
+}
+
+.bpm-ai-autosvyazi {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 998;
+}
+
+.bpm-ai-autosvyazi-inline {
+  font-size: 12px;
+  padding: 6px 12px;
+  margin-right: 8px;
+  font-weight: 500;
+  color: #5a6c7d;
+  background: rgba(0, 120, 210, 0.08);
+  border: 1px solid rgba(0, 120, 210, 0.25);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.bpm-ai-autosvyazi-inline:hover {
+  background: rgba(0, 120, 210, 0.12);
+  color: #002d4d;
+}
+
+.bpm-ai-suggestions-btn {
+  margin-right: 8px;
+}
+.bpm-ai-suggestions-btn.bpm-ai-suggestions-btn-on {
+  background: rgb(208, 230, 246) !important;
+  border-color: rgba(0, 120, 210, 0.4);
+  color: #002d4d;
+}
+
+.bpm-card-ai-agree-badge {
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 4px;
+  height: 16px;
+}
+.bpm-stage-agree-badge {
+  margin-right: 4px;
+}
+
+.bpm-stage-header-ai .bpm-stage-title {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  color: var(--bpm-typo-primary, #002033);
+}
