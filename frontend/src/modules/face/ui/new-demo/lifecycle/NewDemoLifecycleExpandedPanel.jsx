@@ -86,6 +86,15 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 		return Array.from({ length: 6 }, (_, idx) => Number((idx * step).toFixed(2)))
 	}, [yMax])
 
+	const selectedStageDataKey = useMemo(() => {
+		if (!selectedStageKey || !rows.length) return null
+		const hasNumericValues = rows.some((row) => {
+			const value = row[selectedStageKey]
+			return typeof value === "number" && !Number.isNaN(value)
+		})
+		return hasNumericValues ? selectedStageKey : null
+	}, [rows, selectedStageKey])
+
 	const futureSegmentEndYear = useMemo(
 		() => (rows.length ? String(rows[rows.length - 1].year) : null),
 		[rows],
@@ -209,6 +218,13 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 											<stop offset="100%" stopColor={stage.color} stopOpacity={0.08} />
 										</linearGradient>
 									))}
+									<filter id="nd-selected-stage-glow" x="-50%" y="-50%" width="200%" height="200%">
+										<feGaussianBlur stdDeviation="2.2" result="blur" />
+										<feMerge>
+											<feMergeNode in="blur" />
+											<feMergeNode in="SourceGraphic" />
+										</feMerge>
+									</filter>
 								</defs>
 								<CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="4 8" />
 								<XAxis
@@ -261,16 +277,6 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 										isAnimationActive={false}
 									/>
 								))}
-								{selectedStageKey ? (
-									<Line
-										type="monotone"
-										dataKey={selectedStageKey}
-										stroke="rgba(230, 89, 7, 1)"
-										strokeWidth={2.4}
-										dot={false}
-										isAnimationActive={false}
-									/>
-								) : null}
 								<Line
 									type="monotone"
 									dataKey="__total"
@@ -279,6 +285,43 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 									dot={false}
 									isAnimationActive={false}
 								/>
+								{selectedStageDataKey ? (
+									<>
+										<Line
+											type="monotone"
+											dataKey={selectedStageDataKey}
+											stroke="rgba(255, 255, 255, 0.9)"
+											strokeWidth={6}
+											dot={false}
+											connectNulls
+											isAnimationActive={false}
+										/>
+										<Line
+											type="monotone"
+											dataKey={selectedStageDataKey}
+											stroke="rgba(230, 89, 7, 1)"
+											strokeWidth={3.6}
+											strokeOpacity={1}
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											filter="url(#nd-selected-stage-glow)"
+											dot={{
+												r: 3.2,
+												fill: "rgba(230, 89, 7, 1)",
+												stroke: "rgba(255, 255, 255, 0.95)",
+												strokeWidth: 1.4,
+											}}
+											activeDot={{
+												r: 4.4,
+												fill: "rgba(230, 89, 7, 1)",
+												stroke: "#fff",
+												strokeWidth: 1.6,
+											}}
+											connectNulls
+											isAnimationActive={false}
+										/>
+									</>
+								) : null}
 							</AreaChart>
 						</ResponsiveContainer>
 					</div>
