@@ -3,25 +3,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import Engine
+from sqlalchemy import text
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
-
-
-def _engine() -> Engine | None:
-    if not DATABASE_URL:
-        return None
-    return create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=5)
-
-
-engine: Engine | None = None
+from app.api import api_router
+from app.db.session import engine
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global engine
-    engine = _engine()
     yield
     if engine is not None:
         engine.dispose()
@@ -36,6 +25,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health")

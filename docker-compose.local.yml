@@ -24,8 +24,11 @@ services:
   api:
     build: ./backend
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cda}:${POSTGRES_PASSWORD:-cda_change_me}@db:5432/${POSTGRES_DB:-cda}
+      SCENARIO_EXPORTS_DIR: /app/seed_data/scenario_exports
     depends_on:
       db:
         condition: service_healthy
