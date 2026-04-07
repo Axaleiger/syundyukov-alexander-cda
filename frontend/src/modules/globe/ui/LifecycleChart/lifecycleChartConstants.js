@@ -8,11 +8,11 @@ export const VIEW_MODES = [
 ]
 
 export const stages = [
-  { key: 'geologorazvedka', name: 'Геологоразведка и работа с ресурсной базой', color: '#5b8dc9' },
-  { key: 'razrabotka', name: 'Разработка', color: '#6b7fd7' },
-  { key: 'planirovanie', name: 'Планирование и обустройство', color: '#8b7fd4' },
-  { key: 'burenie', name: 'Бурение и ВСР', color: '#7eb8e8' },
-  { key: 'dobycha', name: 'Добыча', color: '#6bc4a0' },
+  { key: 'geologorazvedka', name: 'Геологоразведка и работа с ресурсной базой', color: '#2778A9' },
+  { key: 'razrabotka', name: 'Разработка', color: '#7086FD' },
+  { key: 'planirovanie', name: 'Планирование и обустройство', color: '#C4E7FF' },
+  { key: 'burenie', name: 'Бурение и ВСР', color: '#2FB4E9' },
+  { key: 'dobycha', name: 'Добыча', color: '#0F98AC' },
 ]
 
 /** Цветные линии между точками на оси X (цвет = цвет конечной точки). */

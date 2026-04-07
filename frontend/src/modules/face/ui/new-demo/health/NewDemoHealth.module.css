@@ -3,125 +3,115 @@
 	width: 313px;
 	height: 322px;
 	border-radius: 10px;
-	border: 1px solid rgba(147, 197, 253, 0.28);
+	border: 1px solid rgba(148, 163, 184, 0.34);
 	background: linear-gradient(
-		180deg,
-		rgba(15, 23, 42, 0.44) 0%,
-		rgba(15, 23, 42, 0.24) 58%,
-		rgba(15, 23, 42, 0.14) 100%
+		168deg,
+		rgba(15, 23, 42, 0.66) 0%,
+		rgba(15, 23, 42, 0.42) 52%,
+		rgba(15, 23, 42, 0.26) 100%
 	);
-	backdrop-filter: blur(4px);
-	-webkit-backdrop-filter: blur(4px);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-	display: block;
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.14),
+		inset 0 -24px 48px rgba(15, 23, 42, 0.24),
+		0 16px 34px rgba(2, 8, 23, 0.24);
+	display: grid;
+	grid-template-rows: min-content 1fr;
 	padding: 16px;
 	text-align: left;
 	cursor: pointer;
-	transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-}
-
-.healthCard:hover {
-	border-color: rgba(249, 115, 22, 0.6);
+	overflow: hidden;
+	transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
 .healthCardActive {
-	border-color: rgba(249, 115, 22, 0.88);
+	border-color: rgba(56, 189, 248, 0.7);
 	box-shadow:
-		0 0 0 1px rgba(249, 115, 22, 0.3),
-		inset 0 1px 0 rgba(255, 255, 255, 0.12);
+		inset 0 1px 0 rgba(255, 255, 255, 0.16),
+		inset 0 -24px 48px rgba(15, 23, 42, 0.24),
+		0 0 0 1px rgba(56, 189, 248, 0.35),
+		0 16px 34px rgba(2, 8, 23, 0.24);
+}
+
+.healthCardCompact {
+	height: 35px;
+	box-sizing: border-box;
+	grid-template-rows: 1fr;
+	align-items: center;
+	padding: 5px 12px;
+}
+
+.healthCardHeader {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	align-items: flex-start;
+}
+
+.healthCardBody {
+	position: relative;
+	z-index: 1;
+}
+
+.healthCardCompact .healthCardBody {
+	display: none;
+}
+
+.healthCardBody::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 58%;
+	width: 260px;
+	height: 260px;
+	transform: translate(-50%, -50%);
+	background:
+		radial-gradient(
+			circle at 50% 50%,
+			rgba(56, 189, 248, 0.18) 0%,
+			rgba(37, 99, 235, 0.12) 28%,
+			rgba(15, 23, 42, 0) 68%
+		);
+	filter: blur(18px);
+	opacity: 0.9;
+	pointer-events: none;
 }
 
 .healthCardTitle {
 	margin: 0;
-	font-size: 15px;
-	line-height: 1.25;
-	font-weight: 600;
-	color: rgba(226, 232, 240, 0.94);
-	padding-right: 36px;
+	font-size: 14px;
 }
 
-.healthCardIndex {
+.healthCardRosePreview {
 	position: absolute;
-	top: 58px;
-	left: 16px;
-	color: #f97316;
-	font-size: 18px;
-	font-weight: 700;
-}
-
-.healthCardRadar {
-	position: absolute;
-	left: 50%;
-	top: 56%;
-	transform: translate(-50%, -50%);
-}
-
-.healthLabel {
-	position: absolute;
-	font-size: 10px;
-	color: rgba(226, 232, 240, 0.76);
-	letter-spacing: 0.04em;
-}
-
-.healthLabel0 { top: -12px; left: 53px; }
-.healthLabel1 { top: 16px; right: -24px; }
-.healthLabel2 { top: 84px; right: -22px; }
-.healthLabel3 { bottom: -14px; left: 55px; }
-.healthLabel4 { top: 84px; left: -26px; }
-.healthLabel5 { top: 16px; left: -28px; }
-
-.healthCardTriangle {
-	position: absolute;
-	right: 12px;
-	bottom: 10px;
-	width: 0;
-	height: 0;
-	border-style: solid;
-	border-width: 0 0 16px 16px;
-	border-color: transparent transparent #f97316 transparent;
-	opacity: 0.92;
-}
-
-.radarWrap {
-	display: inline-flex;
+	inset: 4px -4px 6px;
+	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
-.radarWrapSmall {
-	width: 124px;
-	height: 124px;
+.healthCardRosePreview::before {
+	content: "";
+	position: absolute;
+	inset: 8px 2px 0;
+	background: radial-gradient(circle at 50% 46%, rgba(37, 99, 235, 0.08), rgba(15, 23, 42, 0) 62%);
+	pointer-events: none;
 }
 
-.radarWrapLarge {
-	width: 210px;
-	height: 210px;
+.healthCardTriangle {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	width: 12px;
+            height: 10px;
+            background-color: #e66b21;
+            clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
 }
 
-.radarSvg {
-	width: 100%;
-	height: 100%;
-}
-
-.radarRing {
-	fill: none;
-	stroke: rgba(148, 163, 184, 0.24);
-	stroke-width: 1;
-}
-
-.radarAxis {
-	stroke: rgba(148, 163, 184, 0.2);
-	stroke-width: 1;
-}
-
-.radarArea {
-	fill: rgba(249, 115, 22, 0.24);
-	stroke: rgba(251, 146, 60, 0.96);
-	stroke-width: 1.5;
-}
-
-.radarCore {
-	fill: rgba(251, 146, 60, 0.98);
+.healthCardActive .healthCardTriangle {
+	background-color: rgba(47, 180, 233, 1);
+    transform: rotate(180deg);
 }
 
 .expandedRoot {
@@ -129,125 +119,411 @@
 	inset: 0;
 	z-index: 4;
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: center;
-	padding: 20px;
+	padding: 338px 80px 20px;
 	pointer-events: none;
 }
 
 .expandedPanel {
 	position: relative;
-	width: min(1020px, 92vw);
-	min-height: 610px;
-	border-radius: 18px;
-	border: 1px solid rgba(148, 163, 184, 0.45);
-	background: linear-gradient(
-		168deg,
-		rgba(15, 23, 42, 0.82) 0%,
-		rgba(15, 23, 42, 0.72) 52%,
-		rgba(15, 23, 42, 0.62) 100%
-	);
-	backdrop-filter: blur(14px);
-	-webkit-backdrop-filter: blur(14px);
-	box-shadow:
-		0 26px 64px rgba(2, 8, 23, 0.45),
-		inset 0 1px 0 rgba(255, 255, 255, 0.1);
-	padding: 30px 32px 24px;
+	width: min(1000px, 95vw);
+	max-height: calc(100vh - 140px);
+	overflow: auto;
+	border-radius: 12px;
+	box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+	padding: 30px;
 	pointer-events: auto;
+	/* Точные параметры из Figma */
+	background:
+		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
+		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
+		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border-top: 1px solid rgba(224, 242, 254, 0.18);
+	border-right: 1px solid rgba(103, 232, 249, 0.3);
+	border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+	border-left: 1px solid rgba(5, 15, 30, 0.24);
+}
+
+.expandedPanelGlow {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+
 }
 
 .closeButton {
 	position: absolute;
-	top: 10px;
-	right: 14px;
+	z-index: 10;
+	top: 20px;
+	right: 20px;
 	width: 34px;
 	height: 34px;
-	border: none;
+	border: 1px solid rgba(255, 255, 255, 0.14);
 	border-radius: 8px;
-	color: rgba(226, 232, 240, 0.94);
-	background: rgba(15, 23, 42, 0.56);
-	font-size: 26px;
+	color: rgba(255, 255, 255, 0.92);
+	background: rgba(255, 255, 255, 0.08);
+	font-size: 22px;
 	line-height: 1;
 	cursor: pointer;
+	transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.closeButton:hover {
+	border-color: rgba(47, 180, 233, 0.6);
+	background: rgba(255, 255, 255, 0.13);
+}
+
+.expandedHeader {
+	position: relative;
+	z-index: 1;
+	margin-bottom: 30px;
+	padding-right: 56px;
 }
 
 .expandedTitle {
-	margin: 0 0 22px;
-	font-size: 28px;
+	margin: 0;
+	font-size: 20px;
 	font-weight: 600;
-	color: rgba(226, 232, 240, 0.98);
+	color: #ffffff;
+	letter-spacing: 0.01em;
 }
 
-.expandedRadars {
+.expandedWindRoseContainer {
+	position: relative;
+	z-index: 1;
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 28px;
+	gap: 50px;
 }
 
-.expandedRadarBlock {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 12px;
+.expandedWindRoseItem {
+	min-width: 0;
 }
 
 .expandedBlockTitle {
-	margin: 0;
-	align-self: stretch;
-	font-size: 16px;
+	margin: 0 0 25px;
+	font-size: 14px;
 	font-weight: 500;
-	color: rgba(203, 213, 225, 0.96);
+	color: rgba(255, 255, 255, 0.88);
+	opacity: 0.9;
 }
 
-.expandedMetrics {
-	margin-top: 28px;
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 22px;
-}
-
-.metricsList {
-	display: flex;
-	flex-direction: column;
-	gap: 11px;
-}
-
-.metricRow {
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-}
-
-.metricRowHead {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-}
-
-.metricLabel {
-	font-size: 13px;
-	color: rgba(226, 232, 240, 0.9);
+.expandedSubTitle {
+	margin: -20px 0 25px;
+	font-size: 12px;
+	color: rgba(160, 174, 192, 1);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.metricValue {
-	font-size: 12px;
-	color: rgba(251, 146, 60, 0.96);
+.expandedChartBox {
+	height: 260px;
+	position: relative;
+	margin-bottom: 25px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.ndRadar {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ndRadarSmall {
+	width: 252px;
+	height: 252px;
+}
+
+.ndRadarLarge {
+	width: 258px;
+	height: 258px;
+}
+
+.ndRadarSvg {
+	width: 100%;
+	height: 100%;
+}
+
+.ndRadarRing {
+	fill: none;
+	stroke: rgba(71, 85, 105, 0.52);
+	stroke-width: 0.8;
+}
+
+.ndRadarAxis {
+	stroke: rgba(71, 85, 105, 0.42);
+	stroke-width: 0.8;
+}
+
+.ndRadarArea {
+	fill: transparent;
+	stroke: transparent;
+	stroke-width: 1.3;
+}
+
+.ndRadarCore {
+	fill: rgba(251, 146, 60, 0.95);
+}
+
+.ndRadarRay {
+	stroke: rgba(249, 115, 22, 0.66);
+	stroke-width: 1.2;
+	stroke-linecap: round;
+}
+
+.ndRadarRaySmall {
+	stroke-width: 2;
+}
+
+.ndRadarLabels {
+	position: absolute;
+	inset: 0;
+}
+
+.ndLabel {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	min-width: 78px;
+	padding: 5px 8px;
+	border: 1px solid rgba(148, 163, 184, 0.22);
+	border-radius: 10px;
+	color: rgba(226, 232, 240, 0.92);
+	cursor: pointer;
+	text-align: left;
+}
+
+.ndRadar[data-size="small"] .ndLabel {
+	border: none;
+	background: transparent;
+	min-width: 0;
+	padding: 0;
+	text-align: center;
+}
+
+.ndLabelCollapsed {
+	width: 92px;
+}
+
+.ndLabelSelected {
+	border-color: #E65907;
+	box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.25);
+}
+
+.ndRadar[data-size="small"] .ndLabelSelected {
+	box-shadow: none;
+}
+
+.ndLabelName {
+	display: block;
+	font-size: 7px;
+	line-height: 1.2;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 118px;
+}
+
+.ndRadar[data-size="small"] .ndLabelName {
+	font-size: 8px;
+	color: rgba(125, 211, 252, 0.88);
+	font-weight: bold;
+	letter-spacing: 0.02em;
+	max-width: 90px;
+}
+
+.ndLabelValue {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	color: rgba(251, 191, 36, 0.95);
+}
+
+.ndRadar[data-size="small"] .ndLabelValue {
+	font-size: 13px;
+	line-height: 1.1;
+	color: rgba(226, 232, 240, 0.92);
 	font-weight: 600;
 }
 
-.metricTrack {
-	height: 6px;
-	border-radius: 999px;
-	background: rgba(51, 65, 85, 0.7);
-	overflow: hidden;
+.ndMetricList {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	overflow-y: auto;
+	padding-right: 4px;
 }
 
-.metricFill {
+.ndMetricRow {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 6px 12px;
+	align-items: center;
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	border-radius: 10px;
+	padding: 10px 14px;
+	background: transparent;
+	cursor: pointer;
+	text-align: left;
+	transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.ndMetricRow:hover {
+	background: rgba(255, 255, 255, 0.08);
+}
+
+.ndMetricRowSelected {
+	border-color: #e66b21;
+}
+
+.ndMetricName {
+	font-size: 13px;
+	color: rgba(255, 255, 255, 0.85);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ndMetricValue {
+	font-size: 13px;
+	font-weight: 600;
+	color: #ffffff;
+}
+
+.ndMetricTrack {
+	display: none;
+}
+
+.ndMetricFill {
 	display: block;
 	height: 100%;
-	background: linear-gradient(90deg, rgba(249, 115, 22, 0.88), rgba(251, 191, 36, 0.88));
+	background: linear-gradient(90deg, rgba(249, 115, 22, 0.92), rgba(251, 191, 36, 0.9));
+}
+
+.expandedPanelTriangle {
+	position: absolute;
+	right: 15px;
+	bottom: 15px;
+	width: 12px;
+	height: 12px;
+	background-color: #e66b21;
+	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+	cursor: pointer;
+	transition: transform 0.4s ease, background-color 0.4s ease;
+}
+
+.expandedPanelTriangleActive {
+	background-color: rgba(47, 180, 233, 1);
+	transform: rotate(180deg);
+}
+
+.expandedLeftRadar,
+.expandedRightRadar {
+	position: relative;
+	width: 260px;
+	height: 260px;
+}
+
+.expandedChartSvg {
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+.expandedLeftRing,
+.expandedLeftAxis {
+	fill: none;
+	stroke: rgba(255, 255, 255, 0.74);
+	stroke-width: 0.5;
+}
+
+.expandedLeftActiveRay {
+	stroke: #e66b21;
+	stroke-width: 2.5;
+	stroke-linecap: round;
+}
+
+.expandedLeftActiveDot {
+	fill: #e66b21;
+}
+
+.expandedRightRing {
+	fill: none;
+	stroke: rgba(255, 255, 255, 0.74);
+	stroke-width: 0.5;
+}
+
+.expandedRightAxis {
+	stroke: rgba(255, 255, 255, 1);
+	stroke-width: 0.5;
+}
+
+.expandedRightContour {
+	fill: none;
+	stroke: #e66b21;
+	stroke-width: 1.5;
+}
+
+.expandedRadarHitArea {
+	fill: transparent;
+	cursor: pointer;
+}
+
+.expandedRadarHitArea:hover,
+.expandedRadarHitAreaSelected {
+	/* fill: rgba(255, 255, 255, 0.06); */
+}
+
+.expandedLeftLabels,
+.expandedRightLabels {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.expandedLeftLabel,
+.expandedRightLabel {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	font-size: 9px;
+	text-align: center;
+	color: rgba(255, 255, 255, 1);
+	max-width: 96px;
+	line-height: 1.2;
+}
+
+.expandedLeftLabelName {
+	display: block;
+}
+
+.expandedLeftLabelValue {
+	display: block;
+	color: #ffffff;
+	font-weight: 700;
+}
+
+.expandedLeftLabelSelected .expandedLeftLabelName,
+.expandedRightLabelSelected {
+	color: #ffffff;
+}
+
+@media (max-width: 880px) {
+	.expandedPanel {
+		padding: 18px;
+	}
+
+	.expandedChartBox {
+		height: 230px;
+	}
+
+	.expandedLeftRadar,
+	.expandedRightRadar {
+		width: 220px;
+		height: 220px;
+	}
 }

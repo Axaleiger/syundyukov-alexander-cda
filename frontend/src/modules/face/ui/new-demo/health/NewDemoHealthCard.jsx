@@ -1,26 +1,40 @@
-import { NewDemoHealthRadar } from "./NewDemoHealthRadar"
+import { NewDemoWindRoseRadar } from "./NewDemoWindRoseRadar"
 import styles from "./NewDemoHealth.module.css"
 
-const PREVIEW_LABELS = ["ГРР", "Разр", "План", "Бур", "Доб", "Объ"]
-
-export function NewDemoHealthCard({ data, isActive, onToggle }) {
+export function NewDemoHealthCard({
+	data,
+	selectedIndex,
+	onSegmentClick,
+	isActive,
+	isCompact,
+	onToggle,
+}) {
 	return (
 		<button
 			type="button"
-			className={`${styles.healthCard} ${isActive ? styles.healthCardActive : ""}`}
+			className={`${styles.healthCard} ${isActive ? styles.healthCardActive : ""} ${
+				isCompact ? styles.healthCardCompact : ""
+			}`}
 			onClick={onToggle}
 			aria-expanded={isActive}
 			aria-label={isActive ? "Свернуть карту здоровья ЦД" : "Открыть карту здоровья ЦД"}
 		>
-			<h2 className={styles.healthCardTitle}>Карта здоровья ЦД</h2>
-			<span className={styles.healthCardIndex}>1.</span>
-			<div className={styles.healthCardRadar}>
-				<NewDemoHealthRadar data={data} size="small" />
-				{PREVIEW_LABELS.map((label, index) => (
-					<span key={label} className={`${styles.healthLabel} ${styles[`healthLabel${index}`]}`}>
-						{label}
-					</span>
-				))}
+			<div className={styles.healthCardHeader}>
+				<p className={styles.healthCardTitle}>Карта здоровья ЦД</p>
+			</div>
+			<div className={styles.healthCardBody}>
+				<div className={styles.healthCardRosePreview}>
+					{isCompact ? null : (
+						<NewDemoWindRoseRadar
+							data={data}
+							selectedIndex={selectedIndex}
+							onSegmentClick={onSegmentClick}
+							size="small"
+							showLabels
+							variant="collapsedCard"
+						/>
+					)}
+				</div>
 			</div>
 			<span className={styles.healthCardTriangle} aria-hidden />
 		</button>
