@@ -9,6 +9,8 @@ node_modules
 # Production
 /frontend/build
 /frontend/dist
+/dist
+.vite/
 
 # Misc
 .DS_Store
@@ -30,9 +32,7 @@ yarn-error.log*
 *.swp
 *.swo
 *~
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
+.cursor/
 
 # Excel lock files
 ~$*.xlsx

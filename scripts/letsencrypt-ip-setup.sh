@@ -58,7 +58,7 @@ sed "s/158.160.149.143/${IP}/g" "$ROOT/docker/nginx/server-https.conf" > "$ROOT/
 chown yc-user:yc-user "$ROOT/docker/nginx/server.conf" 2>/dev/null || true
 
 cd "$ROOT"
-sudo -u yc-user bash -c "cd $(printf '%q' "$ROOT") && docker compose -f docker-compose.yml -f docker-compose.server.yml --env-file .env up -d nginx"
+sudo -u yc-user bash -c "cd $(printf '%q' "$ROOT") && docker compose -f docker-compose.server.yml --env-file .env up -d nginx"
 
 echo "Готово. Проверка: curl -sk https://${IP}/api/health"
 echo "Автообновление: systemd timer snap.certbot.renew.timer; интервал обновления задаётся renew_before_expiry (1 day ≈ пятый день при сроке ~6 суток)."

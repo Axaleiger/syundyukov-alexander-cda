@@ -32,4 +32,4 @@ jobs:
             git fetch origin
             git checkout "$REF"
             git pull --ff-only origin "$REF"
-            docker compose -f docker-compose.yml -f docker-compose.server.yml --env-file .env up -d --build
+            docker compose -f docker-compose.server.yml --env-file .env up -d --build
