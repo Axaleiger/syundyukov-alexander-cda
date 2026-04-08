@@ -1,0 +1,83 @@
+.card {
+	position: relative;
+	width: 313px;
+	height: 322px;
+	border-radius: 10px;
+	border: 1px solid rgba(148, 163, 184, 0.34);
+	background: linear-gradient(180deg, rgba(47, 180, 233, 0) 0%, rgba(93, 112, 125, 0.3) 100%);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.14),
+		inset 0 -24px 48px rgba(15, 23, 42, 0.24),
+		0 16px 34px rgba(2, 8, 23, 0.24);
+	display: grid;
+	grid-template-rows: min-content 1fr;
+	padding: 16px;
+	text-align: left;
+	cursor: pointer;
+	overflow: hidden;
+	transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.cardActive {
+	border-color: rgba(56, 189, 248, 0.7);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.16),
+		inset 0 -24px 48px rgba(15, 23, 42, 0.24),
+		0 0 0 1px rgba(56, 189, 248, 0.35),
+		0 16px 34px rgba(2, 8, 23, 0.24);
+}
+
+.cardCompact {
+	height: 35px;
+	box-sizing: border-box;
+	grid-template-rows: 1fr;
+	align-items: center;
+	padding: 5px 12px;
+}
+
+.cardHeader {
+	position: relative;
+	z-index: 2;
+}
+
+.cardTitle {
+	margin: 0;
+	font-size: 14px;
+	color: rgba(226, 232, 240, 0.92);
+}
+
+.cardBody {
+	position: relative;
+	z-index: 1;
+	padding-top: 10px;
+}
+
+.cardCompact .cardBody {
+	display: none;
+}
+
+.previewViewport {
+	height: 250px;
+	width: 270px;
+	border-radius: 10px;
+	border: none;
+	background: transparent;
+	overflow: hidden;
+}
+
+.cardTriangle {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	width: 12px;
+	height: 10px;
+	background-color: #e66b21;
+	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+}
+
+.cardActive .cardTriangle {
+	background-color: rgba(47, 180, 233, 1);
+	transform: rotate(180deg);
+}

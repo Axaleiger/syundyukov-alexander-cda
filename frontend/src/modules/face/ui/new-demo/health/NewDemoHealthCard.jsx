@@ -9,13 +9,22 @@ export function NewDemoHealthCard({
 	isCompact,
 	onToggle,
 }) {
+	const handleKeyDown = (event) => {
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault()
+			onToggle()
+		}
+	}
+
 	return (
-		<button
-			type="button"
+		<div
+			role="button"
+			tabIndex={0}
 			className={`${styles.healthCard} ${isActive ? styles.healthCardActive : ""} ${
 				isCompact ? styles.healthCardCompact : ""
 			}`}
 			onClick={onToggle}
+			onKeyDown={handleKeyDown}
 			aria-expanded={isActive}
 			aria-label={isActive ? "Свернуть карту здоровья ЦД" : "Открыть карту здоровья ЦД"}
 		>
@@ -37,6 +46,6 @@ export function NewDemoHealthCard({
 				</div>
 			</div>
 			<span className={styles.healthCardTriangle} aria-hidden />
-		</button>
+		</div>
 	)
 }
