@@ -7,7 +7,6 @@ import { useAdminStore } from "../../modules/admin/model/adminStore"
 import { useThinkingStore } from "../../modules/thinking/model/thinkingStore"
 import CDPage from "../../modules/cd/ui/CDPage"
 import BPMBoard from "../../modules/planning/ui/BPMBoard"
-import { getBoardIdForAsset } from "../../modules/planning/lib/planningHelpers"
 import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/planningGraphNodes"
 import { HeaderMain } from "../../shared/ui/Header/HeaderMain"
 import { SidebarMain } from "../../shared/ui/Sidebar/SidebarMain"
@@ -226,9 +225,6 @@ export const AppLayout = () => {
 					<BPMBoard
 						scenarioName={selectedScenarioName}
 						highlightCardName={bpmHighlight}
-						initialBoardId={
-							selectedAssetId ? getBoardIdForAsset(selectedAssetId) : "hantos"
-						}
 						initialStages={
 							bpmCommand?.scenarioId === "createPlanningCase" ? undefined : bpmStages
 						}

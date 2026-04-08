@@ -5,7 +5,7 @@
 	display: flex;
 	align-items: flex-start;
 	justify-content: center;
-	padding: 338px 70px 20px;
+	padding: 80px 80px 20px;
 	pointer-events: none;
 }
 
@@ -21,8 +21,8 @@
 		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
 		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
 		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
+	backdrop-filter: blur(5px);
+	-webkit-backdrop-filter: blur(5px);
 	border-top: 1px solid rgba(224, 242, 254, 0.18);
 	border-right: 1px solid rgba(103, 232, 249, 0.3);
 	border-bottom: 1px solid rgba(56, 189, 248, 0.22);

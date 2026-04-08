@@ -1,126 +1,126 @@
+import { useMemo } from "react"
+import {
+	Area,
+	AreaChart,
+	CartesianGrid,
+	ReferenceLine,
+	ResponsiveContainer,
+	XAxis,
+	YAxis,
+} from "recharts"
+import { CURRENT_YEAR, stages } from "../../../../globe/ui/LifecycleChart/lifecycleChartConstants"
+import { useNewDemoLifecycleModel } from "./useNewDemoLifecycleModel"
 import styles from "./NewDemoLifecycleCard.module.css"
 
-function buildSmoothPath(points) {
-	if (points.length === 0) return ""
-	if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
-	if (points.length === 2) {
-		return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`
+export function NewDemoLifecyclePreviewChart({ viewMode, faceSeed }) {
+	const model = useNewDemoLifecycleModel({ faceSeed, viewMode, legendOnly: null })
+
+	const chartData = useMemo(() => {
+		if (!model.chartData.length) return []
+		return model.chartData
+	}, [model.chartData])
+
+	const yTicks = useMemo(() => {
+		if (!chartData.length) return undefined
+		const max = chartData.reduce((m, row) => {
+			const sum = stages.reduce((acc, stage) => acc + (Number(row[stage.key]) || 0), 0)
+			return Math.max(m, sum)
+		}, 0)
+		if (!Number.isFinite(max) || max <= 0) return [0]
+		const step = max / 3
+		const snap = (v) => Math.round(v * 10) / 10
+		return [0, snap(step), snap(step * 2), snap(max)]
+	}, [chartData])
+
+	const xTicks = useMemo(() => {
+		if (!chartData.length) return undefined
+		const first = String(chartData[0].year)
+		const last = String(chartData[chartData.length - 1].year)
+		const current = String(CURRENT_YEAR)
+		if (first === last) return [first]
+		if (current === first || current === last) return [first, last]
+		return [first, current, last]
+	}, [chartData])
+
+	if (model.isLoading) {
+		return <div className={styles.lifecycleChartLoading}>Загрузка…</div>
 	}
-
-	let path = `M ${points[0].x} ${points[0].y}`
-	for (let i = 0; i < points.length - 1; i += 1) {
-		const p0 = points[i - 1] ?? points[i]
-		const p1 = points[i]
-		const p2 = points[i + 1]
-		const p3 = points[i + 2] ?? p2
-
-		const cp1x = p1.x + (p2.x - p0.x) / 6
-		const cp1y = p1.y + (p2.y - p0.y) / 6
-		const cp2x = p2.x - (p3.x - p1.x) / 6
-		const cp2y = p2.y - (p3.y - p1.y) / 6
-
-		path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`
-	}
-
-	return path
-}
-
-const PREVIEW_POINTS = [130, 180, 270, 120, 175, 230]
-const Y_TICKS = [0, 60, 120, 180, 240, 300]
-
-export function NewDemoLifecyclePreviewChart() {
-	const width = 276
-	const height = 196
-	const padding = { top: 10, right: 8, bottom: 16, left: 34 }
-	const plotWidth = width - padding.left - padding.right
-	const plotHeight = height - padding.top - padding.bottom
-	const yMax = 300
-	const plotBottom = padding.top + plotHeight
-
-	const points = PREVIEW_POINTS.map((value, index) => {
-		const xRatio = PREVIEW_POINTS.length > 1 ? index / (PREVIEW_POINTS.length - 1) : 0
-		const yRatio = value / yMax
-		return {
-			key: `${index}-${value}`,
-			x: padding.left + (plotWidth * xRatio),
-			y: padding.top + (plotHeight * (1 - yRatio)),
-		}
-	})
-
-	const linePath = buildSmoothPath(points)
-	const areaPath = `${linePath} L ${points[points.length - 1].x} ${plotBottom} L ${points[0].x} ${plotBottom} Z`
-	const xDivisions = 8
-	const xGrid = Array.from({ length: xDivisions + 1 }, (_, idx) => (
-		padding.left + (plotWidth * idx) / xDivisions
-	))
 
 	return (
 		<div className={styles.lifecycleChartRoot}>
-			<svg
-				viewBox={`0 0 ${width} ${height}`}
-				className={styles.lifecycleChartSvg}
-				role="img"
-				aria-label="График жизненного цикла актива"
-			>
-				<defs>
-					<linearGradient id="new-demo-lifecycle-fill" x1="0" y1="0" x2="0" y2="1">
-						<stop offset="0%" stopColor="rgba(59, 130, 246, 0.74)" />
-						<stop offset="100%" stopColor="rgba(15, 23, 42, 0)" />
-					</linearGradient>
-				</defs>
-
-				{Y_TICKS.map((tick) => {
-					const yRatio = tick / yMax
-					const y = padding.top + plotHeight * (1 - yRatio)
-					return (
-						<g key={tick}>
-							<line
-								x1={padding.left}
-								y1={y}
-								x2={width - padding.right}
-								y2={y}
-								className={styles.lifecycleGridLine}
-							/>
-							<text x={8} y={y + 3} className={styles.lifecycleAxisLabel}>
-								{tick}
-							</text>
-						</g>
-					)
-				})}
-
-				{xGrid.map((x) => (
-					<line
-						key={x}
-						x1={x}
-						y1={padding.top}
-						x2={x}
-						y2={plotBottom}
-						className={styles.lifecycleGridLine}
+			<ResponsiveContainer width="100%" height="100%">
+				<AreaChart data={chartData} margin={{ top: 10, right: 10, bottom: 14, left: 4 }}>
+					<CartesianGrid stroke="rgba(255,255,255,0.06)" strokeDasharray="4 8" />
+					<XAxis
+						dataKey="year"
+						axisLine={{ stroke: "#4e9bcd", strokeWidth: 1.1 }}
+						tick={{
+							fill: "rgba(255,255,255,0.9)",
+							fontSize: 10,
+						}}
+						tickLine={false}
+						ticks={xTicks}
+						allowDuplicatedCategory={false}
+						dy={8}
 					/>
-				))}
-
-				<path d={areaPath} className={styles.lifecycleArea} />
-
-				{points.map((point) => (
-					<line
-						key={`guide-${point.key}`}
-						x1={point.x}
-						y1={point.y}
-						x2={point.x}
-						y2={plotBottom}
-						className={styles.lifecycleGuide}
+					<YAxis
+						domain={[0, "auto"]}
+						axisLine={{ stroke: "rgba(255,255,255,0.92)", strokeWidth: 1 }}
+						ticks={yTicks}
+						tick={{
+							fill: "rgba(255,255,255,0.92)",
+							fontSize: 10,
+						}}
+						tickFormatter={(v) => (typeof v === "number" ? v.toFixed(0) : v)}
+						tickLine={false}
+						width={24}
 					/>
-				))}
-
-				<path d={linePath} className={styles.lifecycleLine} />
-
-				{points.map((point) => (
-					<g key={point.key}>
-						<circle cx={point.x} cy={point.y} r={4.2} className={styles.lifecyclePointGlow} />
-						<circle cx={point.x} cy={point.y} r={2.4} className={styles.lifecyclePointCore} />
-					</g>
-				))}
-			</svg>
+					<ReferenceLine y={0} stroke="#4e9bcd" strokeWidth={1.4} />
+					<ReferenceLine
+						x={String(CURRENT_YEAR)}
+						stroke="rgba(0, 112, 186, 1)"
+						strokeWidth={1.4}
+						strokeDasharray="2 2"
+					/>
+					{chartData.length ? (
+						<ReferenceLine
+							segment={[
+								{ x: String(CURRENT_YEAR), y: 0 },
+								{ x: String(chartData[chartData.length - 1].year), y: 0 },
+							]}
+							stroke="rgba(230, 89, 7, 1)"
+							strokeWidth={1.8}
+						/>
+					) : null}
+					<defs>
+						{stages.map((stage) => (
+							<linearGradient
+								key={stage.key}
+								id={`nd-mini-grad-${stage.key}`}
+								x1="0"
+								y1="0"
+								x2="0"
+								y2="1"
+							>
+								<stop offset="0%" stopColor={stage.color} stopOpacity={0.42} />
+								<stop offset="100%" stopColor={stage.color} stopOpacity={0.08} />
+							</linearGradient>
+						))}
+					</defs>
+					{stages.map((stage) => (
+						<Area
+							key={stage.key}
+							type="monotone"
+							dataKey={stage.key}
+							stackId={viewMode === "sum" ? "stack" : undefined}
+							stroke={stage.color}
+							strokeWidth={1.4}
+							fill={`url(#nd-mini-grad-${stage.key})`}
+							isAnimationActive={false}
+						/>
+					))}
+				</AreaChart>
+			</ResponsiveContainer>
 		</div>
 	)
 }

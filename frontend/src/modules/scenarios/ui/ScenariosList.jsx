@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { useRepositories } from '../../../app/providers/DataRepositoriesProvider'
 import { useScenariosData } from '../model/useScenariosData'
 import './ScenariosList.css'
 
@@ -10,13 +11,23 @@ function scenarioDisplayName(name) {
 }
 
 function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onStageFilterToggle, onScenarioClick }) {
+  const { scenarios: scenariosRepo } = useRepositories()
   const {
     scenarioStageFilters: SCENARIO_STAGE_FILTERS,
     periodOptions: PERIOD_OPTIONS,
     scenarioDirections: SCENARIO_DIRECTIONS,
     allScenarios: ALL_SCENARIOS,
     filterScenariosByPeriod,
+    scenariosLoading,
+    scenariosError,
+    refetchScenarios,
   } = useScenariosData()
+
+  const [editingScenarioId, setEditingScenarioId] = useState(null)
+  const [editNameValue, setEditNameValue] = useState('')
+  const [editNameBaseline, setEditNameBaseline] = useState('')
+  const [savingScenarioId, setSavingScenarioId] = useState(null)
+  const [nameSaveError, setNameSaveError] = useState(null)
 
   const [internalFilters, setInternalFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
   const stageFilters = controlledFilters != null ? controlledFilters : internalFilters
@@ -37,8 +48,12 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const filteredByStage = useMemo(() => {
     const anyOn = Object.keys(effectiveFilters).some((k) => effectiveFilters[k])
     if (!anyOn) return ALL_SCENARIOS
-    return ALL_SCENARIOS.filter((s) => effectiveFilters[s.stageType])
-  }, [effectiveFilters])
+    return ALL_SCENARIOS.filter((s) => {
+      const sel = effectiveFilters[s.stageType]
+      if (sel === undefined) return true
+      return Boolean(sel)
+    })
+  }, [effectiveFilters, ALL_SCENARIOS])
 
   const filteredByPeriod = useMemo(
     () => filterScenariosByPeriod(filteredByStage, period),
@@ -46,9 +61,56 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   )
   const filteredScenarios = useMemo(() => filteredByPeriod, [filteredByPeriod])
 
+  const canPatchScenario = typeof scenariosRepo.patchScenario === 'function'
+
+  const startEditName = (row) => {
+    if (!row?.scenarioId || !canPatchScenario) return
+    setNameSaveError(null)
+    setEditingScenarioId(row.scenarioId)
+    setEditNameBaseline(row.name || '')
+    setEditNameValue(row.name || '')
+  }
+
+  const cancelEditName = () => {
+    setEditingScenarioId(null)
+    setEditNameValue('')
+    setEditNameBaseline('')
+    setNameSaveError(null)
+  }
+
+  const commitEditName = async () => {
+    if (!editingScenarioId || !canPatchScenario) return
+    if (savingScenarioId) return
+    const trimmed = editNameValue.trim()
+    if (!trimmed) {
+      setNameSaveError('Введите непустое название')
+      return
+    }
+    if (trimmed === (editNameBaseline || '').trim()) {
+      cancelEditName()
+      return
+    }
+    setNameSaveError(null)
+    setSavingScenarioId(editingScenarioId)
+    try {
+      await scenariosRepo.patchScenario(editingScenarioId, { name: trimmed })
+      cancelEditName()
+      await refetchScenarios()
+    } catch (e) {
+      setNameSaveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingScenarioId(null)
+    }
+  }
+
   return (
     <div className="scenarios-list">
       <h1 className="scenarios-title">Список сценариев</h1>
+      {scenariosError && (
+        <div className="scenarios-api-error" role="alert">
+          Не удалось загрузить сценарии: {scenariosError}
+        </div>
+      )}
 
       <div className="scenarios-layout">
         <div className="scenarios-main">
@@ -103,6 +165,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                     <th>Этапы</th>
                     <th>ДО</th>
                     <th>Месторождение</th>
+                    <th>Направление бизнеса</th>
                     <th>Статус</th>
                     <th>Утвержден</th>
                     <th>Дата создания</th>
@@ -112,17 +175,81 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                   </tr>
                 </thead>
                 <tbody>
+                  {idx === 0 && scenariosLoading && (
+                    <tr>
+                      <td colSpan={12}>Загрузка…</td>
+                    </tr>
+                  )}
                   {(idx === 0 ? filteredScenarios : []).map((row) => (
                     <tr key={row.id}>
                       <td>
-                        <button type="button" className="scenarios-name-link" onClick={() => onScenarioClick?.(row)}>
-                          {scenarioDisplayName(row.name)}
-                        </button>
+                        {editingScenarioId === row.scenarioId ? (
+                          <div className="scenarios-name-edit">
+                            <input
+                              type="text"
+                              className="scenarios-name-input"
+                              value={editNameValue}
+                              disabled={savingScenarioId === row.scenarioId}
+                              onChange={(e) => setEditNameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  void commitEditName()
+                                }
+                                if (e.key === 'Escape') {
+                                  e.preventDefault()
+                                  cancelEditName()
+                                }
+                              }}
+                              autoFocus
+                              aria-label="Название сценария"
+                            />
+                            <div className="scenarios-name-edit-actions">
+                              <button
+                                type="button"
+                                className="scenarios-name-save-btn"
+                                disabled={savingScenarioId === row.scenarioId}
+                                onClick={() => { void commitEditName() }}
+                              >
+                                Готово
+                              </button>
+                              <button
+                                type="button"
+                                className="scenarios-name-cancel-btn"
+                                disabled={savingScenarioId === row.scenarioId}
+                                onClick={cancelEditName}
+                              >
+                                Отмена
+                              </button>
+                            </div>
+                            {nameSaveError && editingScenarioId === row.scenarioId && (
+                              <span className="scenarios-name-save-error" role="alert">{nameSaveError}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="scenarios-name-cell">
+                            <button type="button" className="scenarios-name-link" onClick={() => onScenarioClick?.(row)}>
+                              {scenarioDisplayName(row.name)}
+                            </button>
+                            {canPatchScenario && row.scenarioId && (
+                              <button
+                                type="button"
+                                className="scenarios-edit-name"
+                                title="Изменить название"
+                                aria-label="Изменить название"
+                                onClick={() => startEditName(row)}
+                              >
+                                ✎
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td>{row.id}</td>
                       <td>{row.stages}</td>
                       <td>{row.do}</td>
                       <td>{row.field}</td>
+                      <td>{row.direction || '—'}</td>
                       <td>{row.status}</td>
                       <td>{row.approved ? '✓' : '✗'}</td>
                       <td>{row.dateCreated}</td>

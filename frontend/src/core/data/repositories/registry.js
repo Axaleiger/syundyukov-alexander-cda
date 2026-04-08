@@ -1,7 +1,12 @@
 import { createStaticRepositories } from "./createStaticRepositories.js"
+import { createHttpRepositories } from "./http/createHttpRepositories.js"
+
+const useStaticRepos = import.meta.env.VITE_USE_STATIC_REPOS === "1"
 
 /** @type {import('./contracts/repositoryContracts.js').AppRepositories} */
-let active = createStaticRepositories()
+let active = useStaticRepos
+	? createStaticRepositories()
+	: createHttpRepositories()
 
 /**
  * Активный набор репозиториев (composition root по умолчанию).

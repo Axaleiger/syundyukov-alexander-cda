@@ -17,20 +17,8 @@ function arcPath(cx, cy, radius, start, end) {
 	].join(" ")
 }
 
-function rotateToStart(items, startIndex) {
-	if (!items.length) return { rotated: items, startIndex: 0 }
-	const i = ((startIndex % items.length) + items.length) % items.length
-	if (i === 0) return { rotated: items, startIndex: 0 }
-	return { rotated: [...items.slice(i), ...items.slice(0, i)], startIndex: i }
-}
-
 export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegmentClick }) {
-	const rawItems = data || []
-	const topSemanticIndex = Math.max(
-		0,
-		rawItems.findIndex((x) => (x?.name || "").toLowerCase().includes("добыч")),
-	)
-	const { rotated: items, startIndex: rotation } = rotateToStart(rawItems, topSemanticIndex)
+	const items = data || []
 	const numItems = items.length
 	const angleStep = numItems > 0 ? (2 * Math.PI) / numItems : 0
 	const box = 200
@@ -40,14 +28,7 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 	const ringCount = 3
 
 	const displayedSelectedIndex =
-		selectedIndex != null && numItems > 0
-			? (((selectedIndex - rotation) % numItems) + numItems) % numItems
-			: 0
-
-	const mapDisplayedIndexToRaw = (displayedIndex) => {
-		if (!numItems) return 0
-		return (displayedIndex + rotation) % numItems
-	}
+		selectedIndex != null && numItems > 0 ? ((selectedIndex % numItems) + numItems) % numItems : null
 
 	const segments = items.map((item, index) => {
 		const spokeAngle = startAngle + index * angleStep
@@ -70,6 +51,11 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 			.join(" ")
 	})
 
+	const activeSegment =
+		displayedSelectedIndex != null && segments[displayedSelectedIndex]
+			? segments[displayedSelectedIndex]
+			: null
+
 	return (
 		<div className={styles.expandedRightRadar} role="group" aria-label="Диаграмма объектов">
 			<svg viewBox={`0 0 ${box} ${box}`} className={styles.expandedChartSvg} aria-hidden>
@@ -86,22 +72,46 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 						className={styles.expandedRightAxis}
 					/>
 				))}
-				<polygon points={rosePoints} className={styles.expandedRightContour} />
+				<polygon
+					points={rosePoints}
+					className={`${styles.expandedRightContour} ${
+						displayedSelectedIndex != null ? styles.expandedContourSelected : ""
+					}`}
+				/>
+				{activeSegment ? (
+					<>
+						<line
+							x1={center}
+							y1={center}
+							x2={activeSegment.valuePoint.x}
+							y2={activeSegment.valuePoint.y}
+							className={styles.expandedRightActiveRay}
+						/>
+						<circle
+							cx={activeSegment.valuePoint.x}
+							cy={activeSegment.valuePoint.y}
+							r="3"
+							className={styles.expandedRightActiveDot}
+						/>
+					</>
+				) : null}
 				{segments.map((segment, idx) => (
 					<path
 						key={`hit-${idx}`}
 						d={arcPath(center, center, radius, segment.segmentStart, segment.segmentEnd)}
 						className={`${styles.expandedRadarHitArea} ${
-							idx === displayedSelectedIndex ? styles.expandedRadarHitAreaSelected : ""
+							displayedSelectedIndex != null && idx === displayedSelectedIndex
+								? styles.expandedRadarHitAreaSelected
+								: ""
 						}`}
-						onClick={() => onSegmentClick(mapDisplayedIndexToRaw(idx))}
+						onClick={() => onSegmentClick(idx)}
 					/>
 				))}
 			</svg>
 			<div className={styles.expandedRightLabels}>
 				{segments.map((segment, idx) => {
 					const p = point(50, 50, 46, segment.spokeAngle)
-					const isSelected = idx === displayedSelectedIndex
+					const isSelected = displayedSelectedIndex != null && idx === displayedSelectedIndex
 					return (
 						<div
 							key={`${segment.item.name}-${idx}`}
