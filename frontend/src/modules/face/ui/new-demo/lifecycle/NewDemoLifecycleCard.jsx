@@ -1,7 +1,13 @@
 import { NewDemoLifecyclePreviewChart } from "./NewDemoLifecyclePreviewChart"
 import styles from "./NewDemoLifecycleCard.module.css"
 
-export function NewDemoLifecycleCard({ isActive, isCompact, onToggle }) {
+export function NewDemoLifecycleCard({
+	isActive,
+	isCompact,
+	onToggle,
+	viewMode,
+	faceSeed,
+}) {
 	return (
 		<button
 			type="button"
@@ -16,7 +22,12 @@ export function NewDemoLifecycleCard({ isActive, isCompact, onToggle }) {
 				<p className={styles.lifecycleCardTitle}>ЖЦ Актива</p>
 			</div>
 			<div className={styles.lifecycleCardBody}>
-				{isCompact ? null : <NewDemoLifecyclePreviewChart />}
+				{isCompact ? null : (
+					<NewDemoLifecyclePreviewChart
+						viewMode={viewMode}
+						faceSeed={faceSeed}
+					/>
+				)}
 			</div>
 			<span className={styles.lifecycleCardTriangle} aria-hidden />
 		</button>

@@ -13,6 +13,8 @@ const TOP_PLACEHOLDER_ITEMS = [{ id: "hypercube", label: "Гиперкуб ры�
 export function NewDemoFaceView() {
 	const { routePrefix } = useStand()
 	const [activeTopPanel, setActiveTopPanel] = useState(null)
+	const [lifecycleViewMode, setLifecycleViewMode] = useState("sum")
+	const [lifecycleLegendOnly, setLifecycleLegendOnly] = useState(null)
 
 	const {
 		mapPointsData,
@@ -62,6 +64,8 @@ export function NewDemoFaceView() {
 							isActive={isLifecycleOpen}
 							isCompact={isTopRowCompact}
 							onToggle={toggleLifecyclePanel}
+							viewMode={lifecycleViewMode}
+							faceSeed={faceSeed}
 						/>
 						{TOP_PLACEHOLDER_ITEMS.map((item) => (
 							/* Keep active-state wiring consistent for all top blocks. */
@@ -103,6 +107,10 @@ export function NewDemoFaceView() {
 					<NewDemoLifecycleExpandedPanel
 						faceSeed={faceSeed}
 						onClose={() => setActiveTopPanel(null)}
+						viewMode={lifecycleViewMode}
+						onViewModeChange={setLifecycleViewMode}
+						legendOnly={lifecycleLegendOnly}
+						onLegendOnlyChange={setLifecycleLegendOnly}
 					/>
 				) : null}
 			</section>
