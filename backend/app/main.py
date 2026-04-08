@@ -7,10 +7,12 @@ from sqlalchemy import text
 
 from app.api import api_router
 from app.db.session import engine
+from app.seed.bootstrap import ensure_demo_seed_if_empty
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_demo_seed_if_empty()
     yield
     if engine is not None:
         engine.dispose()

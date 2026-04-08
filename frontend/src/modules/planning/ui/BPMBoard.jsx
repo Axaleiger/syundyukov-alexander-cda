@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
-import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, SYSTEMS_LIST, cardMatchesHighlight, getInitialBoard } from '../data/bpmData'
+import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, SYSTEMS_LIST, cardMatchesHighlight } from '../data/bpmData'
 
 /** Генерирует данные для одной ИИ-карточки: id (AI + 5 цифр), исполнитель, согласующий, даты */
 function getAiCardData(seed) {
@@ -21,7 +21,7 @@ function getAiCardData(seed) {
     periodEnd: dEnd.toISOString().slice(0, 10),
   }
 }
-import { parseBoardFromExcel, parseBoardFromExcelLenient, parseConnectionsFromExcel, generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
+import { generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
 import { bpmToMermaid } from '../lib/bpmToMermaid'
 import CalculateGraph from './CalculateGraph'
 import BPMRightPanelSystems from './BPMRightPanelSystems'
@@ -31,6 +31,9 @@ import './BPMBoard.css'
 const SCHEDULE_EVERY_OPTIONS = ['каждые 1 день', 'каждые 2 дня', 'каждые 3 дня', 'каждые 5 дней', 'каждую неделю', 'каждые 2 недели']
 const AI_STAGE_NAME = 'ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП'
 const AI_STAGE_NAME_2 = 'ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП 2'
+
+/** Пустой шаблон этапов только для режима createPlanningCase (ИИ); доска с сервера — только из API. */
+const DEFAULT_CREATE_STAGES = ['Подготовка', 'Реализация', 'Контроль']
 
 function getInitials(name) {
   if (!name || !String(name).trim()) return '?'
@@ -407,23 +410,15 @@ function lessSaturated(hex, factor = 0.5) {
   return `hsl(${h}, ${Math.round(s * factor)}%, ${l}%)`
 }
 
-function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed }) {
-  const boardData = useMemo(() => {
-    const data = getInitialBoard(initialBoardId)
-    if (data) return data
-    return { stages: [], tasks: {} }
-  }, [initialBoardId])
+function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed }) {
   const isCreatePlanningCase = bpmCommand?.scenarioId === 'createPlanningCase'
   const [stages, setStages] = useState(() => {
-    if (isCreatePlanningCase) {
-      const preset = getInitialBoard('hantos') || { stages: ['Подготовка', 'Реализация', 'Контроль'] }
-      return preset.stages || ['Подготовка', 'Реализация', 'Контроль']
-    }
-    return (initialStages != null && initialStages.length >= 0) ? initialStages : (boardData.stages || [])
+    if (isCreatePlanningCase) return [...DEFAULT_CREATE_STAGES]
+    return initialStages != null ? initialStages : []
   })
   const [tasks, setTasks] = useState(() => {
     if (isCreatePlanningCase) return {}
-    return initialTasks != null ? initialTasks : (boardData.tasks || {})
+    return initialTasks != null ? initialTasks : {}
   })
   const [viewMode, setViewMode] = useState('Подробный вид')
   const [expanded, setExpanded] = useState({}) // key: task.id — сохраняется при перетаскивании между этапами
@@ -434,7 +429,6 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
   const [editingCardName, setEditingCardName] = useState(null) // { stageName, taskIdx }
   const [cardNameEdit, setCardNameEdit] = useState('')
   const [dragged, setDragged] = useState(null)
-  const [uploadError, setUploadError] = useState(null)
   const [showCalculateView, setShowCalculateView] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
@@ -444,10 +438,9 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
   const [periodStartFilter, setPeriodStartFilter] = useState('')
   const [periodEndFilter, setPeriodEndFilter] = useState('')
   const [draggedStageIndex, setDraggedStageIndex] = useState(null)
-  const [excelLoaded, setExcelLoaded] = useState(initialBoardId !== 'hantos' && initialBoardId !== 'do-burenie')
   const [rightPanel, setRightPanel] = useState(null) // { type: 'systems'|'executor', stageName, taskIdx, role? }
   const [customPersonnelList, setCustomPersonnelList] = useState([]) // общий список добавленных вручную ФИО до обновления страницы
-  const [connections, setConnections] = useState([]) // [{ fromStage, fromId, toStage, toId }]
+  const [connections, setConnections] = useState(() => (Array.isArray(initialConnections) ? initialConnections : [])) // [{ fromStage, fromId, toStage, toId }]
   const [connectionsMode, setConnectionsMode] = useState(false)
   const [connectionFrom, setConnectionFrom] = useState(null) // { stageName, taskId }
   const [aiModeLocal, setAiModeLocal] = useState(false)
@@ -622,15 +615,6 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
     return []
   }, [])
 
-  useEffect(() => {
-    const data = getInitialBoard(initialBoardId)
-    if (data) {
-      setStages(data.stages)
-      setTasks(data.tasks)
-    }
-    if (initialBoardId !== 'hantos' && initialBoardId !== 'do-burenie') setExcelLoaded(true)
-  }, [initialBoardId])
-
   // Обработка команд ИИ-помощника: создание кейса, риски, cashflow
   const stagesRef = React.useRef(stages)
   stagesRef.current = stages
@@ -659,8 +643,7 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
     if (scenarioId === 'createPlanningCase') {
       const topic = bpmCommand.params?.topic || 'планирование'
       const customSteps = bpmCommand.params?.steps
-      const preset = getInitialBoard('hantos') || { stages: ['Подготовка', 'Реализация', 'Контроль'], tasks: {} }
-      const stagesList = preset.stages && preset.stages.length > 0 ? preset.stages : ['Подготовка', 'Реализация', 'Контроль']
+      const stagesList = [...DEFAULT_CREATE_STAGES]
       const rawNames = Array.isArray(customSteps) && customSteps.length > 0
         ? ['Кейс: ' + topic, ...customSteps]
         : [
@@ -775,62 +758,9 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
 
   useEffect(() => {
     if (typeof onBoardChange === 'function') {
-      onBoardChange(stages, tasks)
+      onBoardChange(stages, tasks, connections)
     }
-  }, [stages, tasks, onBoardChange])
-
-  useEffect(() => {
-    if (!stages.includes('Реализация')) return
-    const list = tasks['Реализация'] || []
-    if (list.some((t) => (t.name || '').trim() === 'Реинжениринг')) return
-    const newTask = {
-      id: `R${15000 + Math.floor(Math.random() * 999)}`,
-      name: 'Реинжениринг',
-      executor: PERSONNEL[0],
-      approver: PERSONNEL[0],
-      deadline: new Date(),
-      status: 'в работе',
-      date: new Date().toLocaleDateString('ru-RU'),
-      entries: [{ system: '', input: '', output: '' }],
-    }
-    setTasks((t) => ({ ...t, 'Реализация': [...list, newTask] }))
-  }, [stages])
-
-  useEffect(() => {
-    const fileName = initialBoardId === 'do-burenie' ? 'Управление добычей с учетом ближайшего бурения.xlsx' : initialBoardId === 'hantos' ? 'hantos.xlsx' : null
-    if (!fileName) return
-    // Если уже сформирован ИИ-кейс, не перезатираем доску данными из Excel
-    if (aiCaseStageNames && aiCaseStageNames.size > 0) return
-    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
-    const delayMs = 400
-    const t1 = setTimeout(() => {
-      fetch(`${base}${encodeURIComponent(fileName)}`)
-        .then((r) => r.ok ? r.arrayBuffer() : Promise.reject(new Error('Файл не найден')))
-        .then((arrayBuffer) => {
-          const doParse = () => {
-            try {
-              const { stages: s, tasks: t } = parseBoardFromExcel(arrayBuffer)
-              setStages(s)
-              setTasks(t)
-            } catch {
-              const { stages: s, tasks: t } = parseBoardFromExcelLenient(arrayBuffer)
-              setStages(s)
-              setTasks(t)
-            }
-            setConnections(parseConnectionsFromExcel(arrayBuffer))
-            setUploadError(null)
-            setExcelLoaded(true)
-          }
-          if (typeof requestIdleCallback !== 'undefined') {
-            requestIdleCallback(doParse, { timeout: 800 })
-          } else {
-            setTimeout(doParse, 50)
-          }
-        })
-        .catch(() => setExcelLoaded(true))
-    }, delayMs)
-    return () => clearTimeout(t1)
-  }, [initialBoardId])
+  }, [stages, tasks, connections, onBoardChange])
 
   const toggleExpanded = useCallback((key) => {
     setExpanded((e) => ({ ...e, [key]: !e[key] }))
@@ -849,24 +779,6 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
     if (!cur) return false
     return cur[section] === true
   }, [expandedSections])
-
-  const handleFileUpload = useCallback((e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploadError(null)
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        const { stages: s, tasks: t } = parseBoardFromExcel(ev.target.result)
-        setStages(s)
-        setTasks(t)
-      } catch (err) {
-        setUploadError(err.message || 'Ошибка загрузки')
-      }
-    }
-    reader.readAsArrayBuffer(file)
-    e.target.value = ''
-  }, [])
 
   const handleDownloadBoard = useCallback(() => {
     const buf = generateBoardExcel(stages, tasks, connections)
@@ -1221,16 +1133,6 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
     return out
   }, [stages, tasks, searchQuery, statusFilter, executorFilter, approverFilter, periodStartFilter, periodEndFilter, matchesSearch])
 
-  if ((initialBoardId === 'hantos' || initialBoardId === 'do-burenie') && !excelLoaded) {
-    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '') + '/'
-    return (
-      <div className="bpm-board-wrap bpm-loading-wrap">
-        <img src={`${base}gif.gif`} alt="Загрузка…" className="bpm-loading-gif" />
-        <div className="bpm-loading-text">Загрузка данных доски…</div>
-      </div>
-    )
-  }
-
   if (showCalculateView) {
     return (
       <div className="bpm-board-wrap">
@@ -1241,7 +1143,6 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
 
   return (
     <div className="bpm-board-wrap">
-      {uploadError && <div className="bpm-error">{uploadError}</div>}
       <div className="bpm-board-scroll-area">
         <div className="bpm-board-container" style={{ minWidth: `max(${stages.length * 220}px, min-content)` }}>
           <div className="bpm-board-top-in-scroll">
@@ -1255,10 +1156,6 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
                 <h2>{scenarioName}{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
               </div>
               <div className="bpm-header-actions">
-                <label className="bpm-upload-btn">
-                  Загрузить из Excel
-                  <input type="file" accept=".xlsx" onChange={handleFileUpload} hidden />
-                </label>
                 <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
                 <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
                 <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
@@ -1924,7 +1821,7 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
                           <ul className="bpm-card-systems-list">
                             <li className="bpm-card-system-item">
                               {onOpenPlanningWithScenario ? (
-                                <button type="button" className="bpm-card-system-link bpm-card-system-link-btn" onClick={(ev) => { ev.stopPropagation(); onOpenPlanningWithScenario('Проактивное управление ремонтами и приоритетами'); }}><span className="bpm-card-system-link-text">Процесс 1</span><span className="bpm-icon-open-in-new" aria-hidden /></button>
+                                <button type="button" className="bpm-card-system-link bpm-card-system-link-btn" onClick={(ev) => { ev.stopPropagation(); onOpenPlanningWithScenario({ name: 'Проактивное управление ремонтами и приоритетами' }); }}><span className="bpm-card-system-link-text">Процесс 1</span><span className="bpm-icon-open-in-new" aria-hidden /></button>
                               ) : (
                                 <a href={`${typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}#planning`} className="bpm-card-system-link" onClick={(ev) => ev.stopPropagation()}><span className="bpm-card-system-link-text">Процесс 1</span><span className="bpm-icon-open-in-new" aria-hidden /></a>
                               )}
@@ -1996,7 +1893,7 @@ function BPMBoard({ initialBoardId = 'hantos', initialStages, initialTasks, scen
                                       <ul className="bpm-card-systems-list">
                                         <li className="bpm-card-system-item">
                                           {onOpenPlanningWithScenario ? (
-                                            <button type="button" className="bpm-card-system-link bpm-card-system-link-btn" onClick={() => onOpenPlanningWithScenario('Проактивное управление ремонтами и приоритетами')}>
+                                            <button type="button" className="bpm-card-system-link bpm-card-system-link-btn" onClick={() => onOpenPlanningWithScenario({ name: 'Проактивное управление ремонтами и приоритетами' })}>
                                               <span className="bpm-card-system-link-text">Процесс 1</span><span className="bpm-icon-open-in-new" aria-hidden />
                                             </button>
                                           ) : (

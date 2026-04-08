@@ -2,10 +2,23 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.models.tables import ProductionStage, ProductionStageLabel
-from app.schemas.taxonomy import ProductionStageOut
+from app.models.tables import BusinessDirection, ProductionStage, ProductionStageLabel
+from app.schemas.taxonomy import BusinessDirectionOut, ProductionStageOut
 
 router = APIRouter()
+
+
+@router.get("/business-directions", response_model=list[BusinessDirectionOut])
+def business_directions(db: Session = Depends(get_db)):
+    rows = db.query(BusinessDirection).order_by(BusinessDirection.sort_order).all()
+    return [
+        BusinessDirectionOut(
+            id=r.id,
+            name=r.name,
+            sort_order=r.sort_order,
+        )
+        for r in rows
+    ]
 
 
 @router.get("/production-stages", response_model=list[ProductionStageOut])

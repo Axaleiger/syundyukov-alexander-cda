@@ -7,6 +7,15 @@ from pydantic import BaseModel, Field
 from app.schemas.common import DataSourceMixin
 
 
+class PlanningBoardUpdateBody(BaseModel):
+    board: dict[str, Any] = Field(
+        ...,
+        description="Снимок доски: stages, tasks по этапам, connections",
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class PlanningCaseSummary(DataSourceMixin):
     id: uuid.UUID
     scenario_id: Optional[uuid.UUID] = Field(None, serialization_alias="scenarioId")

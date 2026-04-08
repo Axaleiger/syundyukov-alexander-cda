@@ -12,7 +12,7 @@
 
 Доступ к данным идёт через объекты-репозитории с фиксированным набором методов. Контракты — JSDoc в `core/data/repositories/contracts/repositoryContracts.js` (`AppRepositories` и отдельные `*Repository`).
 
-Сейчас единственная «боевая» реализация — **`static/`**: `createStatic*Repository()` читает `core/data/static/*.js`, JSON, генераторы. Сборка — `createStaticRepositories.js`, composition root — `registry.js` (`getRepositories` / `setRepositories`).
+В приложении по умолчанию подключены **HTTP-репозитории** (`createHttpRepositories()` в `registry.js`). Статическая реализация **`static/`** остаётся в кодовой базе для совместимости/тестов, но не является целевым путём для прод-сборки.
 
 ### 1.2 React
 
@@ -20,7 +20,7 @@
 
 ### 1.3 Прокси
 
-`vite.config.js`: `/api` → бэкенд, префикс `/api` снимается → клиент ходит на `fetch('/api/v1/...')`.
+`vite.config.js`: запросы на **`/api/...`** проксируются на FastAPI **без переписывания пути** (тот же `/api/v1/...` доходит до uvicorn). Клиент вызывает `fetch('/api/v1/...')` относительно origin Vite (например `http://localhost:3000`). В Docker для Vite задано `VITE_DOCKER=1`, цель прокси — сервис `api:8000`.
 
 ### 1.4 Что уходит
 
@@ -75,10 +75,10 @@ frontend/src/core/data/
 | Порт | REST | Заметки |
 |------|------|--------|
 | `UsersRepository` | `GET /api/v1/me`, `GET /api/v1/users` | шапка, выбор исполнителя |
-| `ScenariosRepository` | `GET /api/v1/scenarios`, `GET .../scenarios/{id}` | список/карточка; маппинг полей UI ↔ DTO |
-| `PlanningRepository` | `GET /api/v1/planning/cases`, `GET .../cases/{id}` | `board` из API вместо Excel |
+| `ScenariosRepository` | `GET /api/v1/scenarios`, `GET .../scenarios/{id}`, **`PATCH .../scenarios/{id}`** | список/карточка; маппинг полей UI ↔ DTO; сохранение правок реестра (например названия) через **`patchScenario`** в `httpScenariosRepository.js`; после мутации — **`refetchScenarios`** в `useScenariosData` |
+| `PlanningRepository` | `GET /api/v1/planning/cases`, `GET .../cases/{id}`, опционально **`GET .../cases/{id}/board`**, **`PUT .../cases/{id}/board`** | `board` из API вместо Excel; **не** подменять доску данными из `public/*.xlsx`, если `board` уже загружен с сервера (`PlanningPage` + `BPMBoard`) |
 | `AssetsRepository` | `GET /api/v1/assets`, `GET .../assets/{id}` | выбор актива, привязка сценариев |
-| `TaxonomyRepository` или поля в Roses | `GET /api/v1/taxonomy/production-stages` | фильтры этапов вместо строк из `rosesData` |
+| `TaxonomyRepository` или поля в Roses | `GET /api/v1/taxonomy/production-stages`, **`GET .../taxonomy/business-directions`** | фильтры этапов и направлений |
 | Остальное (розы по объектам, воронка, lifecycle, сравнение сценариев) | отдельные эндпоинты по мере готовности бэкенда | до появления API — экран не отдаёт данных из static, а **пустое состояние / заглушка** или скрытие блока |
 
 ---

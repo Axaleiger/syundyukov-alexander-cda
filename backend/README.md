@@ -10,11 +10,15 @@
 docker compose -f docker-compose.local.yml --env-file .env up --build -d db api
 ```
 
-Миграции применяются при старте контейнера `api`. Затем один раз загрузить демо-данные:
+Миграции применяются при старте контейнера `api`. Если таблица `scenario` пуста, при старте API автоматически выполняется сид (`AUTO_SEED=1` по умолчанию): сценарии (как `generateScenarios()` на фронте) и две доски планирования.
+
+Полный сброс и перезаливка вручную (осторожно: `TRUNCATE` всех таблиц):
 
 ```bash
 docker compose -f docker-compose.local.yml exec api python scripts/reset_and_seed.py
 ```
+
+Отключить автозаливку: задайте для сервиса `api` переменную `AUTO_SEED=0`.
 
 Проверка:
 
@@ -22,7 +26,9 @@ docker compose -f docker-compose.local.yml exec api python scripts/reset_and_see
 - `GET http://localhost:8000/api/v1/me`
 - `GET http://localhost:8000/api/v1/scenarios`
 
-Переменная `SCENARIO_EXPORTS_DIR` (в compose уже `/app/seed_data/scenario_exports`) указывает на каталог с `hantos.xlsx` и `Управление добычей с учетом ближайшего бурения.xlsx` — копии лежат в `backend/seed_data/scenario_exports/`.
+Переменная `SCENARIO_EXPORTS_DIR` (в compose уже `/app/seed_data/scenario_exports`) — при наличии `.xlsx` доски берутся из файлов; иначе используются встроенные снимки `app/seed/board_demo_snapshots.py` (те же этапы/карточки, что в `bpmData.js`).
+
+Список сценариев на фронте должен приходить с API: не включайте `VITE_USE_STATIC_REPOS=1`, иначе UI покажет статический список при пустой БД.
 
 ## Локально без Docker
 

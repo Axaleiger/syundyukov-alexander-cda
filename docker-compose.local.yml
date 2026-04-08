@@ -1,5 +1,7 @@
 # Локальная развёртка с HMR: PostgreSQL + FastAPI + Vite (код из frontend/). Один файл.
 # Фронт: http://localhost:${DEV_PORT:-3000} — API проксируется с /api на FastAPI.
+# Сервис api собирается из ./backend (образ без hot-reload кода): после смены Python/Routes —
+#   docker compose -f docker-compose.local.yml build api [--no-cache] && docker compose -f docker-compose.local.yml up -d api
 # Запуск: docker compose -f docker-compose.local.yml --env-file .env up --build
 # Остановка: docker compose -f docker-compose.local.yml down --remove-orphans
 
@@ -29,6 +31,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cda}:${POSTGRES_PASSWORD:-cda_change_me}@db:5432/${POSTGRES_DB:-cda}
       SCENARIO_EXPORTS_DIR: /app/seed_data/scenario_exports
+      # При пустой БД один раз загружает сценарии и доски (без ручного reset_and_seed)
+      AUTO_SEED: "1"
     depends_on:
       db:
         condition: service_healthy

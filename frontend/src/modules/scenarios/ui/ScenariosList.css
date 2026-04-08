@@ -11,6 +11,15 @@
   font-weight: 600;
 }
 
+.scenarios-api-error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 1rem;
+  background: #fde8e8;
+  color: #8b1a1a;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
 .scenarios-layout {
   display: flex;
   gap: 1.5rem;
@@ -318,4 +327,84 @@
 
 .scenarios-name-link:hover {
   color: #1e4a77;
+}
+
+.scenarios-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.scenarios-edit-name {
+  flex-shrink: 0;
+  padding: 0.1rem 0.35rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.65;
+  border-radius: 4px;
+}
+
+.scenarios-edit-name:hover {
+  opacity: 1;
+  background: #e2e8f0;
+}
+
+.scenarios-name-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 12rem;
+}
+
+.scenarios-name-input {
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.35rem 0.5rem;
+  font-size: inherit;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.scenarios-name-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.scenarios-name-save-btn,
+.scenarios-name-cancel-btn {
+  padding: 0.25rem 0.65rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.scenarios-name-save-btn {
+  background: #1e3a5f;
+  color: #fff;
+  border-color: #1e3a5f;
+}
+
+.scenarios-name-save-btn:hover:not(:disabled) {
+  background: #2d5a87;
+}
+
+.scenarios-name-cancel-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.scenarios-name-save-btn:disabled,
+.scenarios-name-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scenarios-name-save-error {
+  font-size: 0.8rem;
+  color: #b91c1c;
 }

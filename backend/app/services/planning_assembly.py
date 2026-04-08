@@ -18,6 +18,18 @@ from app.models.tables import (
 )
 
 
+def _deadline_to_json(v: Any) -> Any:
+    """Даты из БД — date/datetime; защита от строк/прочего после ручных правок."""
+    if v is None:
+        return None
+    if hasattr(v, "isoformat"):
+        try:
+            return v.isoformat()
+        except (TypeError, ValueError):
+            return str(v)
+    return str(v)
+
+
 def build_board_payload(session: Session, case_id: uuid.UUID) -> dict[str, Any]:
     case = session.get(PlanningCase, case_id)
     if not case:
@@ -82,8 +94,8 @@ def build_board_payload(session: Session, case_id: uuid.UUID) -> dict[str, Any]:
                 "name": c.name,
                 "executor": users.get(c.executor_user_id, "") if c.executor_user_id else "",
                 "approver": users.get(c.approver_user_id, "") if c.approver_user_id else "",
-                "deadline": c.deadline.isoformat() if c.deadline else None,
-                "status": c.status,
+                "deadline": _deadline_to_json(c.deadline),
+                "status": c.status if c.status is not None else "",
                 "date": c.date_created_text or "",
                 "entries": entries,
             }

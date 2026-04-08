@@ -31,7 +31,8 @@ from app.models.tables import (
     Scenario,
     SystemAlias,
 )
-from app.seed.excel_board import parse_board_from_excel
+from app.seed.board_demo_snapshots import board_fallback_do_burenie, board_fallback_hantos
+from app.seed.excel_board import BoardParseResult, parse_board_from_excel
 from app.seed.ids import seed_uuid
 from app.seed.scenarios_gen import SCENARIO_DIRECTIONS, generate_scenarios
 from app.seed.static_lists import FIELD_ASSETS, PERSONNEL, PRODUCTION_STAGES, SYSTEMS_LIST
@@ -262,20 +263,21 @@ def _upsert_scenarios(
         )
 
 
-def _load_board_case(
+def _persist_planning_board(
     session: Session,
     *,
     case_key: str,
     scenario_external_code: str | None,
     asset_field: str,
-    excel_path: Path,
+    parsed: BoardParseResult,
     users_by_name: dict[str, Any],
     assets: dict[str, Any],
 ) -> None:
-    if not excel_path.is_file():
+    if not parsed.stages:
         return
-    parsed = parse_board_from_excel(str(excel_path))
-    asset_id = assets[asset_field]
+    asset_id = assets.get(asset_field) or assets.get("Зимнее")
+    if not asset_id:
+        return
     scenario_id = (
         seed_uuid("scenario", scenario_external_code) if scenario_external_code else None
     )
@@ -364,6 +366,35 @@ def _load_board_case(
         )
 
 
+def _load_board_case(
+    session: Session,
+    *,
+    case_key: str,
+    scenario_external_code: str | None,
+    asset_field: str,
+    excel_path: Path,
+    users_by_name: dict[str, Any],
+    assets: dict[str, Any],
+) -> None:
+    if excel_path.is_file():
+        parsed = parse_board_from_excel(str(excel_path))
+    else:
+        parsed = (
+            board_fallback_do_burenie()
+            if case_key == "case_do_burenie"
+            else board_fallback_hantos()
+        )
+    _persist_planning_board(
+        session,
+        case_key=case_key,
+        scenario_external_code=scenario_external_code,
+        asset_field=asset_field,
+        parsed=parsed,
+        users_by_name=users_by_name,
+        assets=assets,
+    )
+
+
 def _board_templates(session: Session) -> None:
     presets = {
         "hantos": "ООО \"Газпромнефть-Хантос\" / Зимнее",
@@ -406,16 +437,17 @@ def run_seed(session: Session, exports_dir: Path | None = None) -> None:
     hantos_x = exports_dir / "hantos.xlsx"
     dobur_x = exports_dir / "Управление добычей с учетом ближайшего бурения.xlsx"
 
+    # hantos: «Проактивное управление ремонтами…» — SC-17271 (детерминированный id из scenarios_gen)
     _load_board_case(
         session,
         case_key="case_hantos",
-        scenario_external_code=None,
+        scenario_external_code="SC-17271",
         asset_field="Зимнее",
         excel_path=hantos_x,
         users_by_name=users_by_name,
         assets=assets_map,
     )
-    # Сценарий «Управление добычей…» — SC-17111 из сида (первый generic может отличаться; привязываем по имени)
+    # «Управление добычей с учётом ближайшего бурения» — первый именованный сценарий, SC-17081
     sc_do = None
     for row in generate_scenarios():
         if "Управление добычей" in row["name"] and "бурения" in row["name"]:
@@ -430,5 +462,23 @@ def run_seed(session: Session, exports_dir: Path | None = None) -> None:
         users_by_name=users_by_name,
         assets=assets_map,
     )
+
+    # Остальные сценарии из списка — по одному кейсу планирования с демо-доской (как hantos-пресет).
+    scenarios_with_excel_board = {"SC-17271", sc_do} if sc_do else {"SC-17271"}
+    template_board = board_fallback_hantos()
+    for row in generate_scenarios():
+        ext = row["id"]
+        if ext in scenarios_with_excel_board:
+            continue
+        field = row.get("field") or "Зимнее"
+        _persist_planning_board(
+            session,
+            case_key=f"pc:{ext}",
+            scenario_external_code=ext,
+            asset_field=field,
+            parsed=template_board,
+            users_by_name=users_by_name,
+            assets=assets_map,
+        )
 
     session.commit()

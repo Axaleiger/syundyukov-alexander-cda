@@ -1,17 +1,22 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.models.tables import AppUser, Scenario
-from app.schemas.scenario import ScenarioListItem, ScenarioOut
+from app.models.tables import AppUser, BusinessDirection, Scenario
+from app.schemas.scenario import ScenarioListItem, ScenarioOut, ScenarioUpdate
 
 router = APIRouter()
 
 
-def _to_list_item(s: Scenario, author_name: Optional[str]) -> ScenarioListItem:
+def _to_list_item(
+    s: Scenario,
+    author_name: Optional[str],
+    business_direction_name: Optional[str],
+) -> ScenarioListItem:
     return ScenarioListItem(
         id=s.id,
         external_code=s.external_code,
@@ -26,6 +31,24 @@ def _to_list_item(s: Scenario, author_name: Optional[str]) -> ScenarioListItem:
         created_at=s.created_at,
         updated_at=s.updated_at,
         data_source=s.data_source,
+        business_direction_id=s.business_direction_id,
+        business_direction_name=business_direction_name,
+    )
+
+
+def _scenario_to_out(s: Scenario, db: Session) -> ScenarioOut:
+    author_name = None
+    if s.author_user_id:
+        u = db.get(AppUser, s.author_user_id)
+        author_name = u.display_name if u else None
+    bd_name = None
+    if s.business_direction_id:
+        bd = db.get(BusinessDirection, s.business_direction_id)
+        bd_name = bd.name if bd else None
+    base = _to_list_item(s, author_name, bd_name)
+    return ScenarioOut(
+        **base.model_dump(),
+        approved_at=s.approved_at,
     )
 
 
@@ -46,23 +69,40 @@ def list_scenarios(
     if author_ids:
         for u in db.query(AppUser).filter(AppUser.id.in_(author_ids)):
             authors[u.id] = u.display_name
-    return [_to_list_item(s, authors.get(s.author_user_id)) for s in rows]
+    bd_ids = {s.business_direction_id for s in rows if s.business_direction_id}
+    bd_names: dict = {}
+    if bd_ids:
+        for bd in db.query(BusinessDirection).filter(BusinessDirection.id.in_(bd_ids)):
+            bd_names[bd.id] = bd.name
+    return [
+        _to_list_item(s, authors.get(s.author_user_id), bd_names.get(s.business_direction_id))
+        for s in rows
+    ]
 
 
 @router.get("/{scenario_id}", response_model=ScenarioOut)
 def get_scenario(scenario_id: uuid.UUID, db: Session = Depends(get_db)):
     s = db.get(Scenario, scenario_id)
     if not s:
-        from fastapi import HTTPException
-
         raise HTTPException(404, "scenario not found")
-    author_name = None
-    if s.author_user_id:
-        u = db.get(AppUser, s.author_user_id)
-        author_name = u.display_name if u else None
-    base = _to_list_item(s, author_name)
-    return ScenarioOut(
-        **base.model_dump(),
-        business_direction_id=s.business_direction_id,
-        approved_at=s.approved_at,
-    )
+    return _scenario_to_out(s, db)
+
+
+@router.patch("/{scenario_id}", response_model=ScenarioOut)
+def patch_scenario(
+    scenario_id: uuid.UUID,
+    body: ScenarioUpdate,
+    db: Session = Depends(get_db),
+):
+    s = db.get(Scenario, scenario_id)
+    if not s:
+        raise HTTPException(404, "scenario not found")
+    data = body.model_dump(exclude_unset=True)
+    if not data:
+        return _scenario_to_out(s, db)
+    for k, v in data.items():
+        setattr(s, k, v)
+    s.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(s)
+    return _scenario_to_out(s, db)

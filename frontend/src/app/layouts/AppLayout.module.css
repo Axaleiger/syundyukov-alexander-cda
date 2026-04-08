@@ -19,6 +19,16 @@
   font-size: 1rem;
 }
 
+.bpm-board-warning {
+  margin: 0.5rem 0.75rem 0;
+  padding: 0.65rem 1rem;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  color: #9a3412;
+  font-size: 0.9rem;
+}
+
 .app-main {
   flex: 1;
   overflow: auto;

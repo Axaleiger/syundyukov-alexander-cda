@@ -17,6 +17,50 @@ import urllib.request
 from typing import Any
 
 
+def _put_json(url: str, payload: dict) -> tuple[int, Any]:
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode()
+            code = resp.getcode()
+    except urllib.error.HTTPError as e:
+        code = e.code
+        body = e.read().decode() if e.fp else ""
+    try:
+        parsed = json.loads(body) if body else None
+    except json.JSONDecodeError:
+        parsed = body
+    return code, parsed
+
+
+def _patch_json(url: str, payload: dict) -> tuple[int, Any]:
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        method="PATCH",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = resp.read().decode()
+            code = resp.getcode()
+    except urllib.error.HTTPError as e:
+        code = e.code
+        body = e.read().decode() if e.fp else ""
+    try:
+        parsed = json.loads(body) if body else None
+    except json.JSONDecodeError:
+        parsed = body
+    return code, parsed
+
+
 def _get(url: str) -> tuple[int, Any]:
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
@@ -83,6 +127,14 @@ def main() -> None:
     for k in ("id", "canonicalKey", "sortOrder", "labelFull"):
         _assert(k in s0, f"stage missing {k}: {s0}")
 
+    # --- /api/v1/taxonomy/business-directions ---
+    code, data = _get(f"{base}/api/v1/taxonomy/business-directions")
+    _assert(code == 200, f"/taxonomy/business-directions {code}")
+    _assert(isinstance(data, list) and len(data) >= 1, "business-directions non-empty")
+    bd0 = data[0]
+    for k in ("id", "name"):
+        _assert(k in bd0, f"business direction missing {k}: {bd0}")
+
     # --- /api/v1/assets ---
     code, data = _get(f"{base}/api/v1/assets")
     _assert(code == 200, "/api/v1/assets")
@@ -104,13 +156,34 @@ def main() -> None:
         f"scenarios list too short: {len(scenarios) if isinstance(scenarios, list) else 0}",
     )
     sc = scenarios[0]
-    for k in ("id", "name", "status", "productionStageId", "dataSource"):
+    for k in (
+        "id",
+        "name",
+        "status",
+        "productionStageId",
+        "dataSource",
+        "businessDirectionId",
+        "businessDirectionName",
+    ):
         _assert(k in sc, f"scenario item missing {k}")
 
     scenario_id = sc["id"]
     code, detail = _get(f"{base}/api/v1/scenarios/{scenario_id}")
     _assert(code == 200, "/api/v1/scenarios/{id}")
     _assert(detail.get("id") == scenario_id and "businessDirectionId" in detail, "scenario detail")
+
+    orig_name = detail["name"]
+    code, patched = _patch_json(
+        f"{base}/api/v1/scenarios/{scenario_id}",
+        {"name": orig_name + " (smoke)"},
+    )
+    _assert(code == 200, f"PATCH /api/v1/scenarios/{{id}} {code}")
+    _assert(patched.get("name") == orig_name + " (smoke)", "PATCH scenario name")
+    code, _ = _patch_json(
+        f"{base}/api/v1/scenarios/{scenario_id}",
+        {"name": orig_name},
+    )
+    _assert(code == 200, "PATCH scenario restore name")
 
     # --- /api/v1/planning/cases ---
     code, data = _get(f"{base}/api/v1/planning/cases")
@@ -137,6 +210,13 @@ def main() -> None:
             t0 = tasks_for[0]
             for k in ("id", "name", "executor", "approver", "entries"):
                 _assert(k in t0, f"task missing {k}")
+
+    code, putd = _put_json(
+        f"{base}/api/v1/planning/cases/{case_id}/board",
+        {"board": board},
+    )
+    _assert(code == 200, f"PUT planning case board {code}: {putd}")
+    _assert(isinstance(putd, dict) and putd.get("board"), "PUT board response")
 
     print("OK: все смоук-тесты пройдены.")
     print(f"    base URL: {base}")

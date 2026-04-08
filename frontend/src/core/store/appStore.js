@@ -1,9 +1,6 @@
 import { create } from "zustand"
 import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap.js"
-import { getRepositories } from "../data/repositories/registry.js"
-
-const SCENARIO_STAGE_FILTERS =
-	getRepositories().scenarios.getScenarioStageFilters()
+import { SCENARIO_STAGE_FILTERS } from "../data/static/scenariosData.js"
 
 export const useAppStore = create((set) => ({
 	// UI
@@ -63,6 +60,16 @@ export const useAppStore = create((set) => ({
 				typeof fn === "function" ? fn(state.scenarioStageFilters) : fn,
 		})),
 
+	/** После загрузки этапов с API: добавить отсутствующие ключи в фильтр (по умолчанию true). */
+	mergeScenarioStageFilterKeys: (names) =>
+		set((state) => {
+			const next = { ...state.scenarioStageFilters }
+			for (const name of names) {
+				if (next[name] === undefined) next[name] = true
+			}
+			return { scenarioStageFilters: next }
+		}),
+
 	scenariosStageFilter: null,
 	setScenariosStageFilter: (v) => set({ scenariosStageFilter: v }),
 
@@ -76,6 +83,14 @@ export const useAppStore = create((set) => ({
 	selectedScenarioName: "Управление добычей с учетом ближайшего бурения",
 	setSelectedScenarioName: (v) => set({ selectedScenarioName: v }),
 
+	/** UUID сценария из API (для выбора кейса планирования) */
+	selectedScenarioId: null,
+	setSelectedScenarioId: (v) => set({ selectedScenarioId: v }),
+
+	/** UUID кейса планирования (для сохранения доски) */
+	planningCaseId: null,
+	setPlanningCaseId: (v) => set({ planningCaseId: v }),
+
 	// BPM
 	bpmCommand: null,
 	setBpmCommand: (v) => set({ bpmCommand: v }),
@@ -88,15 +103,22 @@ export const useAppStore = create((set) => ({
 
 	bpmStages: null,
 	bpmTasks: null,
-	setBpmBoard: (stages, tasks) =>
+	/** Связи карточек при загрузке с API; правки только в BPMBoard до появления сохранения */
+	bpmConnections: null,
+	setBpmBoard: (stages, tasks, connections) =>
 		set((state) => {
-			if (state.bpmStages === stages && state.bpmTasks === tasks) {
-				return state // 🚫 не обновляем
+			const sameStages = state.bpmStages === stages
+			const sameTasks = state.bpmTasks === tasks
+			const sameConn =
+				connections === undefined || state.bpmConnections === connections
+			if (sameStages && sameTasks && sameConn) {
+				return state
 			}
 
 			return {
 				bpmStages: stages,
 				bpmTasks: tasks,
+				...(connections !== undefined ? { bpmConnections: connections } : {}),
 			}
 		}),
 
