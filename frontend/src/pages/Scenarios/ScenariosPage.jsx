@@ -11,6 +11,7 @@ export function ScenariosPage() {
         setScenarioStageFilters,
         setScenariosStageFilter,
         setSelectedScenarioName,
+        setSelectedScenarioId,
     } = useAppStore()
 
     return (
@@ -30,6 +31,7 @@ export function ScenariosPage() {
                     row.name.replace(/\s*\(раздел\s*"[^"]*"\)\s*$/i, '').trim() || row.name
 
                 setSelectedScenarioName(displayName)
+                setSelectedScenarioId(row.scenarioId ?? null)
 
                 navigate('/planning')
             }}

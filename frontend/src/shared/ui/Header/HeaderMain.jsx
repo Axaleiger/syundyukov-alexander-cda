@@ -1,4 +1,5 @@
 import { useAppStore } from "../../../core/store/appStore"
+import { useMe } from "../../../core/data/me/useMe"
 import styles from "./HeaderMain.module.css"
 
 const staticBase = `${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}`
@@ -6,6 +7,14 @@ const staticBase = `${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}`
 export const HeaderMain = () => {
 	const aiMode = useAppStore((s) => s.aiMode)
 	const setAiMode = useAppStore((s) => s.setAiMode)
+	const { me, loading: meLoading, error: meError } = useMe()
+
+	const userLine =
+		me && !meLoading && !meError
+			? [me.displayName, me.jobTitle].filter(Boolean).join(" · ")
+			: meLoading && !meError
+				? "…"
+				: "Сюндюков А.В. · Ведущий эксперт"
 
 	return (
 		<header className={styles["app-header"]}>
@@ -33,7 +42,7 @@ export const HeaderMain = () => {
 				</button>
 				<div className={styles["app-header-user"]}>
 					<span className={styles["app-header-user-name"]}>
-						Сюндюков А.В. · Ведущий эксперт
+						{userLine}
 					</span>
 					<img
 						src={`${staticBase}/sanya-bodibilder.png`}
