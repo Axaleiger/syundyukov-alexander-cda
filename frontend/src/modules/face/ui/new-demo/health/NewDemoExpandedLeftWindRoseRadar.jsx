@@ -17,20 +17,8 @@ function arcPath(cx, cy, radius, start, end) {
 	].join(" ")
 }
 
-function rotateToStart(items, startIndex) {
-	if (!items.length) return { rotated: items, startIndex: 0 }
-	const i = ((startIndex % items.length) + items.length) % items.length
-	if (i === 0) return { rotated: items, startIndex: 0 }
-	return { rotated: [...items.slice(i), ...items.slice(0, i)], startIndex: i }
-}
-
 export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmentClick }) {
-	const rawItems = data || []
-	const topSemanticIndex = Math.max(
-		0,
-		rawItems.findIndex((x) => (x?.name || "").toLowerCase().includes("добыч")),
-	)
-	const { rotated: items, startIndex: rotation } = rotateToStart(rawItems, topSemanticIndex)
+	const items = data || []
 	const numItems = items.length
 	const angleStep = numItems > 0 ? (2 * Math.PI) / numItems : 0
 	const box = 200
@@ -40,24 +28,22 @@ export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmen
 	const ringCount = 3
 
 	const displayedSelectedIndex =
-		selectedIndex != null && numItems > 0
-			? (((selectedIndex - rotation) % numItems) + numItems) % numItems
-			: 0
-
-	const mapDisplayedIndexToRaw = (displayedIndex) => {
-		if (!numItems) return 0
-		return (displayedIndex + rotation) % numItems
-	}
+		selectedIndex != null && numItems > 0 ? ((selectedIndex % numItems) + numItems) % numItems : null
 
 	const segments = items.map((item, index) => {
 		const spokeAngle = startAngle + index * angleStep
 		const segmentStart = spokeAngle - angleStep / 2
 		const segmentEnd = spokeAngle + angleStep / 2
 		const axisPoint = point(center, center, radius, spokeAngle)
-		return { item, index, spokeAngle, segmentStart, segmentEnd, axisPoint }
+		const valueRadius = (radius * Math.max(0, Math.min(100, item.value || 0))) / 100
+		const valuePoint = point(center, center, valueRadius, spokeAngle)
+		return { item, index, spokeAngle, segmentStart, segmentEnd, axisPoint, valuePoint }
 	})
 
-	const activeSegment = segments[displayedSelectedIndex] || segments[0]
+	const activeSegment =
+		displayedSelectedIndex != null && segments[displayedSelectedIndex]
+			? segments[displayedSelectedIndex]
+			: null
 
 	const ringPolygons = Array.from({ length: ringCount }, (_, ringIndex) => {
 		const ringRadius = (radius * (ringIndex + 1)) / ringCount
@@ -68,6 +54,8 @@ export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmen
 			})
 			.join(" ")
 	})
+
+	const contourPoints = segments.map((segment) => `${segment.valuePoint.x},${segment.valuePoint.y}`).join(" ")
 
 	return (
 		<div className={styles.expandedLeftRadar} role="group" aria-label="Диаграмма производственных этапов">
@@ -85,18 +73,24 @@ export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmen
 						className={styles.expandedLeftAxis}
 					/>
 				))}
+				<polygon
+					points={contourPoints}
+					className={`${styles.expandedLeftContour} ${
+						displayedSelectedIndex != null ? styles.expandedContourSelected : ""
+					}`}
+				/>
 				{activeSegment ? (
 					<>
 						<line
 							x1={center}
 							y1={center}
-							x2={activeSegment.axisPoint.x}
-							y2={activeSegment.axisPoint.y}
+							x2={activeSegment.valuePoint.x}
+							y2={activeSegment.valuePoint.y}
 							className={styles.expandedLeftActiveRay}
 						/>
 						<circle
-							cx={activeSegment.axisPoint.x}
-							cy={activeSegment.axisPoint.y}
+							cx={activeSegment.valuePoint.x}
+							cy={activeSegment.valuePoint.y}
 							r="3"
 							className={styles.expandedLeftActiveDot}
 						/>
@@ -107,14 +101,14 @@ export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmen
 						key={`hit-${idx}`}
 						d={arcPath(center, center, radius, segment.segmentStart, segment.segmentEnd)}
 						className={styles.expandedRadarHitArea}
-						onClick={() => onSegmentClick(mapDisplayedIndexToRaw(idx))}
+						onClick={() => onSegmentClick(idx)}
 					/>
 				))}
 			</svg>
 			<div className={styles.expandedLeftLabels}>
 				{segments.map((segment, idx) => {
 					const p = point(50, 50, 46, segment.spokeAngle)
-					const isSelected = idx === displayedSelectedIndex
+					const isSelected = displayedSelectedIndex != null && idx === displayedSelectedIndex
 					return (
 						<div
 							key={`${segment.item.name}-${idx}`}

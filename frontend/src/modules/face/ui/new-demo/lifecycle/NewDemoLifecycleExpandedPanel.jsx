@@ -10,7 +10,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts"
-import { useLifecycleChartModel } from "../../../../globe/model/useLifecycleChartModel"
+import { useNewDemoLifecycleModel } from "./useNewDemoLifecycleModel"
 import {
 	CURRENT_YEAR,
 	stages,
@@ -48,10 +48,16 @@ function getNearestYearIndex(rows, yearTarget) {
 
 const VISUAL_Y_LABELS = [0, 20, 40, 60, 80, 100]
 
-export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
-	const model = useLifecycleChartModel({ faceSeed })
+export function NewDemoLifecycleExpandedPanel({
+	onClose,
+	faceSeed = 0,
+	viewMode,
+	onViewModeChange,
+	legendOnly,
+	onLegendOnlyChange,
+}) {
+	const model = useNewDemoLifecycleModel({ faceSeed, viewMode, legendOnly })
 	const [tooltipIndex, setTooltipIndex] = useState(0)
-	const [selectedStageKey, setSelectedStageKey] = useState(null)
 	const [activeChartX, setActiveChartX] = useState(null)
 	const [chartAreaWidth, setChartAreaWidth] = useState(0)
 	const chartAreaRef = useRef(null)
@@ -85,15 +91,6 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 		const step = yMax / 5
 		return Array.from({ length: 6 }, (_, idx) => Number((idx * step).toFixed(2)))
 	}, [yMax])
-
-	const selectedStageDataKey = useMemo(() => {
-		if (!selectedStageKey || !rows.length) return null
-		const hasNumericValues = rows.some((row) => {
-			const value = row[selectedStageKey]
-			return typeof value === "number" && !Number.isNaN(value)
-		})
-		return hasNumericValues ? selectedStageKey : null
-	}, [rows, selectedStageKey])
 
 	const futureSegmentEndYear = useMemo(
 		() => (rows.length ? String(rows[rows.length - 1].year) : null),
@@ -139,8 +136,8 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 						<button
 							key={mode.id}
 							type="button"
-							className={`${styles.tab} ${model.viewMode === mode.id ? styles.tabActive : ""}`}
-							onClick={() => model.setViewMode(mode.id)}
+							className={`${styles.tab} ${viewMode === mode.id ? styles.tabActive : ""}`}
+							onClick={() => onViewModeChange(mode.id)}
 						>
 							{mode.id === "default" ? "Детализировано" : mode.label}
 						</button>
@@ -149,16 +146,14 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 
 				<div className={styles.stagesNav}>
 					{stages.map((stage) => {
-						const isActive = selectedStageKey === stage.key
+						const isActive = legendOnly === stage.key
 						return (
 							<button
 								key={stage.key}
 								type="button"
 								className={`${styles.stageItem} ${isActive ? styles.stageItemActive : ""}`}
 								onClick={() => {
-									setSelectedStageKey((prev) => (prev === stage.key ? null : stage.key))
-									const next = model.selectedStage === stage.name ? null : stage.name
-									model.setSelectedStage(next)
+									onLegendOnlyChange(legendOnly === stage.key ? null : stage.key)
 								}}
 							>
 								<span className={styles.stageDot} />
@@ -176,7 +171,7 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 								<div
 									key={stage.key}
 									className={`${styles.tooltipRow} ${
-										selectedStageKey === stage.key ? styles.tooltipRowActive : ""
+										legendOnly === stage.key ? styles.tooltipRowActive : ""
 									}`}
 								>
 									<span>{stage.name}:</span>
@@ -265,12 +260,12 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 									strokeWidth={2}
 									strokeDasharray="2 2"
 								/>
-								{stages.map((stage) => (
+								{(viewMode === "sum" && legendOnly == null ? stages : model.visibleStages).map((stage) => (
 									<Area
 										key={stage.key}
 										type="monotone"
 										dataKey={stage.key}
-										stackId={model.viewMode === "sum" && model.legendOnly == null ? "stack" : undefined}
+										stackId={viewMode === "sum" && legendOnly == null ? "stack" : undefined}
 										stroke={stage.color}
 										strokeWidth={1.2}
 										fill={`url(#nd-lifecycle-grad-${stage.key})`}
@@ -285,43 +280,7 @@ export function NewDemoLifecycleExpandedPanel({ onClose, faceSeed = 0 }) {
 									dot={false}
 									isAnimationActive={false}
 								/>
-								{selectedStageDataKey ? (
-									<>
-										<Line
-											type="monotone"
-											dataKey={selectedStageDataKey}
-											stroke="rgba(255, 255, 255, 0.9)"
-											strokeWidth={6}
-											dot={false}
-											connectNulls
-											isAnimationActive={false}
-										/>
-										<Line
-											type="monotone"
-											dataKey={selectedStageDataKey}
-											stroke="rgba(230, 89, 7, 1)"
-											strokeWidth={3.6}
-											strokeOpacity={1}
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											filter="url(#nd-selected-stage-glow)"
-											dot={{
-												r: 3.2,
-												fill: "rgba(230, 89, 7, 1)",
-												stroke: "rgba(255, 255, 255, 0.95)",
-												strokeWidth: 1.4,
-											}}
-											activeDot={{
-												r: 4.4,
-												fill: "rgba(230, 89, 7, 1)",
-												stroke: "#fff",
-												strokeWidth: 1.6,
-											}}
-											connectNulls
-											isAnimationActive={false}
-										/>
-									</>
-								) : null}
+								{/* main semantics: legendOnly filters visibleStages; no extra emphasis line */}
 							</AreaChart>
 						</ResponsiveContainer>
 					</div>
