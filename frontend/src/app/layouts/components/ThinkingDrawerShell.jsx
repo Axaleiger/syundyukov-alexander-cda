@@ -27,12 +27,15 @@ export function ThinkingDrawerShell({
 	appliedDecisionPathId,
 	setSelectedDecisionPathId,
 	handleRecalculateDecision,
+	isNewDemo = false,
 }) {
 	if (!thinkingPanelOpen) return null
 
 	const closePanel = () => {
 		setThinkingPanelOpen(false)
-		setThinkingCurrentMessage("")
+		if (!isNewDemo) {
+			setThinkingCurrentMessage("")
+		}
 		setThinkingPaused(false)
 	}
 
@@ -74,6 +77,11 @@ export function ThinkingDrawerShell({
 					onRecalculate={handleRecalculateDecision}
 					awaitingConfirm={thinkingAwaitingConfirm}
 					onConfirm={handleThinkingConfirm}
+					onClosePanel={() => {
+						thinkingChainRevealedRef.current = true
+						closePanel()
+					}}
+					isNewDemo={isNewDemo}
 				/>
 			) : (
 				<AiThinkingUI
@@ -87,18 +95,21 @@ export function ThinkingDrawerShell({
 					onResume={() => setThinkingPaused(false)}
 					awaitingConfirm={thinkingAwaitingConfirm}
 					onConfirm={handleThinkingConfirm}
+					isNewDemo={isNewDemo}
 				/>
 			)}
-			<button
-				type="button"
-				className={faceHologram ? "app-thinking-drawer-exit" : styles.exit}
-				onClick={() => {
-					thinkingChainRevealedRef.current = true
-					closePanel()
-				}}
-			>
-				Закрыть панель
-			</button>
+			{!(isNewDemo && thinkingConfirmPhase === "brain") && (
+				<button
+					type="button"
+					className={faceHologram ? "app-thinking-drawer-exit" : `${styles.exit} ${isNewDemo ? styles.exitNewDemo : ""}`}
+					onClick={() => {
+						thinkingChainRevealedRef.current = true
+						closePanel()
+					}}
+				>
+					Закрыть панель
+				</button>
+			)}
 		</>
 	)
 
@@ -145,20 +156,25 @@ export function ThinkingDrawerShell({
 				aria-hidden
 			/>
 			<div
-				className={`${styles.drawer} ${isThinkingDrawerCollapsed ? styles.drawerCollapsed : ""}`}
+				className={`${styles.drawer} ${isThinkingDrawerCollapsed ? styles.drawerCollapsed : ""} ${isNewDemo ? styles.drawerNewDemo : ""}`}
+				data-new-demo-thinking={isNewDemo ? "true" : undefined}
 			>
-				<div className={styles.head}>
-					<h3 className={styles.title}>Режим мышления</h3>
-					<button
-						type="button"
-						className={styles.close}
-						onClick={closePanel}
-						aria-label="Закрыть"
-					>
-						×
-					</button>
+				{!isNewDemo && (
+					<div className={styles.head}>
+						<h3 className={styles.title}>Режим мышления</h3>
+						<button
+							type="button"
+							className={styles.close}
+							onClick={closePanel}
+							aria-label="Закрыть"
+						>
+							×
+						</button>
+					</div>
+				)}
+				<div className={`${styles.body} ${isNewDemo ? styles.bodyNewDemo : ""}`}>
+					{renderBody()}
 				</div>
-				<div className={styles.body}>{renderBody()}</div>
 			</div>
 		</>
 	)

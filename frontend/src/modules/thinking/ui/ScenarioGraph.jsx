@@ -54,7 +54,13 @@ function wrapLabelToLines(text, maxCharsPerLine, maxLines) {
   return lines.slice(0, maxLines)
 }
 
-function nodeBox(node) {
+function nodeBox(node, isNewDemo = false) {
+  if (isNewDemo) {
+    if (node.type === 'start') return { w: 98, h: 30, fontSize: 8, maxLines: 2, padY: 6, iconPad: 18 }
+    if (node.type === 'scenario') return { w: 74, h: 26, fontSize: 7, maxLines: 2, padY: 5, iconPad: 16 }
+    if (node.type === 'milestone') return { w: 78, h: 26, fontSize: 7, maxLines: 2, padY: 5, iconPad: 16 }
+    return { w: 74, h: 26, fontSize: 7, maxLines: 2, padY: 5, iconPad: 16 }
+  }
   if (node.type === 'start') {
     return { w: 220, h: 46, fontSize: 10, maxLines: 3, padY: 10, iconPad: 28 }
   }
@@ -67,8 +73,8 @@ function nodeBox(node) {
   return { w: 120, h: 46, fontSize: 9, maxLines: 3, padY: 9, iconPad: 26 }
 }
 
-function estimateRenderedBox(node) {
-  const box = nodeBox(node)
+function estimateRenderedBox(node, isNewDemo = false) {
+  const box = nodeBox(node, isNewDemo)
   const innerW = box.w - 12 - (box.iconPad ?? 26)
   const maxChars = maxCharsForWidth(innerW, box.fontSize)
   const lines = wrapLabelToLines(node.label, maxChars, box.maxLines)
@@ -77,17 +83,17 @@ function estimateRenderedBox(node) {
   return { w: box.w, h: rectH, lines, box }
 }
 
-function nodeStyleByType(type) {
+function nodeStyleByType(type, palette) {
   if (type === 'start') {
-    return { fill: '#162032', stroke: '#f59e0b', port: '#fbbf24' }
+    return { fill: palette.startFill, stroke: palette.startStroke, port: palette.startPort }
   }
   if (type === 'scenario') {
-    return { fill: '#0c1222', stroke: '#38bdf8', port: '#7dd3fc' }
+    return { fill: palette.scenarioFill, stroke: palette.scenarioStroke, port: palette.scenarioPort }
   }
   if (type === 'milestone') {
-    return { fill: '#0d1f1d', stroke: '#34d399', port: '#6ee7b7' }
+    return { fill: palette.milestoneFill, stroke: palette.milestoneStroke, port: palette.milestonePort }
   }
-  return { fill: '#121826', stroke: '#94a3b8', port: '#cbd5e1' }
+  return { fill: palette.defaultFill, stroke: palette.defaultStroke, port: palette.defaultPort }
 }
 
 function pickSides(from, to) {
@@ -216,7 +222,7 @@ function viewFromBBox(bbox) {
   }
 }
 
-const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEntering }) {
+const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEntering, isNewDemo = false }) {
   const {
     bw,
     rectH,
@@ -252,14 +258,14 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
         >
           <defs>
             <clipPath id={`sg-clip-${node.id}`}>
-              <rect x="0" y="0" width={bw} height={rectH} rx="12" ry="12" />
+              <rect x="0" y="0" width={bw} height={rectH} rx={isNewDemo ? "8" : "12"} ry={isNewDemo ? "8" : "12"} />
             </clipPath>
           </defs>
           <rect
             width={bw}
             height={rectH}
-            rx="12"
-            ry="12"
+            rx={isNewDemo ? "8" : "12"}
+            ry={isNewDemo ? "8" : "12"}
             fill={fillCol}
             stroke={strokeColor}
             strokeWidth={strokeW}
@@ -273,7 +279,7 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
             y={textStartY}
             textAnchor="start"
             fontSize={box.fontSize}
-            fill="#e2e8f0"
+            fill={isNewDemo ? "#f4fbff" : "#e2e8f0"}
             style={{ pointerEvents: 'none', fontWeight: 600 }}
             clipPath={`url(#sg-clip-${node.id})`}
           >
@@ -331,7 +337,63 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
   )
 })
 
-function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
+function ScenarioGraph({
+  visibleNodeIds = new Set(),
+  graphComplete = false,
+  isNewDemo = false,
+  isBoardLayout = false,
+}) {
+  const palette = isNewDemo
+    ? {
+        startFill: 'rgba(17, 51, 83, 0.9)',
+        startStroke: '#9ff8d4',
+        startPort: '#9ff8d4',
+        scenarioFill: 'rgba(8, 25, 44, 0.88)',
+        scenarioStroke: 'rgba(125, 211, 252, 0.82)',
+        scenarioPort: '#6fe8ff',
+        milestoneFill: 'rgba(9, 34, 53, 0.88)',
+        milestoneStroke: 'rgba(74, 222, 128, 0.85)',
+        milestonePort: 'rgba(134, 239, 172, 0.92)',
+        defaultFill: 'rgba(8, 24, 43, 0.88)',
+        defaultStroke: 'rgba(125, 211, 252, 0.82)',
+        defaultPort: '#6fe8ff',
+        optimalNodeStroke: '#c6ffe9',
+        optimalNodeFill: 'rgba(35, 105, 88, 0.96)',
+        optimalNodePort: '#d5fff0',
+        edgeGlow: 'rgba(56, 189, 248, 0.36)',
+        edgeFore: 'rgba(56, 189, 248, 0.84)',
+        optimalEdgeGlow: 'rgba(186, 255, 226, 0.62)',
+        optimalEdgeFore: 'rgba(227, 255, 243, 0.98)',
+        canvasGrid: 'rgba(47,180,233,0.08)',
+        controlBorder: 'border-sky-400/45',
+        controlBg: 'bg-slate-900/55',
+        controlText: 'text-slate-100',
+      }
+    : {
+        startFill: '#162032',
+        startStroke: '#f59e0b',
+        startPort: '#fbbf24',
+        scenarioFill: '#0c1222',
+        scenarioStroke: '#38bdf8',
+        scenarioPort: '#7dd3fc',
+        milestoneFill: '#0d1f1d',
+        milestoneStroke: '#34d399',
+        milestonePort: '#6ee7b7',
+        defaultFill: '#121826',
+        defaultStroke: '#94a3b8',
+        defaultPort: '#cbd5e1',
+        optimalNodeStroke: '#bbf7d0',
+        optimalNodeFill: '#071c12',
+        optimalNodePort: '#ecfdf5',
+        edgeGlow: 'rgba(56, 189, 248, 0.35)',
+        edgeFore: 'rgba(56, 189, 248, 0.42)',
+        optimalEdgeGlow: 'rgba(134, 239, 172, 0.72)',
+        optimalEdgeFore: 'rgba(240, 253, 244, 0.98)',
+        canvasGrid: 'rgba(51,65,85,0.07)',
+        controlBorder: 'border-slate-700/80',
+        controlBg: 'bg-[#0a0e14]',
+        controlText: 'text-slate-100',
+      }
   const containerRef = useRef(null)
   const viewRef = useRef(null)
   const animRef = useRef(null)
@@ -394,10 +456,10 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
   const boxById = useMemo(() => {
     const m = new Map()
     for (const n of scenarioGraphNodes) {
-      m.set(n.id, estimateRenderedBox(n))
+      m.set(n.id, estimateRenderedBox(n, isNewDemo))
     }
     return m
-  }, [])
+  }, [isNewDemo])
 
   const edgeLayouts = useMemo(() => {
     return visibleEdges.map((edge, idx) => {
@@ -410,7 +472,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
       const d = createSmoothBezierPath(from, to, fb, tb, edge)
       const ekey = `${edge.from}|${edge.to}`
       const isOptimalEdge = graphComplete && optimalScenarioEdgeKeys.has(ekey)
-      const baseW = Math.max(2.2, idx % 7 === 0 ? 2.8 : 2.2)
+      const baseW = isNewDemo ? Math.max(1.2, idx % 8 === 0 ? 1.8 : 1.2) : Math.max(2.2, idx % 7 === 0 ? 2.8 : 2.2)
       const isNewEdge = enteringNodeIds.has(edge.to) && visibleNodeIds.has(edge.from)
       return {
         d,
@@ -420,7 +482,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
         isNewEdge,
       }
     })
-  }, [visibleEdges, graphComplete, nodesById, boxById, enteringNodeIds, visibleNodeIds])
+  }, [visibleEdges, graphComplete, nodesById, boxById, enteringNodeIds, visibleNodeIds, isNewDemo])
 
   const nodeLayouts = useMemo(() => {
     const m = new Map()
@@ -435,13 +497,13 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
       const linesClamped = wrapLabelToLines(node.label, maxChars, box.maxLines)
       const textBlockH = linesClamped.length * LINE_HEIGHT
       const textStartY = rectH / 2 - textBlockH / 2 + LINE_HEIGHT * 0.72
-      const styles = nodeStyleByType(node.type)
+      const styles = nodeStyleByType(node.type, palette)
       const isOptimal = graphComplete && optimalScenarioNodeIds.has(node.id)
-      const strokeColor = isOptimal ? '#bbf7d0' : styles.stroke
-      const strokeW = isOptimal ? OPT_NODE_STROKE_W : 1.2
-      const fillCol = isOptimal ? '#071c12' : styles.fill
-      const portStroke = isOptimal ? '#ecfdf5' : styles.port
-      const portStrokeW = isOptimal ? OPT_PORT_STROKE_W : 1.8
+      const strokeColor = isOptimal ? palette.optimalNodeStroke : styles.stroke
+      const strokeW = isOptimal ? (isNewDemo ? 3.2 : OPT_NODE_STROKE_W) : (isNewDemo ? 0.9 : 1.2)
+      const fillCol = isOptimal ? palette.optimalNodeFill : styles.fill
+      const portStroke = isOptimal ? palette.optimalNodePort : styles.port
+      const portStrokeW = isOptimal ? (isNewDemo ? 2.4 : OPT_PORT_STROKE_W) : (isNewDemo ? 1.2 : 1.8)
       m.set(node.id, {
         bw,
         rectH,
@@ -461,7 +523,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
       })
     }
     return m
-  }, [graphComplete])
+  }, [graphComplete, isNewDemo])
 
   const animateToView = useCallback(
     (targetZoom, targetPan) => {
@@ -550,14 +612,14 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
 
   return (
     <div className="w-full">
-      <h3 className={`${chrome.drawerTitle} ${chrome.drawerTitleSpaced}`}>Граф сценария</h3>
+      <h3 className={`${chrome.drawerTitle} ${isBoardLayout ? '' : chrome.drawerTitleSpaced}`}>Граф сценария</h3>
       <div
         ref={containerRef}
-        className="relative h-[560px] w-full cursor-grab overflow-hidden rounded-2xl border border-slate-700/50 bg-[#0a0e14] active:cursor-grabbing"
+        className={`relative ${isBoardLayout ? "h-[420px]" : "h-[560px]"} w-full cursor-grab overflow-hidden rounded-2xl border active:cursor-grabbing ${isNewDemo ? "border-sky-400/40" : "border-slate-700/50"} ${isNewDemo ? "bg-[#03182d]" : "bg-[#0a0e14]"}`}
         style={{
           touchAction: 'none',
           backgroundImage:
-            'linear-gradient(rgba(51,65,85,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(51,65,85,0.07) 1px, transparent 1px)',
+            `linear-gradient(${palette.canvasGrid} 1px, transparent 1px), linear-gradient(90deg, ${palette.canvasGrid} 1px, transparent 1px)`,
           backgroundSize: '28px 28px',
         }}
         onPointerDown={(e) => {
@@ -589,6 +651,15 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
           dragRef.current = null
         }}
       >
+        {isNewDemo && (
+          <div
+            className="pointer-events-none absolute inset-0 z-0"
+            style={{
+              background:
+                'radial-gradient(120% 90% at 55% 52%, rgba(25, 110, 186, 0.18) 0%, rgba(5, 33, 66, 0.18) 52%, rgba(3, 18, 37, 0.08) 100%), radial-gradient(65% 45% at 50% 50%, rgba(51, 181, 255, 0.12) 0%, rgba(51, 181, 255, 0.03) 60%, rgba(51, 181, 255, 0) 100%)',
+            }}
+          />
+        )}
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-full w-full select-none" preserveAspectRatio="xMidYMid meet">
           <defs>
             <filter id="sg-node-shadow" x="-30%" y="-30%" width="160%" height="160%">
@@ -638,6 +709,9 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
                 .sg-node-glow-rect {
                   animation: sg-node-glow-fade 0.65s ease-out forwards;
                 }
+                .sg-map-silhouette {
+                  opacity: 0.22;
+                }
                 @keyframes sg-edge-draw {
                   to {
                     stroke-dashoffset: 0;
@@ -652,6 +726,16 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
             </style>
           </defs>
           <g ref={viewRef}>
+            {isNewDemo && (
+              <g className="pointer-events-none sg-map-silhouette">
+                <path
+                  d="M96 296 C180 210, 292 186, 398 204 C490 220, 588 214, 690 202 C784 190, 876 202, 984 242 C1118 294, 1204 352, 1352 338 C1440 332, 1538 284, 1624 238 L1624 474 L96 474 Z"
+                  fill="rgba(89, 174, 233, 0.12)"
+                  stroke="rgba(132, 211, 255, 0.35)"
+                  strokeWidth="2"
+                />
+              </g>
+            )}
             <g className="pointer-events-none">
               {edgeLayouts.map((item) => {
                 if (!item) return null
@@ -662,9 +746,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
                     <path
                       d={d}
                       fill="none"
-                      stroke={
-                        isOptimalEdge ? 'rgba(134, 239, 172, 0.72)' : 'rgba(56, 189, 248, 0.35)'
-                      }
+                      stroke={isOptimalEdge ? palette.optimalEdgeGlow : palette.edgeGlow}
                       strokeWidth={isOptimalEdge ? Math.max(OPT_EDGE_GLOW_W, baseW * 3 + 9) : baseW}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -674,9 +756,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
                     <path
                       d={d}
                       fill="none"
-                      stroke={
-                        isOptimalEdge ? 'rgba(240, 253, 244, 0.98)' : 'rgba(56, 189, 248, 0.42)'
-                      }
+                      stroke={isOptimalEdge ? palette.optimalEdgeFore : palette.edgeFore}
                       strokeWidth={isOptimalEdge ? OPT_EDGE_FORE_W : baseW * 0.55}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -702,6 +782,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
                   layout={layout}
                   inc={inc}
                   isEntering={enteringNodeIds.has(node.id)}
+                  isNewDemo={isNewDemo}
                 />
               )
             })}
@@ -712,7 +793,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
           <button
             type="button"
             data-sg-control
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0a0e14] text-slate-100 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60 ${palette.controlBorder} ${palette.controlBg} ${palette.controlText}`}
             aria-label="Zoom in"
             onClick={zoomIn}
           >
@@ -724,7 +805,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
           <button
             type="button"
             data-sg-control
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0a0e14] text-slate-100 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60 ${palette.controlBorder} ${palette.controlBg} ${palette.controlText}`}
             aria-label="Zoom out"
             onClick={zoomOut}
           >
@@ -735,7 +816,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
           <button
             type="button"
             data-sg-control
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700/80 bg-[#0a0e14] text-slate-100 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60 ${palette.controlBorder} ${palette.controlBg} ${palette.controlText}`}
             aria-label="Center graph"
             onClick={fitAllVisible}
           >
@@ -752,7 +833,7 @@ function ScenarioGraph({ visibleNodeIds = new Set(), graphComplete = false }) {
           <button
             type="button"
             data-sg-control
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-700/50 bg-[#0a0e14] text-emerald-300 shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60"
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60 ${isNewDemo ? "border-orange-500/60 text-orange-300 bg-slate-900/55" : "border-emerald-700/50 bg-[#0a0e14] text-emerald-300"}`}
             aria-label="Fit best scenario"
             onClick={fitOptimalOnly}
           >

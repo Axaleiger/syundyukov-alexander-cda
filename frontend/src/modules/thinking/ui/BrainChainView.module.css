@@ -140,3 +140,476 @@
     transform: translateX(0);
   }
 }
+
+.rootNewDemo .brainWrap {
+  background: linear-gradient(180deg, rgba(7, 33, 61, 0.8) 0%, rgba(2, 20, 41, 0.76) 100%);
+  border-color: rgba(47, 180, 233, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rootNewDemo .graphWrap {
+  margin-top: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.rootNewDemo .chainChecklist {
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  background: linear-gradient(180deg, rgba(7, 33, 61, 0.44) 0%, rgba(5, 26, 49, 0.34) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.rootNewDemo .chainChecklist .chainStep {
+  color: rgba(226, 232, 240, 0.94);
+}
+
+.rootNewDemo .chainChecklist .chainStep .chainStepIcon {
+  color: #2fb4e9;
+}
+
+.rootNewDemo .chainStepActive {
+  background: rgba(230, 89, 7, 0.16);
+}
+
+.rootNewDemo .btnResumeFromAi {
+  border-radius: 12px;
+  border: 1px solid rgba(47, 180, 233, 0.55);
+  color: rgba(226, 232, 240, 0.96);
+  background: rgba(8, 38, 69, 0.48);
+}
+
+.rootNewDemoBoard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.boardRevealSection {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 420ms ease, transform 420ms ease;
+}
+
+.boardRevealVisible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.boardCard {
+  border: 1px solid rgba(125, 211, 252, 0.34);
+  border-radius: 14px;
+  background: linear-gradient(113.87deg, rgba(0, 112, 186, 0.44) -32.91%, rgba(2, 40, 85, 0.44) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.boardTopRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.boardCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px 0;
+}
+
+.boardTitle {
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.boardSectionTitle {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.96);
+}
+
+.boardCloseX {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(125, 211, 252, 0.46);
+  background: rgba(7, 33, 61, 0.52);
+  color: rgba(241, 245, 249, 0.96);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.boardChainWrap {
+  padding: 12px 14px 14px;
+}
+
+.boardChainTitleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.boardChainAccentDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-top: 2px;
+  background:
+    radial-gradient(circle at 35% 35%, rgba(167, 243, 255, 0.95) 0%, rgba(47, 180, 233, 0.86) 45%, rgba(0, 112, 186, 0.45) 100%);
+  box-shadow: 0 0 10px rgba(47, 180, 233, 0.8), 0 0 22px rgba(47, 180, 233, 0.35);
+}
+
+.boardChainTitle {
+  margin: 0;
+  color: #f5fbff;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  max-width: 420px;
+}
+
+.boardThinkingList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boardThinkingItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) minmax(140px, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  animation: brain-chain-node-in 0.42s ease forwards;
+}
+
+.boardThinkingBullet {
+  color: rgba(241, 245, 249, 0.98);
+  font-size: 32px;
+  line-height: 0.4;
+}
+
+.boardThinkingText {
+  color: rgba(241, 245, 249, 0.98);
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boardThinkingLine {
+  display: block;
+  height: 2px;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(0, 112, 186, 0.45) 0%, rgba(61, 199, 255, 0.94) 100%);
+  box-shadow: 0 0 8px rgba(47, 180, 233, 0.45);
+}
+
+.boardThinkingItemActive .boardThinkingText {
+  color: #ffffff;
+}
+
+.boardThinkingItemActive .boardThinkingLine {
+  background: linear-gradient(90deg, rgba(0, 112, 186, 0.62) 0%, rgba(126, 230, 255, 1) 100%);
+  box-shadow: 0 0 12px rgba(86, 215, 255, 0.62);
+}
+
+.boardBrainWrap {
+  padding: 4px 10px 14px;
+  height: 286px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boardBrainWrap :global(.new-demo-brain-root) {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.boardBrainCard {
+  border-color: rgba(125, 211, 252, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+
+.boardGraphWrap {
+  padding: 10px 12px 12px;
+}
+
+.boardProgressStrip {
+  padding: 8px 14px;
+}
+
+.boardProgressInner {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.55fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+}
+
+.boardProgressMeter {
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 112, 186, 0.55);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 112, 186, 0.92) 0 3px,
+      rgba(0, 112, 186, 0.0) 3px 6px
+    );
+  box-shadow: inset 0 0 10px rgba(0, 112, 186, 0.35), 0 0 12px rgba(47, 180, 233, 0.22);
+}
+
+.boardProgressText {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: rgba(241, 245, 249, 0.95);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boardRecommendationsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.boardRecommendationCard {
+  padding: 12px 14px 14px 24px;
+  position: relative;
+  overflow: hidden;
+  min-height: 157px;
+  border-radius: 22px;
+}
+
+.boardRecommendationCardPrimary::before,
+.boardRecommendationCardSecondary::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  border-radius: 999px;
+}
+
+.boardRecommendationCardPrimary::after,
+.boardRecommendationCardSecondary::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 34px;
+  border-radius: 999px;
+  background: var(--board-card-bg);
+  pointer-events: none;
+}
+
+.boardRecommendationCardPrimary::before {
+  background: linear-gradient(180deg, rgba(35, 194, 255, 0.96) 0%, rgba(0, 112, 186, 0.92) 100%);
+}
+
+.boardRecommendationCardSecondary::before {
+  background: linear-gradient(180deg, rgba(255, 141, 46, 0.98) 0%, rgba(230, 89, 7, 0.96) 100%);
+}
+
+.boardRecommendationTitle {
+  margin: 0 0 10px;
+  font-size: 19px;
+  color: rgba(226, 232, 240, 0.96);
+  line-height: 1.35;
+}
+
+.boardRecommendationList {
+  margin: 0;
+  padding: 2px 0 0 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  color: rgba(229, 238, 247, 0.95);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.boardRecommendationItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
+}
+
+.boardRecommendationIndex {
+  font-size: 42px;
+  line-height: 0.9;
+  font-weight: 700;
+  color: #2fb4e9;
+}
+
+.boardRecommendationCardSecondary .boardRecommendationIndex {
+  color: #e65907;
+}
+
+.boardRecommendationText {
+  font-size: 14px;
+  color: rgba(229, 238, 247, 0.95);
+  line-height: 1.4;
+}
+
+.boardBottomRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.boardKpiCard {
+  padding: 12px 14px 14px;
+}
+
+.boardKpiTable {
+  margin-top: 10px;
+  display: grid;
+  gap: 0;
+}
+
+.boardKpiRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.38);
+}
+
+.boardKpiMetric {
+  color: rgba(226, 232, 240, 0.94);
+  font-size: 14px;
+}
+
+.boardKpiValue {
+  color: rgba(241, 245, 249, 0.96);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.boardKpiDelta {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.boardKpiDeltaGood {
+  color: #2FB4E9;
+}
+
+.boardKpiDeltaBad {
+  color: #E65907;
+}
+
+.boardControlsCol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.boardConfirmCard {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boardConfirmBtn {
+  width: 100%;
+  margin-top: 0;
+  min-height: 56px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 12px;
+  border: 1px solid rgba(61, 206, 255, 0.72);
+  background:
+    linear-gradient(180deg, rgba(23, 82, 128, 0.64) 0%, rgba(14, 61, 101, 0.62) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(219, 241, 255, 0.22),
+    inset 0 -10px 24px rgba(4, 38, 71, 0.28),
+    0 0 0 1px rgba(0, 112, 186, 0.22);
+  color: #ffffff;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 120ms ease;
+}
+
+.boardConfirmBtn:hover {
+  border-color: rgba(126, 232, 255, 0.92);
+  background:
+    linear-gradient(180deg, rgba(28, 94, 145, 0.7) 0%, rgba(16, 69, 113, 0.67) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(226, 245, 255, 0.3),
+    inset 0 -10px 24px rgba(4, 38, 71, 0.34),
+    0 0 0 1px rgba(47, 180, 233, 0.32);
+  transform: translateY(-1px);
+}
+
+.boardConfirmBtn:disabled {
+  border-color: rgba(125, 211, 252, 0.32);
+  background: linear-gradient(180deg, rgba(36, 67, 97, 0.52) 0%, rgba(25, 53, 80, 0.48) 100%);
+  color: #ffffff;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.boardConfirmPlaceholder {
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 14px;
+}
+
+.boardClosePanelBtn {
+  align-self: flex-end;
+  margin-top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 8px;
+  min-height: 52px;
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.56);
+  background: linear-gradient(180deg, rgba(28, 69, 105, 0.58) 0%, rgba(18, 56, 89, 0.5) 100%);
+  color: rgba(234, 243, 251, 0.98);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.boardClosePanelX {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.58);
+  background: rgba(38, 79, 114, 0.64);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  line-height: 1;
+}

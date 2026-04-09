@@ -24,10 +24,11 @@ function AiThinkingUI({
   onResume,
   awaitingConfirm = false,
   onConfirm,
+  isNewDemo = false,
 }) {
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
   return (
-    <div className={styles.root}>
+    <div className={`${styles.root} ${isNewDemo ? styles.rootNewDemo : ''}`}>
       {stepsUnique.length > 0 && (
         <ul className={styles.checklist} aria-label="Шаги выполнения">
           {stepsUnique.map((item) => (
