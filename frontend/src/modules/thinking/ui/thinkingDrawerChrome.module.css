@@ -36,3 +36,23 @@
 .drawerExit:hover {
   background: #e2e8f0;
 }
+
+:global([data-new-demo-thinking="true"]) .drawerTitle {
+  color: rgba(241, 245, 249, 0.96);
+}
+
+:global([data-new-demo-thinking="true"]) .drawerExit {
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.46);
+  color: rgba(226, 232, 240, 0.95);
+  background: rgba(7, 33, 61, 0.46);
+}
+
+:global([data-new-demo-thinking="true"]) .drawerExit:hover {
+  background: rgba(10, 44, 79, 0.55);
+}
+
+:global([data-new-demo-thinking="true"]) .drawerExitSuccess {
+  border-color: rgba(230, 89, 7, 0.62);
+  color: #f9b47d;
+}

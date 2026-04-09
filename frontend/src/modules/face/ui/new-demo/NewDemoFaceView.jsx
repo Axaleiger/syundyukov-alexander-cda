@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useStand } from "../../../../app/stands/standContext"
 import { useFacePageModel } from "../../model/useFacePageModel"
 import { NewDemoPlanetScene } from "../../../globe/ui/new-demo/NewDemoPlanetScene"
@@ -9,6 +9,7 @@ import { NewDemoHypercubeCard } from "./hypercube/NewDemoHypercubeCard"
 import { NewDemoHypercubeExpandedPanel } from "./hypercube/NewDemoHypercubeExpandedPanel"
 import { NewDemoLifecycleCard } from "./lifecycle/NewDemoLifecycleCard"
 import { NewDemoLifecycleExpandedPanel } from "./lifecycle/NewDemoLifecycleExpandedPanel"
+import { NewDemoSelectedAssetExpandedPanel } from "./selected-asset/NewDemoSelectedAssetExpandedPanel"
 import styles from "./NewDemoFaceView.module.css"
 
 export function NewDemoFaceView() {
@@ -20,11 +21,17 @@ export function NewDemoFaceView() {
 	const {
 		mapPointsData,
 		selectedAssetId,
+		scenarioComparisonRevision,
 		handleMapAssetSelect,
 		PRODUCTION_STAGES,
 		leftRoseData,
 		rightRoseData,
 		faceSeed,
+		selectedAssetPoint,
+		assetStatus,
+		assetStatusLabel,
+		assetStatusIcon,
+		handleClearSelectedAsset,
 		selectedLeftStageIndex,
 		selectedRightObjectIndex,
 		handleLeftSegmentClick,
@@ -33,9 +40,17 @@ export function NewDemoFaceView() {
 	} = useFacePageModel(routePrefix)
 
 	const selectedAsset = useMemo(
-		() => mapPointsData.find((point) => point.id === selectedAssetId) || null,
-		[mapPointsData, selectedAssetId],
+		() => selectedAssetPoint || mapPointsData.find((point) => point.id === selectedAssetId) || null,
+		[selectedAssetPoint, mapPointsData, selectedAssetId],
 	)
+	const showSelectedAssetUi = Boolean(selectedAssetId && selectedAsset && assetStatus)
+	const assetIconColorClass =
+		assetStatusIcon &&
+		{
+			green: styles.selectedAssetIconGreen,
+			orange: styles.selectedAssetIconOrange,
+			red: styles.selectedAssetIconRed,
+		}[assetStatusIcon.color]
 	const hypercubeModel = useHypercube3DModel({
 		onOpenBpm: openPlanningWithHighlight,
 		highlightCaseTree: false,
@@ -44,6 +59,7 @@ export function NewDemoFaceView() {
 	const isHealthOpen = activeTopPanel === "health"
 	const isLifecycleOpen = activeTopPanel === "lifecycle"
 	const isHypercubeOpen = activeTopPanel === "hypercube"
+	const isAssetOpen = activeTopPanel === "asset"
 	const isTopRowCompact = activeTopPanel !== null
 
 	const toggleHealthPanel = () => {
@@ -58,10 +74,59 @@ export function NewDemoFaceView() {
 		setActiveTopPanel((prev) => (prev === "hypercube" ? null : "hypercube"))
 	}
 
+	useEffect(() => {
+		if (selectedAssetId) {
+			setActiveTopPanel("asset")
+			return
+		}
+		setActiveTopPanel((prev) => (prev === "asset" ? null : prev))
+	}, [selectedAssetId])
+
 	return (
 		<div className={styles.page}>
 			<section className={styles.sceneFrame}>
 				<div className={styles.topArea}>
+					{showSelectedAssetUi ? (
+						<div
+							className={styles.selectedAssetBar}
+							onClick={() => setActiveTopPanel("asset")}
+							onKeyDown={(event) => {
+								if (event.key === "Enter" || event.key === " ") {
+									event.preventDefault()
+									setActiveTopPanel("asset")
+								}
+							}}
+							role="button"
+							tabIndex={0}
+							aria-label="Открыть панель выбранного актива"
+						>
+							<span className={styles.selectedAssetLabel}>Выбран актив</span>
+							<span className={styles.selectedAssetName}>{selectedAsset.name}</span>
+							<span className={styles.selectedAssetStatus}>{assetStatusLabel}</span>
+							{assetStatusIcon ? (
+								<span
+									className={`${styles.selectedAssetIcon} ${assetIconColorClass || ""}`}
+									title={assetStatusLabel}
+								>
+									{assetStatusIcon.type === "check" && "✓"}
+									{assetStatusIcon.type === "exclamation" && "!"}
+									{assetStatusIcon.type === "question" && "?"}
+								</span>
+							) : null}
+							<span className={styles.selectedAssetHint}>Открыть детали</span>
+							<button
+								type="button"
+								className={styles.selectedAssetClose}
+								onClick={(event) => {
+									event.stopPropagation()
+									handleClearSelectedAsset()
+								}}
+								aria-label="Сбросить выбранный актив"
+							>
+								×
+							</button>
+						</div>
+					) : null}
 					<div className={styles.topCardsRow}>
 						<NewDemoHealthCard
 							data={leftRoseData}
@@ -123,13 +188,18 @@ export function NewDemoFaceView() {
 						model={hypercubeModel}
 					/>
 				) : null}
+				{isAssetOpen && showSelectedAssetUi ? (
+					<NewDemoSelectedAssetExpandedPanel
+						assetId={selectedAssetId}
+						selectedAsset={selectedAsset}
+						assetStatusLabel={assetStatusLabel}
+						assetStatusIcon={assetStatusIcon}
+						scenarioComparisonRevision={scenarioComparisonRevision}
+						onClose={() => setActiveTopPanel(null)}
+						onClearSelection={handleClearSelectedAsset}
+					/>
+				) : null}
 			</section>
-			{selectedAsset ? (
-				<div className={styles.selectedAssetBadge}>
-					<span className={styles.selectedAssetLabel}>Выбран актив:</span>
-					<span className={styles.selectedAssetName}>{selectedAsset.name}</span>
-				</div>
-			) : null}
 		</div>
 	)
 }

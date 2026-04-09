@@ -26,8 +26,18 @@
  */
 
 /**
+ * @typedef {Object} MapPoint
+ * @property {string} id
+ * @property {string} name
+ * @property {number} lat
+ * @property {number} lon
+ * @property {string | null} [city]
+ * @property {string} [color] Optional idle color override (hex/rgb/css color string)
+ */
+
+/**
  * @typedef {Object} MapGlobeRepository
- * @property {() => unknown[]} getMapPoints
+ * @property {() => MapPoint[]} getMapPoints
  * @property {() => unknown[]} getChains
  * @property {() => { from: string, to: string, cf: number }[]} getCfArrows
  * @property {(assetId: string) => number | null} getBudgetForAssetId
