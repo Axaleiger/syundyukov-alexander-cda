@@ -1,0 +1,202 @@
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useFrame } from "@react-three/fiber"
+import * as THREE from "three"
+import { latLngToVector3 } from "./latLngToVector3"
+
+const Z_AXIS = new THREE.Vector3(0, 0, 1)
+const Y_AXIS = new THREE.Vector3(0, 1, 0)
+const RING_BASE_RADII = [0.10, 0.19, 0.28]
+const RING_ANIMATION_DELAYS = [0, 0.12, 0.22]
+const PIN_RADIUS = 0.04
+const PIN_HEIGHT = 0.11
+const RING_STROKE_WIDTH = 0.04
+const RING_GLOW_LAYER_OFFSETS = [-0.02, -0.04, -0.065]
+const RING_GLOW_LAYER_EXPAND = [0.012, 0.032, 0.058]
+const RING_GLOW_LAYER_OPACITY = [0.22, 0.13, 0.07]
+const SELECTED_PIN_COLOR = "#16D7FB"
+const HOVERED_PIN_COLOR = "#2CE0FF"
+const DEFAULT_IDLE_PIN_COLOR = "#16D7FB"
+
+function getRingScale(progress, delay) {
+	if (progress <= delay) return 0.001
+	const normalized = Math.min(1, (progress - delay) / (1 - delay))
+	return 0.001 + normalized * 0.999
+}
+
+function getPointPhaseOffset(pointId) {
+	let hash = 0
+	for (let i = 0; i < pointId.length; i += 1) {
+		hash = (hash << 5) - hash + pointId.charCodeAt(i)
+		hash |= 0
+	}
+	return (Math.abs(hash) % 628) / 100
+}
+
+export function InteractiveMapPoint({
+	point,
+	earthRadius,
+	isActive,
+	onToggle,
+	onPositionComputed,
+}) {
+	const [isHovered, setIsHovered] = useState(false)
+	const coreMaterialRef = useRef(null)
+	const groundGlowRef = useRef(null)
+	const groundGlowGroupRef = useRef(null)
+	const ringGroupRef = useRef(null)
+	const ringGradientRef = useRef(null)
+	const animationProgressRef = useRef(isActive ? 1 : 0)
+	const animationTargetRef = useRef(isActive ? 1 : 0)
+
+	const surfacePosition = useMemo(() => latLngToVector3(point.lat, point.lon, earthRadius), [earthRadius, point.lat, point.lon])
+	const normal = useMemo(() => surfacePosition.clone().normalize(), [surfacePosition])
+	const domeQuaternion = useMemo(
+		() => new THREE.Quaternion().setFromUnitVectors(Y_AXIS, normal),
+		[normal],
+	)
+	const pinTopPosition = useMemo(
+		() => surfacePosition.clone().add(normal.clone().multiplyScalar(PIN_HEIGHT)),
+		[normal, surfacePosition],
+	)
+	const ringPosition = useMemo(
+		() => pinTopPosition.clone().add(normal.clone().multiplyScalar(-0.07)),
+		[normal, pinTopPosition],
+	)
+	const groundGlowPosition = useMemo(
+		() => surfacePosition.clone().add(normal.clone().multiplyScalar(0.008)),
+		[normal, surfacePosition],
+	)
+	const ringQuaternion = useMemo(
+		() => new THREE.Quaternion().setFromUnitVectors(Z_AXIS, normal),
+		[normal],
+	)
+	const phaseOffset = useMemo(() => getPointPhaseOffset(point.id), [point.id])
+	const resolvedPinColor = useMemo(() => {
+		if (isActive) return SELECTED_PIN_COLOR
+		if (isHovered) return HOVERED_PIN_COLOR
+		return point.color || DEFAULT_IDLE_PIN_COLOR
+	}, [isActive, isHovered, point.color])
+
+	useEffect(() => {
+		onPositionComputed(point.id, ringPosition)
+	}, [onPositionComputed, point.id, ringPosition])
+
+	useEffect(() => {
+		animationTargetRef.current = isActive ? 1 : 0
+	}, [isActive])
+
+	useFrame((state, delta) => {
+		const breathing = Math.sin(state.clock.elapsedTime * 1.8 + phaseOffset)
+
+		if (coreMaterialRef.current) {
+			// Idle microinteraction: subtle breathing only through light response.
+			coreMaterialRef.current.color.set(resolvedPinColor)
+			coreMaterialRef.current.emissive.set(resolvedPinColor)
+			coreMaterialRef.current.emissiveIntensity = isActive ? 0.92 : 0.88 + breathing * 0.04
+		}
+		if (groundGlowGroupRef.current) {
+			groundGlowGroupRef.current.visible = isActive || animationProgressRef.current > 0.02
+		}
+		if (groundGlowRef.current && groundGlowGroupRef.current?.visible) {
+			groundGlowRef.current.scale.setScalar(1 + breathing * 0.01)
+		}
+
+		const smoothing = 1 - Math.exp(-delta * 7.5)
+		animationProgressRef.current +=
+			(animationTargetRef.current - animationProgressRef.current) * smoothing
+
+		if (ringGroupRef.current) {
+			ringGroupRef.current.children.forEach((child, index) => {
+				const scale = getRingScale(animationProgressRef.current, RING_ANIMATION_DELAYS[index])
+				child.scale.set(scale, scale, scale)
+				child.visible = isActive || animationProgressRef.current > 0.02
+			})
+		}
+
+		if (ringGradientRef.current) {
+			ringGradientRef.current.children.forEach((child) => {
+				const baseScale = animationProgressRef.current <= 0.02 ? 0.001 : animationProgressRef.current
+				child.scale.set(baseScale, baseScale, baseScale)
+				child.visible = isActive || animationProgressRef.current > 0.02
+			})
+		}
+	}, [isActive, resolvedPinColor])
+
+	return (
+		<group
+			onClick={(event) => {
+				event.stopPropagation()
+				onToggle(point.id)
+			}}
+			onPointerOver={(event) => {
+				event.stopPropagation()
+				setIsHovered(true)
+				document.body.style.cursor = "pointer"
+			}}
+			onPointerOut={() => {
+				setIsHovered(false)
+				document.body.style.cursor = "default"
+			}}
+		>
+			<group position={surfacePosition} quaternion={domeQuaternion}>
+				<mesh>
+					<cylinderGeometry args={[PIN_RADIUS, PIN_RADIUS * 0.72, PIN_HEIGHT, 18]} />
+					<meshStandardMaterial
+						ref={coreMaterialRef}
+						color={resolvedPinColor}
+						emissive={resolvedPinColor}
+						emissiveIntensity={0.92}
+					/>
+				</mesh>
+			</group>
+
+			<group ref={groundGlowGroupRef} position={groundGlowPosition} quaternion={ringQuaternion}>
+				<mesh ref={groundGlowRef}>
+					<circleGeometry args={[0.16, 36]} />
+					<meshBasicMaterial color="#16D7FB" transparent opacity={0.14} depthWrite={false} />
+				</mesh>
+				<mesh>
+					<circleGeometry args={[0.27, 36]} />
+					<meshBasicMaterial color="#16D7FB" transparent opacity={0.06} depthWrite={false} />
+				</mesh>
+			</group>
+
+			<group ref={ringGroupRef} position={ringPosition} quaternion={ringQuaternion}>
+				{RING_BASE_RADII.map((radius) => (
+					<mesh key={`${point.id}-ring-${radius}`}>
+						<ringGeometry args={[radius, radius + RING_STROKE_WIDTH, 64]} />
+						<meshBasicMaterial
+							color="#16D7FB"
+							transparent
+							opacity={0.7}
+							side={THREE.DoubleSide}
+							depthWrite={false}
+						/>
+					</mesh>
+				))}
+			</group>
+
+			<group ref={ringGradientRef} position={ringPosition} quaternion={ringQuaternion}>
+				{RING_BASE_RADII.map((radius) =>
+					RING_GLOW_LAYER_OFFSETS.map((offset, layerIndex) => {
+						const expand = RING_GLOW_LAYER_EXPAND[layerIndex]
+						const innerRadius = radius - 0.006 + expand
+						const outerRadius = radius + RING_STROKE_WIDTH + expand
+						return (
+							<mesh key={`${point.id}-ring-glow-${radius}-${offset}`} position={[0, 0, offset]}>
+								<ringGeometry args={[innerRadius, outerRadius, 64]} />
+								<meshBasicMaterial
+									color="#16D7FB"
+									transparent
+									opacity={RING_GLOW_LAYER_OPACITY[layerIndex]}
+									side={THREE.DoubleSide}
+									depthWrite={false}
+								/>
+							</mesh>
+						)
+					}),
+				)}
+			</group>
+		</group>
+	)
+}

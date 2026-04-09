@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { Canvas, useThree } from "@react-three/fiber"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import * as THREE from "three"
 import styles from "./NewDemoPlanetScene.module.css"
 import EARTH_JSON_OBJECT from "../../../../shared/assets/Earth.json"
+import { InteractiveMapPoint } from "./InteractiveMapPoint"
+import { MapPointConnectorLine } from "./MapPointConnectorLine"
+import { MapPointTooltip } from "./MapPointTooltip"
 
 const EARTH_RADIUS = 10
 const PLANET_CENTER_TARGET = [0, 8, 0]
@@ -13,15 +16,6 @@ const FIXED_POLAR_ANGLE = 1.05
 const AZIMUTH_LIMIT = THREE.MathUtils.degToRad(35)
 const PLANET_ROTATION_Y = Math.PI
 const LOCKED_CAMERA_DISTANCE = 30
-
-function latLonToCartesian(lat, lon, radius = EARTH_RADIUS) {
-	const phi = THREE.MathUtils.degToRad(90 - lat)
-	const theta = THREE.MathUtils.degToRad(lon + 180)
-	const x = -(radius * Math.sin(phi) * Math.cos(theta))
-	const y = radius * Math.cos(phi)
-	const z = radius * Math.sin(phi) * Math.sin(theta)
-	return [x, y, z]
-}
 
 function removeEmbeddedCameras(root) {
 	const cameras = []
@@ -82,48 +76,20 @@ function useEarthSceneFromJson() {
 	return state
 }
 
-function PlanetPoint({ point, isSelected, onSelect }) {
-	const [isHovered, setIsHovered] = useState(false)
-	const keyAssetIds = useMemo(() => new Set(["do-yamal", "do-noyabrsk", "do-megion"]), [])
-
-	const position = useMemo(() => latLonToCartesian(point.lat, point.lon, EARTH_RADIUS * 1.01), [point])
-	const color = isSelected ? "#22d3ee" : isHovered ? "#38bdf8" : keyAssetIds.has(point.id) ? "#ef4444" : "#0ea5e9"
-	const radius = isSelected ? 0.26 : isHovered ? 0.23 : 0.2
-
-	return (
-		<mesh
-			position={position}
-			onClick={(event) => {
-				event.stopPropagation()
-				onSelect(point.id)
-			}}
-			onPointerOver={(event) => {
-				event.stopPropagation()
-				setIsHovered(true)
-				document.body.style.cursor = "pointer"
-			}}
-			onPointerOut={() => {
-				setIsHovered(false)
-				document.body.style.cursor = "default"
-			}}
-		>
-			<sphereGeometry args={[radius, 14, 14]} />
-			<meshStandardMaterial
-				color={color}
-				emissive={isSelected ? "#0891b2" : "#000000"}
-				emissiveIntensity={0.35}
-				metalness={0.15}
-				roughness={0.5}
-			/>
-		</mesh>
-	)
-}
-
-function PlanetSceneContent({ sceneRoot, points, selectedAssetId, onSelectAsset }) {
+function PlanetSceneContent({
+	sceneRoot,
+	points,
+	activePointId,
+	onTogglePoint,
+	onActivePointScreenPosition,
+}) {
 	const groupRef = useRef(null)
 	const runtimeScene = useThree((state) => state.scene)
 	const gl = useThree((state) => state.gl)
+	const camera = useThree((state) => state.camera)
+	const size = useThree((state) => state.size)
 	const envTargetRef = useRef(null)
+	const pointPositionsRef = useRef(new Map())
 
 	useEffect(() => {
 		document.body.style.cursor = "default"
@@ -162,16 +128,51 @@ function PlanetSceneContent({ sceneRoot, points, selectedAssetId, onSelectAsset 
 		}
 	}, [gl, runtimeScene, sceneRoot])
 
+	const activePointPosition = activePointId ? pointPositionsRef.current.get(activePointId) || null : null
+
+	const handlePositionComputed = useCallback((pointId, position) => {
+		pointPositionsRef.current.set(pointId, position.clone())
+	}, [])
+
+	useFrame(() => {
+		if (!activePointPosition) {
+			onActivePointScreenPosition(null)
+			return
+		}
+		const worldAnchor = groupRef.current
+			? groupRef.current.localToWorld(activePointPosition.clone())
+			: activePointPosition.clone()
+		const projected = worldAnchor.project(camera)
+		const x = (projected.x * 0.5 + 0.5) * size.width
+		const y = (-projected.y * 0.5 + 0.5) * size.height
+		const isInFrustum =
+			projected.z > -1 &&
+			projected.z < 1 &&
+			projected.x > -1.3 &&
+			projected.x < 1.3 &&
+			projected.y > -1.3 &&
+			projected.y < 1.3
+		onActivePointScreenPosition({
+			x,
+			y,
+			width: size.width,
+			height: size.height,
+			visible: isInFrustum,
+		})
+	})
+
 	return (
 		<>
 			<group ref={groupRef} rotation={[0, PLANET_ROTATION_Y, 0]} scale={1.8}>
 				<primitive object={sceneRoot} />
 				{points.map((point) => (
-					<PlanetPoint
+					<InteractiveMapPoint
 						key={point.id}
 						point={point}
-						isSelected={selectedAssetId === point.id}
-						onSelect={onSelectAsset}
+						earthRadius={EARTH_RADIUS}
+						isActive={activePointId === point.id}
+						onToggle={onTogglePoint}
+						onPositionComputed={handlePositionComputed}
 					/>
 				))}
 			</group>
@@ -193,6 +194,58 @@ function PlanetSceneContent({ sceneRoot, points, selectedAssetId, onSelectAsset 
 
 export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 	const { loading, sceneRoot, error } = useEarthSceneFromJson()
+	const [activePointId, setActivePointId] = useState(selectedAssetId || null)
+	const [activePointScreenPosition, setActivePointScreenPosition] = useState(null)
+	const lastScreenPositionRef = useRef(null)
+
+	useEffect(() => {
+		setActivePointId(selectedAssetId || null)
+	}, [selectedAssetId])
+
+	const handleTogglePoint = useCallback(
+		(pointId) => {
+			const nextPointId = activePointId === pointId ? null : pointId
+			setActivePointId(nextPointId)
+			onSelectAsset(nextPointId)
+		},
+		[activePointId, onSelectAsset],
+	)
+	const activePoint = useMemo(
+		() => points.find((point) => point.id === activePointId) || null,
+		[activePointId, points],
+	)
+	const tooltipAnchor = useMemo(() => {
+		if (!activePointScreenPosition) return null
+		return {
+			x: activePointScreenPosition.width / 2,
+			y: activePointScreenPosition.height * 0.7,
+			width: activePointScreenPosition.width,
+			height: activePointScreenPosition.height,
+		}
+	}, [activePointScreenPosition])
+
+	const handleActivePointScreenPosition = useCallback((nextPosition) => {
+		if (!nextPosition) {
+			if (lastScreenPositionRef.current !== null) {
+				lastScreenPositionRef.current = null
+				setActivePointScreenPosition(null)
+			}
+			return
+		}
+
+		const prev = lastScreenPositionRef.current
+		const hasMeaningfulDelta =
+			!prev ||
+			Math.abs(prev.x - nextPosition.x) > 0.75 ||
+			Math.abs(prev.y - nextPosition.y) > 0.75 ||
+			prev.width !== nextPosition.width ||
+			prev.height !== nextPosition.height ||
+			prev.visible !== nextPosition.visible
+		if (!hasMeaningfulDelta) return
+
+		lastScreenPositionRef.current = nextPosition
+		setActivePointScreenPosition(nextPosition)
+	}, [])
 
 	if (error) {
 		return (
@@ -221,14 +274,28 @@ export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 					gl.setClearColor(0x000000, 0)
 				}}
 				style={{ background: "transparent" }}
+				onPointerMissed={() => {
+					setActivePointId(null)
+					setActivePointScreenPosition(null)
+					onSelectAsset(null)
+				}}
 			>
 				<PlanetSceneContent
 					sceneRoot={sceneRoot}
 					points={points}
-					selectedAssetId={selectedAssetId}
-					onSelectAsset={onSelectAsset}
+					activePointId={activePointId}
+					onTogglePoint={handleTogglePoint}
+					onActivePointScreenPosition={handleActivePointScreenPosition}
 				/>
 			</Canvas>
+			{activePoint && activePointScreenPosition?.visible && tooltipAnchor ? (
+				<div className={styles.overlayLayer}>
+					<MapPointConnectorLine start={activePointScreenPosition} end={tooltipAnchor} />
+					<div className={styles.tooltipCenterWrap}>
+						<MapPointTooltip title={activePoint.name} />
+					</div>
+				</div>
+			) : null}
 		</div>
 	)
 }

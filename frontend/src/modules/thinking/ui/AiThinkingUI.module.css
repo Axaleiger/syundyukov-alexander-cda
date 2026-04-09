@@ -112,3 +112,51 @@
   cursor: not-allowed;
   opacity: 0.85;
 }
+
+.rootNewDemo {
+  gap: 12px;
+}
+
+.rootNewDemo .checklist {
+  padding: 10px 12px;
+  border: 1px solid rgba(125, 211, 252, 0.36);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.08) 0%, rgba(56, 189, 248, 0.06) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.rootNewDemo .step {
+  color: rgba(191, 219, 254, 0.88);
+}
+
+.rootNewDemo .stepDone {
+  color: rgba(226, 232, 240, 0.96);
+}
+
+.rootNewDemo .stepDone .stepIcon {
+  color: #2fb4e9;
+}
+
+.rootNewDemo .message {
+  color: rgba(226, 232, 240, 0.94);
+}
+
+.rootNewDemo .btn {
+  border-radius: 12px;
+  border: 1px solid rgba(125, 211, 252, 0.45);
+  background: rgba(7, 33, 61, 0.45);
+  color: rgba(226, 232, 240, 0.96);
+}
+
+.rootNewDemo .btnStop {
+  border-color: rgba(230, 89, 7, 0.56);
+  color: rgba(251, 146, 60, 0.98);
+  background: rgba(66, 30, 15, 0.42);
+}
+
+.rootNewDemo .btnResume {
+  border-color: rgba(47, 180, 233, 0.58);
+  color: rgba(191, 219, 254, 0.96);
+  background: rgba(9, 41, 76, 0.42);
+}

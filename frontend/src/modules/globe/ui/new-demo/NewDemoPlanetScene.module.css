@@ -3,6 +3,21 @@
 	inset: 0;
 }
 
+.overlayLayer {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.tooltipCenterWrap {
+	position: absolute;
+	left: 50%;
+	top: 70%;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+}
+
 .fallback {
 	position: absolute;
 	inset: 0;
