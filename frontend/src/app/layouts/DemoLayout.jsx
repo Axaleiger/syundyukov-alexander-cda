@@ -12,6 +12,7 @@ import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/plann
 import { DemoHeader } from "./demo/DemoHeader"
 import { DemoSidebar } from "./demo/DemoSidebar"
 import { DemoSecondarySidebar } from "./demo/DemoSecondarySidebar"
+import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController"
@@ -23,6 +24,17 @@ import { standHref } from "../stands/standPathUtils"
 import DemoStandRightPanel from "../../demo-stand/components/RightPanel.jsx"
 import RussiaGlobe from "../../demo-stand/components/RussiaGlobe.jsx"
 import { demoFaceMapAssetSelect } from "../../modules/face/lib/demoFaceMapAssetSelect.js"
+
+function getDisabledTabsFromEnv() {
+	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
+	if (!raw) return new Set()
+	return new Set(
+		raw
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean),
+	)
+}
 
 /**
  * Shell демо-стенда: классы документа, модификаторы стенда, Outlet.
@@ -183,6 +195,15 @@ export default function DemoLayout() {
 		setOpenConfiguratorFromPlanning(false)
 	}, [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning])
 
+	useEffect(() => {
+		const disabled = getDisabledTabsFromEnv()
+		if (!disabled.size) return
+		const raw = (location.pathname || "").replace(/\/$/, "")
+		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		if (!disabled.has(segment)) return
+		navigate(standHref(routePrefix, "planning"), { replace: true })
+	}, [location.pathname, navigate, routePrefix])
+
 	const aiAssistantAndThinkingDrawer = (
 		<>
 			<AIAssistantWidget
@@ -283,6 +304,7 @@ export default function DemoLayout() {
 			data-demo-stand-shell="true"
 			className={`app app-with-sidebar ${styles.app} ${styles["app-with-sidebar"]} app--demo app--demo-stand-4k ${isDemoFace ? "app--demo-stand-face" : ""}`}
 		>
+			<ExpoIdleResetGuard routePrefix={routePrefix} />
 			{isDemoFace ? (
 				<div className="app-demo-globe-fixed">
 					<div className="app-demo-globe-transform">

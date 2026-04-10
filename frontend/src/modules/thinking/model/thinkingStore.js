@@ -46,4 +46,18 @@ export const useThinkingStore = create((set) => ({
 
 	appliedDecisionPathId: null,
 	setAppliedDecisionPathId: (v) => set({ appliedDecisionPathId: v }),
+
+	resetExpoPreset: () =>
+		set({
+			thinkingPanelOpen: false,
+			thinkingSteps: [],
+			thinkingCurrentMessage: "",
+			thinkingPaused: false,
+			thinkingConfirmPhase: null,
+			thinkingAwaitingConfirm: false,
+			thinkingGraphNodes: [],
+			brainPanelOpenKey: 0,
+			selectedDecisionPathId: null,
+			appliedDecisionPathId: null,
+		}),
 }))

@@ -37,6 +37,18 @@
 	color: #ffffff;
 }
 
+.tab:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	background: transparent !important;
+	color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.tab:disabled:hover {
+	background: transparent;
+	color: rgba(255, 255, 255, 0.7);
+}
+
 .tabActive {
 	background: #004596;
 	color: #ffffff;

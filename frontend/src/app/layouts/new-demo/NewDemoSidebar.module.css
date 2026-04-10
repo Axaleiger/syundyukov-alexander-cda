@@ -63,6 +63,19 @@
 	filter: drop-shadow(0 0 7px rgba(236, 113, 42, 0.45));
 }
 
+.navItemDisabled {
+	opacity: 0.35;
+	pointer-events: auto;
+	cursor: not-allowed;
+	filter: none !important;
+}
+
+.navItemDisabled:hover {
+	opacity: 0.35;
+	color: #ffffff;
+	filter: none;
+}
+
 .iconGlyph {
 	width: 20px;
 	height: 20px;

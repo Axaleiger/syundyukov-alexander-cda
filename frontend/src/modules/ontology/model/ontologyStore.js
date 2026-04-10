@@ -40,4 +40,13 @@ export const useOntologyStore = create((set) => ({
       }
       return { schemaNodes: next }
     }),
+
+  resetExpoPreset: () =>
+    set({
+      lastConsumedPlanningSignature: null,
+      schemaNodes: null,
+      schemaEdges: null,
+      mode: 'schema',
+      codeValue: null,
+    }),
 }))

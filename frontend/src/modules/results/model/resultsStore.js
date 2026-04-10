@@ -6,4 +6,5 @@ import { create } from "zustand"
 export const useResultsStore = create((set) => ({
 	resultsDashboardFocus: null,
 	setResultsDashboardFocus: (v) => set({ resultsDashboardFocus: v }),
+	resetExpoPreset: () => set({ resultsDashboardFocus: null }),
 }))
