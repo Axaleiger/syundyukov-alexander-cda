@@ -107,6 +107,9 @@ class Asset(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
     asset_type: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    slug: Mapped[Optional[str]] = mapped_column(Text, unique=True, nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    map_sort_order: Mapped[int] = mapped_column(Integer, server_default=text("0"), nullable=False)
     org_unit_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("org_unit.id"), nullable=True
     )

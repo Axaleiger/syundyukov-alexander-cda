@@ -14,9 +14,9 @@ const ASSET_STATUS = {
   'do-megion': 'stable',
   'do-tomsk': 'risk_orange',
   'prirazlomnoe': 'stable',
-  'novy-port': 'risk_red',
-  'messoyakha-m': 'stable',
-  'chayandinskoe': 'risk_orange',
+  'do-vostok': 'stable',
+  'do-hantos': 'stable',
+  'do-salym': 'risk_orange',
   'spb': 'stable',
   'moscow': 'risk_orange',
 }

@@ -1,13 +1,14 @@
 import { useMemo } from "react"
 import { useRepositories } from "../../../app/providers/DataRepositoriesProvider"
+import { useMapPointsData } from "../../globe/model/useMapPointsData"
 
 /**
  * Экран «Лицо»: карта, розы, статусы активов, имена этапов для навигации в сценарии.
  */
 export function useFaceData() {
-	const { mapGlobe, roses, assetStatus, scenarios } = useRepositories()
+	const { roses, assetStatus, scenarios } = useRepositories()
 
-	const mapPointsData = useMemo(() => mapGlobe.getMapPoints(), [mapGlobe])
+	const mapPointsData = useMapPointsData()
 	const productionStages = useMemo(() => roses.getProductionStages(), [roses])
 	const objectsByStage = useMemo(() => roses.getObjectsByStage(), [roses])
 	const defaultObjects = useMemo(() => roses.getDefaultObjects(), [roses])

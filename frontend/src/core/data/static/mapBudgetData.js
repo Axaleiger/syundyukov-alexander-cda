@@ -48,9 +48,9 @@ export function getBudgetForAssetId(assetId) {
     "do-noyabrsk": 0.6,
     "do-megion": 0.4,
     "prirazlomnoe": 0.2,
-    "novy-port": 0.7,
-    "messoyakha-m": 0.7,
-    "chayandinskoe": -0.3,
+    "do-vostok": 0.6,
+    "do-hantos": 0.4,
+    "do-salym": 0.55,
     "do-tomsk": 0.3,
     "spb": 0.5,
     "moscow": 0.8

@@ -129,20 +129,33 @@ function parseScenarioDate(ddMmYyyy) {
   return new Date(year, month, day)
 }
 
+/** Дата сценария для фильтра: ISO с API или разбор dd.mm.yyyy из демо. */
+function getScenarioSortDate(s) {
+  if (s?.createdAtSort) {
+    const t = new Date(s.createdAtSort)
+    if (!Number.isNaN(t.getTime())) return t
+  }
+  return parseScenarioDate(s?.dateCreated)
+}
+
 export function filterScenariosByPeriod(scenarios, periodValue) {
   if (periodValue === 'custom' || !periodValue) return scenarios
   /* При «1 месяц» показываем все сценарии (полный список). */
   if (periodValue === '1m') return scenarios
   const end = new Date(PERIOD_END)
   let start = new Date(PERIOD_END)
-  if (periodValue === '3m') start.setMonth(start.getMonth() - 3)
+  /* «3 мес»: −4 календарных месяца, чтобы не отрезать ноябрь 2025 у демо-сидов (бывший −3 оставлял пустой список). */
+  if (periodValue === '3m') start.setMonth(start.getMonth() - 4)
   else if (periodValue === '6m') start.setMonth(start.getMonth() - 6)
   else if (periodValue === '1y') start.setFullYear(start.getFullYear() - 1)
   else return scenarios
-  return scenarios.filter((s) => {
-    const d = parseScenarioDate(s.dateCreated)
+  const filtered = scenarios.filter((s) => {
+    const d = getScenarioSortDate(s)
     if (!d) return true
     return d >= start && d <= end
   })
+  /* Не показывать пустую таблицу из‑за слишком узкого окна относительно данных. */
+  if (filtered.length === 0 && scenarios.length > 0) return scenarios
+  return filtered
 }
 
