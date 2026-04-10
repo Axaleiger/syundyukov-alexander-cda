@@ -3,6 +3,12 @@ import { persist } from "zustand/middleware"
 import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap.js"
 import { SCENARIO_STAGE_FILTERS } from "../data/static/scenariosData.js"
 
+const DEFAULT_SCENARIO_NAME = "Управление добычей с учетом ближайшего бурения"
+const DEFAULT_SCENARIO_FILTERS = SCENARIO_STAGE_FILTERS.reduce(
+	(acc, name) => ({ ...acc, [name]: true }),
+	{},
+)
+
 export const useAppStore = create(
 	persist(
 		(set) => ({
@@ -52,10 +58,7 @@ export const useAppStore = create(
 	setConfiguratorNodeCommand: (v) => set({ configuratorNodeCommand: v }),
 
 	// scenarios
-	scenarioStageFilters: SCENARIO_STAGE_FILTERS.reduce(
-		(acc, name) => ({ ...acc, [name]: true }),
-		{},
-	),
+	scenarioStageFilters: DEFAULT_SCENARIO_FILTERS,
 
 	setScenarioStageFilters: (fn) =>
 		set((state) => ({
@@ -83,7 +86,7 @@ export const useAppStore = create(
 	setServicePageName: (v) => set({ servicePageName: v }),
 
 	// scenario
-	selectedScenarioName: "Управление добычей с учетом ближайшего бурения",
+	selectedScenarioName: DEFAULT_SCENARIO_NAME,
 	setSelectedScenarioName: (v) => set({ selectedScenarioName: v }),
 
 	/** UUID сценария из API (для выбора кейса планирования) */
@@ -139,6 +142,36 @@ export const useAppStore = create(
 
 	showConfiguratorDoc: false,
 	setShowConfiguratorDoc: (v) => set({ showConfiguratorDoc: v }),
+
+	/** Expo reset preset: вернуть интерфейс в исходное состояние. */
+	resetExpoPreset: () =>
+		set({
+			aiMode: false,
+			selectedAssetId: null,
+			faceSelectedScenarioTitle: null,
+			agreedInfluenceLine: null,
+			cdPageNode: null,
+			scenarioComparisonRevision: 0,
+			hypercubeCaseIntro: false,
+			configuratorNodeCommand: null,
+			scenarioStageFilters: DEFAULT_SCENARIO_FILTERS,
+			scenariosStageFilter: null,
+			servicePageName: null,
+			selectedScenarioName: DEFAULT_SCENARIO_NAME,
+			selectedScenarioId: null,
+			planningCaseId: null,
+			bpmCommand: null,
+			bpmHighlight: null,
+			showBpm: false,
+			bpmStages: null,
+			bpmTasks: null,
+			bpmConnections: null,
+			flowCode: DEFAULT_FLOW_CODE,
+			openConfiguratorFromPlanning: false,
+			configuratorInitialNodes: null,
+			configuratorInitialEdges: null,
+			showConfiguratorDoc: false,
+		}),
 		}),
 		{
 			name: "cda-app-store",

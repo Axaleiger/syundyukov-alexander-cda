@@ -9,6 +9,8 @@ import {
 import { useNavigate, useOutletContext } from "react-router-dom"
 
 import appLayoutStyles from "../../app/layouts/AppLayout.module.css"
+import { useStand } from "../../app/stands/standContext"
+import { standHref } from "../../app/stands/standPathUtils"
 import BPMBoard from "../../modules/planning/ui/BPMBoard"
 import { normalizePlanningBoardPayload } from "../../modules/planning/lib/planningApiBoard"
 import { serializeBoardForSave } from "../../modules/planning/lib/serializeBoardForSave"
@@ -34,6 +36,7 @@ async function resolveScenarioIdFromApi(title) {
 
 export function PlanningPage() {
 	const navigate = useNavigate()
+	const { routePrefix } = useStand()
 	const { onBpmCommandConsumed } = useOutletContext() || {}
 
 	const {
@@ -56,6 +59,17 @@ export function PlanningPage() {
 		servicePageName,
 		setServicePageName,
 	} = useAppStore()
+
+	const disabledTabs = useMemo(() => {
+		const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
+		if (!raw) return new Set()
+		return new Set(
+			raw
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean),
+		)
+	}, [])
 
 	const [boardMountKey, setBoardMountKey] = useState("default")
 	const [planningCaseLoading, setPlanningCaseLoading] = useState(false)
@@ -94,6 +108,24 @@ export function PlanningPage() {
 				: null,
 		[selectedAssetId],
 	)
+
+	// После reset preset selectedScenarioId может быть null, а имя дефолтного сценария уже есть.
+	// Восстанавливаем scenarioId через API, чтобы Planning не оставался пустым.
+	useEffect(() => {
+		if (selectedScenarioId || !selectedScenarioName) return
+		let cancelled = false
+		;(async () => {
+			try {
+				const sid = await resolveScenarioIdFromApi(selectedScenarioName)
+				if (!cancelled && sid) setSelectedScenarioId(sid)
+			} catch {
+				/* noop */
+			}
+		})()
+		return () => {
+			cancelled = true
+		}
+	}, [selectedScenarioId, selectedScenarioName, setSelectedScenarioId])
 
 	useEffect(() => {
 		if (!selectedScenarioId) {
@@ -196,6 +228,12 @@ export function PlanningPage() {
 		[navigate, setSelectedScenarioId, setSelectedScenarioName],
 	)
 
+	const handleBackToScenarios = useCallback(() => {
+		navigate(standHref(routePrefix, "scenarios"))
+	}, [navigate, routePrefix])
+
+	const canGoBackToScenarios = !disabledTabs.has("scenarios")
+
 	if (servicePageName) {
 		return (
 			<div
@@ -286,7 +324,7 @@ export function PlanningPage() {
 						initialConnections={bpmConnections ?? undefined}
 						selectedAssetName={selectedAssetPoint?.name}
 						highlightCardName={bpmHighlight}
-						onClose={() => navigate("/scenarios")}
+						onClose={canGoBackToScenarios ? handleBackToScenarios : undefined}
 						onBoardChange={handleBoardChange}
 						aiMode={aiMode}
 						setAiMode={setAiMode}

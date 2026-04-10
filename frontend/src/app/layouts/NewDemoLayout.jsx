@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react"
-import { Outlet, useNavigate } from "react-router-dom"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import styles from "./NewDemoLayout.module.css"
 import { NewDemoHeader } from "./new-demo/NewDemoHeader"
 import { NewDemoSidebar } from "./new-demo/NewDemoSidebar"
@@ -11,12 +11,25 @@ import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/plann
 import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController"
 import { useBpmCommandBridge } from "./hooks/useBpmCommandBridge"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
+import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
+
+function getDisabledTabsFromEnv() {
+	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
+	if (!raw) return new Set()
+	return new Set(
+		raw
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean),
+	)
+}
 
 export default function NewDemoLayout() {
 	const [thinkingConfirmCounter, setThinkingConfirmCounter] = useState(0)
 	const navigate = useNavigate()
+	const location = useLocation()
 	const { routePrefix } = useStand()
 	const {
 		thinkingPanelOpen,
@@ -118,8 +131,18 @@ export default function NewDemoLayout() {
 		setThinkingConfirmCounter((v) => v + 1)
 	}, [handleThinkingConfirm])
 
+	useEffect(() => {
+		const disabled = getDisabledTabsFromEnv()
+		if (!disabled.size) return
+		const raw = (location.pathname || "").replace(/\/$/, "")
+		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		if (!disabled.has(segment)) return
+		navigate(standHref(routePrefix, "planning"), { replace: true })
+	}, [location.pathname, navigate, routePrefix])
+
 	return (
 		<div className={styles.shell} data-new-demo-shell="true">
+			<ExpoIdleResetGuard routePrefix={routePrefix} />
 			<NewDemoHeader />
 			<div className={styles.body}>
 				<NewDemoSidebar />

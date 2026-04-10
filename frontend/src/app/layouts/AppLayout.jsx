@@ -11,6 +11,7 @@ import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/plann
 import { HeaderMain } from "../../shared/ui/Header/HeaderMain"
 import { SidebarMain } from "../../shared/ui/Sidebar/SidebarMain"
 import { SecondarySidebar } from "../../shared/ui/SecondarySidebar/SecondarySidebar"
+import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { useLegacyHashNavigation } from "./hooks/useLegacyHashNavigation"
@@ -18,6 +19,17 @@ import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController
 import { useBpmCommandBridge } from "./hooks/useBpmCommandBridge"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
+
+function getDisabledTabsFromEnv() {
+	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
+	if (!raw) return new Set()
+	return new Set(
+		raw
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean),
+	)
+}
 
 export const AppLayout = () => {
 	const { routePrefix } = useStand()
@@ -152,6 +164,16 @@ export const AppLayout = () => {
 		setOpenConfiguratorFromPlanning(false)
 	}, [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning])
 
+	// Expo stand safety: forbid direct access to disabled sections via URL.
+	useEffect(() => {
+		const disabled = getDisabledTabsFromEnv()
+		if (!disabled.size) return
+		const raw = (location.pathname || "").replace(/\/$/, "")
+		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		if (!disabled.has(segment)) return
+		navigate(standHref(routePrefix, "planning"), { replace: true })
+	}, [location.pathname, navigate, routePrefix])
+
 	const aiAssistantAndThinkingDrawer = (
 		<>
 			<AIAssistantWidget
@@ -248,6 +270,7 @@ export const AppLayout = () => {
 
 	return (
 		<div className={`${styles.app} ${styles["app-with-sidebar"]}`}>
+			<ExpoIdleResetGuard routePrefix={routePrefix} />
 			<HeaderMain />
 
 			<div className={styles["app-body"]}>
