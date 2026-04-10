@@ -16,6 +16,9 @@ const FIXED_POLAR_ANGLE = 1.05
 const AZIMUTH_LIMIT = THREE.MathUtils.degToRad(35)
 const PLANET_ROTATION_Y = Math.PI
 const LOCKED_CAMERA_DISTANCE = 30
+const TOOLTIP_SIDE_PADDING = 140
+const TOOLTIP_BOTTOM_GAP = 40
+const TOOLTIP_TOP_GAP = 40
 
 function removeEmbeddedCameras(root) {
 	const cameras = []
@@ -192,7 +195,12 @@ function PlanetSceneContent({
 	)
 }
 
-export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
+export function NewDemoPlanetScene({
+	points,
+	selectedAssetId,
+	onSelectAsset,
+	bottomOverlaySafeInset = 0,
+}) {
 	const { loading, sceneRoot, error } = useEarthSceneFromJson()
 	const [activePointId, setActivePointId] = useState(selectedAssetId || null)
 	const [activePointScreenPosition, setActivePointScreenPosition] = useState(null)
@@ -204,11 +212,10 @@ export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 
 	const handleTogglePoint = useCallback(
 		(pointId) => {
-			const nextPointId = activePointId === pointId ? null : pointId
-			setActivePointId(nextPointId)
-			onSelectAsset(nextPointId)
+			setActivePointId(pointId)
+			onSelectAsset(pointId)
 		},
-		[activePointId, onSelectAsset],
+		[onSelectAsset],
 	)
 	const activePoint = useMemo(
 		() => points.find((point) => point.id === activePointId) || null,
@@ -216,13 +223,28 @@ export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 	)
 	const tooltipAnchor = useMemo(() => {
 		if (!activePointScreenPosition) return null
+		const safeBottomInset = Math.max(0, bottomOverlaySafeInset)
+		const minY = TOOLTIP_TOP_GAP
+		const maxY = Math.max(
+			minY,
+			activePointScreenPosition.height - safeBottomInset - TOOLTIP_BOTTOM_GAP,
+		)
+		const preferredY = activePointScreenPosition.height * 0.7
+		const clampedY = Math.min(maxY, Math.max(minY, preferredY))
+		const minX = TOOLTIP_SIDE_PADDING
+		const maxX = Math.max(
+			minX,
+			activePointScreenPosition.width - TOOLTIP_SIDE_PADDING,
+		)
+		const preferredX = activePointScreenPosition.width / 2
+		const clampedX = Math.min(maxX, Math.max(minX, preferredX))
 		return {
-			x: activePointScreenPosition.width / 2,
-			y: activePointScreenPosition.height * 0.7,
+			x: clampedX,
+			y: clampedY,
 			width: activePointScreenPosition.width,
 			height: activePointScreenPosition.height,
 		}
-	}, [activePointScreenPosition])
+	}, [activePointScreenPosition, bottomOverlaySafeInset])
 
 	const handleActivePointScreenPosition = useCallback((nextPosition) => {
 		if (!nextPosition) {
@@ -274,11 +296,6 @@ export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 					gl.setClearColor(0x000000, 0)
 				}}
 				style={{ background: "transparent" }}
-				onPointerMissed={() => {
-					setActivePointId(null)
-					setActivePointScreenPosition(null)
-					onSelectAsset(null)
-				}}
 			>
 				<PlanetSceneContent
 					sceneRoot={sceneRoot}
@@ -291,7 +308,10 @@ export function NewDemoPlanetScene({ points, selectedAssetId, onSelectAsset }) {
 			{activePoint && activePointScreenPosition?.visible && tooltipAnchor ? (
 				<div className={styles.overlayLayer}>
 					<MapPointConnectorLine start={activePointScreenPosition} end={tooltipAnchor} />
-					<div className={styles.tooltipCenterWrap}>
+					<div
+						className={styles.tooltipCenterWrap}
+						style={{ left: `${tooltipAnchor.x}px`, top: `${tooltipAnchor.y}px` }}
+					>
 						<MapPointTooltip title={activePoint.name} />
 					</div>
 				</div>

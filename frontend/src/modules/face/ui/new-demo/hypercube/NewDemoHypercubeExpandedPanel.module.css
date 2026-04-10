@@ -10,22 +10,13 @@
 }
 
 .modal {
+	composes: surfaceGlass from "../NewDemoDesignSystem.module.css";
 	position: relative;
 	width: min(1080px, 95vw);
 	max-height: calc(100vh - 140px);
 	overflow: auto;
-	border-radius: 12px;
+	border-radius: 10px;
 	box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-	background:
-		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
-		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
-		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
-	backdrop-filter: blur(5px);
-	-webkit-backdrop-filter: blur(5px);
-	border-top: 1px solid rgba(224, 242, 254, 0.18);
-	border-right: 1px solid rgba(103, 232, 249, 0.3);
-	border-bottom: 1px solid rgba(56, 189, 248, 0.22);
-	border-left: 1px solid rgba(5, 15, 30, 0.24);
 	padding: 30px 30px 22px;
 	display: grid;
 	grid-template-rows: auto 1fr auto auto;
@@ -96,21 +87,7 @@
 }
 
 .closeBtn {
-	width: 34px;
-	height: 34px;
-	border-radius: 8px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	background: rgba(255, 255, 255, 0.08);
-	color: rgba(255, 255, 255, 0.92);
-	font-size: 22px;
-	line-height: 1;
-	cursor: pointer;
-	transition: border-color 150ms ease, background-color 150ms ease;
-}
-
-.closeBtn:hover {
-	border-color: rgba(47, 180, 233, 0.6);
-	background: rgba(255, 255, 255, 0.13);
+	composes: closeButton from "../NewDemoDesignSystem.module.css";
 }
 
 .content {
@@ -191,10 +168,7 @@
 }
 
 .filterBtn {
-	border: 1px solid rgba(148, 163, 184, 0.36);
-	background: rgba(15, 23, 42, 0.35);
-	color: rgba(226, 232, 240, 0.9);
-	border-radius: 8px;
+	composes: selectableControl from "../NewDemoDesignSystem.module.css";
 	padding: 7px 8px;
 	font-size: 12px;
 	cursor: pointer;
@@ -202,8 +176,7 @@
 }
 
 .filterBtnActive {
-	border-color: rgba(56, 189, 248, 0.7);
-	background: rgba(14, 116, 144, 0.28);
+	composes: selectableControlActive from "../NewDemoDesignSystem.module.css";
 }
 
 .riskBlock {
@@ -229,9 +202,8 @@
 }
 
 .riskPill {
+	composes: selectableControl from "../NewDemoDesignSystem.module.css";
 	justify-self: start;
-	border: 1px solid rgba(148, 163, 184, 0.4);
-	background: rgba(15, 23, 42, 0.35);
 	color: rgba(226, 232, 240, 0.88);
 	border-radius: 999px;
 	padding: 7px 12px;
@@ -243,14 +215,13 @@
 }
 
 .riskPillActive {
-	border-color: rgba(56, 189, 248, 0.76);
-	background: rgba(14, 116, 144, 0.3);
+	composes: selectableControlActive from "../NewDemoDesignSystem.module.css";
 }
 
 .pointLegendBlock {
 	margin-top: 4px;
 	padding: 10px 10px 9px;
-	border-radius: 12px;
+	border-radius: 10px;
 	border: 1px solid rgba(125, 211, 252, 0.3);
 	background: linear-gradient(180deg, rgba(15, 23, 42, 0.36) 0%, rgba(15, 23, 42, 0.18) 100%);
 	display: grid;
@@ -361,7 +332,7 @@
 }
 
 .metricCard {
-	border-radius: 16px;
+	border-radius: 10px;
 	padding: 15px 16px 14px;
 	background: linear-gradient(180deg, rgba(224, 242, 254, 0.04) 0%, rgba(224, 242, 254, 0.01) 100%);
 	border: 1px solid rgba(191, 219, 254, 0.36);

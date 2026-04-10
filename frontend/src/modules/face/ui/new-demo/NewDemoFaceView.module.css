@@ -13,16 +13,14 @@
 }
 
 .selectedAssetBar {
+	composes: surfaceGlass from "./NewDemoDesignSystem.module.css";
 	width: min(980px, 100%);
 	display: inline-flex;
 	align-items: center;
 	gap: 10px;
 	padding: 10px 14px;
-	border: 1px solid rgba(56, 189, 248, 0.42);
-	border-radius: 12px;
+	border-radius: 10px;
 	background: rgba(15, 23, 42, 0.88);
-	backdrop-filter: blur(6px);
-	-webkit-backdrop-filter: blur(6px);
 	cursor: pointer;
 	transition: border-color .15s ease, background-color .15s ease;
 }
@@ -41,10 +39,10 @@
 }
 
 .selectedAssetClose {
+	composes: buttonBase from "./NewDemoDesignSystem.module.css";
 	width: 22px;
 	height: 22px;
-	border: none;
-	border-radius: 999px;
+	border-radius: 10px;
 	color: #cbd5e1;
 	background: rgba(148, 163, 184, 0.18);
 	cursor: pointer;
@@ -54,10 +52,6 @@
 	font-size: 14px;
 	line-height: 1;
 	flex: 0 0 auto;
-}
-
-.selectedAssetClose:hover {
-	background: rgba(148, 163, 184, 0.28);
 }
 
 .selectedAssetLabel {

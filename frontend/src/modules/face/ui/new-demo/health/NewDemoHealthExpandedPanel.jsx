@@ -15,18 +15,18 @@ export function NewDemoHealthExpandedPanel({
 }) {
 	return (
 		<div className={styles.expandedRoot}>
-			<section className={styles.expandedPanel} aria-label="Карта здоровья ЦД">
+			<section className={styles.expandedPanel} aria-label="Цифровая зрелость ЦД">
 				<div className={styles.expandedPanelGlow} aria-hidden />
 				<button
 					type="button"
 					className={styles.closeButton}
 					onClick={onClose}
-					aria-label="Закрыть панель карты здоровья"
+					aria-label="Закрыть панель цифровой зрелости"
 				>
 					×
 				</button>
 				<header className={styles.expandedHeader}>
-					<p className={styles.expandedTitle}>Карта здоровья ЦД</p>
+					<p className={styles.expandedTitle}>Цифровая зрелость ЦД</p>
 				</header>
 				<div className={styles.expandedWindRoseContainer}>
 					<section className={styles.expandedWindRoseItem}>

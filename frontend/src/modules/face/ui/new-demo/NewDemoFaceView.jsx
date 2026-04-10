@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useStand } from "../../../../app/stands/standContext"
 import { useFacePageModel } from "../../model/useFacePageModel"
 import { NewDemoPlanetScene } from "../../../globe/ui/new-demo/NewDemoPlanetScene"
@@ -9,7 +9,7 @@ import { NewDemoHypercubeCard } from "./hypercube/NewDemoHypercubeCard"
 import { NewDemoHypercubeExpandedPanel } from "./hypercube/NewDemoHypercubeExpandedPanel"
 import { NewDemoLifecycleCard } from "./lifecycle/NewDemoLifecycleCard"
 import { NewDemoLifecycleExpandedPanel } from "./lifecycle/NewDemoLifecycleExpandedPanel"
-import { NewDemoSelectedAssetExpandedPanel } from "./selected-asset/NewDemoSelectedAssetExpandedPanel"
+import { NewDemoSelectedAssetSidebar } from "./selected-asset/NewDemoSelectedAssetSidebar"
 import styles from "./NewDemoFaceView.module.css"
 
 export function NewDemoFaceView() {
@@ -17,6 +17,8 @@ export function NewDemoFaceView() {
 	const [activeTopPanel, setActiveTopPanel] = useState(null)
 	const [lifecycleViewMode, setLifecycleViewMode] = useState("sum")
 	const [lifecycleLegendOnly, setLifecycleLegendOnly] = useState(null)
+	const assetSidebarPanelRef = useRef(null)
+	const [assetSidebarSafeInset, setAssetSidebarSafeInset] = useState(0)
 
 	const {
 		mapPointsData,
@@ -44,13 +46,6 @@ export function NewDemoFaceView() {
 		[selectedAssetPoint, mapPointsData, selectedAssetId],
 	)
 	const showSelectedAssetUi = Boolean(selectedAssetId && selectedAsset && assetStatus)
-	const assetIconColorClass =
-		assetStatusIcon &&
-		{
-			green: styles.selectedAssetIconGreen,
-			orange: styles.selectedAssetIconOrange,
-			red: styles.selectedAssetIconRed,
-		}[assetStatusIcon.color]
 	const hypercubeModel = useHypercube3DModel({
 		onOpenBpm: openPlanningWithHighlight,
 		highlightCaseTree: false,
@@ -59,7 +54,6 @@ export function NewDemoFaceView() {
 	const isHealthOpen = activeTopPanel === "health"
 	const isLifecycleOpen = activeTopPanel === "lifecycle"
 	const isHypercubeOpen = activeTopPanel === "hypercube"
-	const isAssetOpen = activeTopPanel === "asset"
 	const isTopRowCompact = activeTopPanel !== null
 
 	const toggleHealthPanel = () => {
@@ -75,58 +69,55 @@ export function NewDemoFaceView() {
 	}
 
 	useEffect(() => {
-		if (selectedAssetId) {
-			setActiveTopPanel("asset")
-			return
+		const className = "new-demo-asset-sidebar-open"
+		if (showSelectedAssetUi) {
+			document.body.classList.add(className)
+			return () => {
+				document.body.classList.remove(className)
+			}
 		}
-		setActiveTopPanel((prev) => (prev === "asset" ? null : prev))
-	}, [selectedAssetId])
+		document.body.classList.remove(className)
+		return undefined
+	}, [showSelectedAssetUi])
+
+	useEffect(() => {
+		if (!showSelectedAssetUi || !assetSidebarPanelRef.current) {
+			setAssetSidebarSafeInset(0)
+			return undefined
+		}
+
+		const panel = assetSidebarPanelRef.current
+		const updateInset = () => {
+			const nextInset = Math.ceil(panel.getBoundingClientRect().height) + 16
+			setAssetSidebarSafeInset(nextInset)
+		}
+
+		updateInset()
+		const observer =
+			typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateInset) : null
+		observer?.observe(panel)
+		window.addEventListener("resize", updateInset)
+
+		return () => {
+			observer?.disconnect()
+			window.removeEventListener("resize", updateInset)
+		}
+	}, [showSelectedAssetUi])
+
+	useEffect(() => {
+		document.body.style.setProperty(
+			"--new-demo-asset-sidebar-safe-bottom",
+			`${assetSidebarSafeInset}px`,
+		)
+		return () => {
+			document.body.style.removeProperty("--new-demo-asset-sidebar-safe-bottom")
+		}
+	}, [assetSidebarSafeInset])
 
 	return (
 		<div className={styles.page}>
 			<section className={styles.sceneFrame}>
 				<div className={styles.topArea}>
-					{showSelectedAssetUi ? (
-						<div
-							className={styles.selectedAssetBar}
-							onClick={() => setActiveTopPanel("asset")}
-							onKeyDown={(event) => {
-								if (event.key === "Enter" || event.key === " ") {
-									event.preventDefault()
-									setActiveTopPanel("asset")
-								}
-							}}
-							role="button"
-							tabIndex={0}
-							aria-label="Открыть панель выбранного актива"
-						>
-							<span className={styles.selectedAssetLabel}>Выбран актив</span>
-							<span className={styles.selectedAssetName}>{selectedAsset.name}</span>
-							<span className={styles.selectedAssetStatus}>{assetStatusLabel}</span>
-							{assetStatusIcon ? (
-								<span
-									className={`${styles.selectedAssetIcon} ${assetIconColorClass || ""}`}
-									title={assetStatusLabel}
-								>
-									{assetStatusIcon.type === "check" && "✓"}
-									{assetStatusIcon.type === "exclamation" && "!"}
-									{assetStatusIcon.type === "question" && "?"}
-								</span>
-							) : null}
-							<span className={styles.selectedAssetHint}>Открыть детали</span>
-							<button
-								type="button"
-								className={styles.selectedAssetClose}
-								onClick={(event) => {
-									event.stopPropagation()
-									handleClearSelectedAsset()
-								}}
-								aria-label="Сбросить выбранный актив"
-							>
-								×
-							</button>
-						</div>
-					) : null}
 					<div className={styles.topCardsRow}>
 						<NewDemoHealthCard
 							data={leftRoseData}
@@ -157,6 +148,7 @@ export function NewDemoFaceView() {
 							points={mapPointsData}
 							selectedAssetId={selectedAssetId}
 							onSelectAsset={handleMapAssetSelect}
+							bottomOverlaySafeInset={assetSidebarSafeInset}
 						/>
 					</div>
 				</div>
@@ -188,15 +180,15 @@ export function NewDemoFaceView() {
 						model={hypercubeModel}
 					/>
 				) : null}
-				{isAssetOpen && showSelectedAssetUi ? (
-					<NewDemoSelectedAssetExpandedPanel
+				{showSelectedAssetUi ? (
+					<NewDemoSelectedAssetSidebar
 						assetId={selectedAssetId}
 						selectedAsset={selectedAsset}
 						assetStatusLabel={assetStatusLabel}
 						assetStatusIcon={assetStatusIcon}
 						scenarioComparisonRevision={scenarioComparisonRevision}
-						onClose={() => setActiveTopPanel(null)}
-						onClearSelection={handleClearSelectedAsset}
+						onClose={handleClearSelectedAsset}
+						panelRef={assetSidebarPanelRef}
 					/>
 				) : null}
 			</section>

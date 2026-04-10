@@ -1,7 +1,7 @@
 .widget {
 	position: fixed;
-	left: 0;
-	bottom: 56px;
+	left: var(--new-demo-overlay-safe-left, 64px);
+	bottom: calc(56px + var(--new-demo-asset-sidebar-safe-bottom, 0px));
 	z-index: 40;
 	display: flex;
 	flex-direction: column;
@@ -9,7 +9,13 @@
 	gap: 12px;
 }
 
+:global(body.new-demo-asset-sidebar-open) .widget {
+	bottom: calc(56px + var(--new-demo-asset-sidebar-safe-bottom, 0px));
+}
+
 .toggle {
+	composes: surfaceGlass from "../NewDemoDesignSystem.module.css";
+	composes: buttonBase from "../NewDemoDesignSystem.module.css";
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
@@ -18,18 +24,7 @@
 	max-width: 206px;
 	min-height: 61px;
 	padding: 10px 14px;
-	border-radius: 0 12px 12px 0;
-	border-top: 1px solid rgba(224, 242, 254, 0.18);
-	border-right: 1px solid rgba(103, 232, 249, 0.3);
-	border-bottom: 1px solid rgba(56, 189, 248, 0.22);
-	border-left: 1px solid rgba(5, 15, 30, 0.24);
-	background:
-		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
-		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
-		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
 	color: rgba(241, 245, 249, 0.96);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 10px 24px rgba(2, 12, 24, 0.3);
 	cursor: pointer;
 }
@@ -89,32 +84,26 @@
 	font-size: 16px;
 	line-height: 20px;
 	letter-spacing: -0.1px;
-	text-transform: lowercase;
 	white-space: nowrap;
 }
 
 .panel {
+	composes: surfaceGlass from "../NewDemoDesignSystem.module.css";
 	display: none;
 	position: fixed;
-	left: 264px;
-	bottom: 56px;
+	left: calc(var(--new-demo-overlay-safe-left, 64px) + 224px);
+	bottom: calc(56px + var(--new-demo-asset-sidebar-safe-bottom, 0px));
 	width: 560px;
 	max-width: calc(100vw - 64px);
-	border-radius: 16px;
-	background:
-		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
-		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
-		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
+	border-radius: 10px;
 	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 16px 34px rgba(2, 12, 24, 0.24);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	border-top: 1px solid rgba(224, 242, 254, 0.28);
-	border-right: 1px solid rgba(103, 232, 249, 0.34);
-	border-bottom: 1px solid rgba(56, 189, 248, 0.26);
-	border-left: 1px solid rgba(5, 15, 30, 0.28);
 	padding: 18px 20px 16px;
 	gap: 10px;
 	flex-direction: column;
+}
+
+:global(body.new-demo-asset-sidebar-open) .panel {
+	bottom: calc(56px + var(--new-demo-asset-sidebar-safe-bottom, 0px));
 }
 
 .widgetOpen .panel {
@@ -167,26 +156,17 @@
 }
 
 .panelClose {
+	composes: closeButton from "../NewDemoDesignSystem.module.css";
 	margin-left: auto;
-	width: 34px;
-	height: 34px;
 	padding: 0;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 8px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	background: rgba(255, 255, 255, 0.08);
 	color: rgba(236, 244, 251, 0.94);
 	font-size: 16px;
 	line-height: 1;
 	cursor: pointer;
 	transition: border-color 150ms ease, background-color 150ms ease;
-}
-
-.panelClose:hover {
-	border-color: rgba(47, 180, 233, 0.6);
-	background: rgba(255, 255, 255, 0.13);
 }
 
 .chatHistory {
@@ -219,11 +199,10 @@
 }
 
 .suggestionButton {
+	composes: buttonGhost from "../NewDemoDesignSystem.module.css";
 	width: 100%;
 	min-height: 32px;
-	border-radius: 12px;
-	border: 1px solid rgba(0, 185, 255, 0.8);
-	background: rgba(4, 51, 83, 0.2);
+	border-radius: 10px;
 	color: rgba(223, 235, 246, 0.92);
 	font-family: "SF Pro", "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI",
 		sans-serif;
@@ -233,10 +212,6 @@
 	padding: 6px 12px;
 	cursor: pointer;
 	text-align: left;
-}
-
-.suggestionButton:hover {
-	background: rgba(8, 72, 115, 0.28);
 }
 
 .clarificationHidden {
@@ -258,7 +233,7 @@
 .input {
 	width: 100%;
 	min-height: 170px;
-	border-radius: 12px;
+	border-radius: 10px;
 	border: 1px solid rgba(193, 225, 244, 0.44);
 	background: linear-gradient(180deg, rgba(193, 217, 231, 0.28) 0%, rgba(135, 161, 180, 0.2) 100%);
 	color: rgba(241, 245, 249, 0.98);
@@ -280,13 +255,14 @@
 }
 
 .mic {
+	composes: buttonBase from "../NewDemoDesignSystem.module.css";
 	width: 34px;
 	height: 34px;
 	position: absolute;
 	right: 10px;
 	bottom: 10px;
-	border-radius: 12px;
-	border: 1px solid rgba(203, 231, 248, 0.5);
+	border-radius: 10px;
+	border-color: rgba(203, 231, 248, 0.5);
 	background: rgba(54, 83, 107, 0.46);
 	backdrop-filter: blur(6px);
 	-webkit-backdrop-filter: blur(6px);
@@ -320,11 +296,11 @@
 }
 
 .openThinking {
+	composes: buttonBase from "../NewDemoDesignSystem.module.css";
 	height: 32px;
 	padding: 0 12px;
-	border-radius: 12px;
-	border: 1px solid rgba(195, 224, 243, 0.5);
 	color: rgba(232, 240, 247, 0.92);
+	border-color: rgba(195, 224, 243, 0.5);
 	background: rgba(78, 111, 136, 0.34);
 	backdrop-filter: blur(4px);
 	-webkit-backdrop-filter: blur(4px);
@@ -345,12 +321,10 @@
 }
 
 .send {
+	composes: buttonPrimary from "../NewDemoDesignSystem.module.css";
 	height: 32px;
 	padding: 0 14px;
-	border-radius: 12px;
-	border: 1px solid rgba(141, 219, 255, 0.62);
-	background: linear-gradient(180deg, rgba(67, 118, 155, 0.7) 0%, rgba(49, 93, 127, 0.78) 100%);
-	color: #fff;
+	border-radius: 10px;
 	font-size: 13px;
 	cursor: pointer;
 }

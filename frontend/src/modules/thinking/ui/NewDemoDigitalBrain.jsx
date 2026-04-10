@@ -211,9 +211,6 @@ export default function NewDemoDigitalBrain({
 	return (
 		<div className="new-demo-brain-root">
 			<canvas ref={canvasRef} className="new-demo-brain-canvas" />
-			<div className="new-demo-brain-progress-overlay" aria-live="polite">
-				<span className="new-demo-brain-progress-value">{displayProgress}%</span>
-			</div>
 		</div>
 	)
 }

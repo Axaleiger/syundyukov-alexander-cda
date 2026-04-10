@@ -38,7 +38,7 @@ function BrainChainView({
   onRecalculate,
   awaitingConfirm,
   onConfirm,
-  onClosePanel,
+  onGraphBuildCompleteChange,
   isNewDemo = false,
 }) {
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
@@ -132,22 +132,16 @@ function BrainChainView({
     }
   }, [chainAlreadyRevealed])
 
+  useEffect(() => {
+    if (!onGraphBuildCompleteChange) return
+    onGraphBuildCompleteChange(graphBuildComplete)
+  }, [graphBuildComplete, onGraphBuildCompleteChange])
+
   if (isNewDemo) {
     return (
       <div className={`${styles.root} ${styles.rootNewDemoBoard}`}>
         <div className={styles.boardTopRow}>
           <section className={styles.boardCard}>
-            <div className={styles.boardCardHead}>
-              <h3 className={`${chrome.drawerTitle} ${styles.boardTitle}`}>Режим мышления</h3>
-              <button
-                type="button"
-                className={styles.boardCloseX}
-                onClick={onClosePanel}
-                aria-label="Закрыть"
-              >
-                ×
-              </button>
-            </div>
             <div className={styles.boardChainWrap}>
               <div className={styles.boardChainTitleRow}>
                 <span className={styles.boardChainAccentDot} aria-hidden />
@@ -182,14 +176,6 @@ function BrainChainView({
           <section className={`${styles.boardCard} ${styles.boardBrainCard}`}>
             <div className={styles.boardCardHead}>
               <h3 className={`${chrome.drawerTitle} ${styles.boardTitle}`}>Цифровой мозг</h3>
-              <button
-                type="button"
-                className={styles.boardCloseX}
-                onClick={onClosePanel}
-                aria-label="Закрыть"
-              >
-                ×
-              </button>
             </div>
             <div className={styles.boardBrainWrap}>
               <NewDemoDigitalBrain graphProgressPercent={graphTargetPercent} />
@@ -197,7 +183,7 @@ function BrainChainView({
           </section>
         </div>
 
-        <section className={styles.boardCard}>
+        <section className={styles.boardGraphSection}>
           <div className={styles.boardGraphWrap}>
             <ScenarioGraph
               visibleNodeIds={visibleNodeIds}
@@ -272,43 +258,6 @@ function BrainChainView({
               })}
             </div>
           </article>
-
-          <div className={styles.boardControlsCol}>
-            <article className={`${styles.boardCard} ${styles.boardConfirmCard}`}>
-              {awaitingConfirm && onConfirm ? (
-                <button
-                  type="button"
-                  className={`${chrome.drawerExit} ${styles.boardConfirmBtn}`}
-                  onClick={onConfirm}
-                  disabled={!graphBuildComplete}
-                >
-                  Согласовать предлагаемый сценарий
-                </button>
-              ) : (
-                <div className={styles.boardConfirmPlaceholder}>Ожидание подтверждения сценария</div>
-              )}
-              {showRecalculate && (
-                <button
-                  type="button"
-                  className={styles.btnResumeFromAi}
-                  onClick={onRecalculate}
-                >
-                  Пересчитать
-                </button>
-              )}
-            </article>
-
-            <button
-              type="button"
-              className={`${chrome.drawerExit} ${styles.boardClosePanelBtn}`}
-              onClick={onClosePanel}
-            >
-              <span>Закрыть панель</span>
-              <span className={styles.boardClosePanelX} aria-hidden>
-                ×
-              </span>
-            </button>
-          </div>
         </section>
       </div>
     )

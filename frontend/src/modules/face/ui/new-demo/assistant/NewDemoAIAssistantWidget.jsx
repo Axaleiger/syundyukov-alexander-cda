@@ -232,6 +232,7 @@ export default function NewDemoAIAssistantWidget({
 	const inputValue = transcript || question
 	const isThinkingMode = isThinkingPanelOpen && hasThinkingResult
 	const isUnrecognizedState = Boolean(displayClarification)
+	const showPreparedPrompts = isUnrecognizedState || chatHistory.length === 0
 
 	return (
 		<div className={`${styles.widget} ${open ? styles.widgetOpen : ""}`}>
@@ -285,10 +286,10 @@ export default function NewDemoAIAssistantWidget({
 								? "Запрос не распознан. Введите запрос заново или воспользуйтесь ранее подготовленными"
 								: chatHistory.length
 									? "Продолжайте диалог."
-									: "Здравствуйте, задайте свой промпт."}
+									: "Здравствуйте, задайте свой промпт или воспользуйтесь ранее подготовленными"}
 						</p>
 
-						{isUnrecognizedState ? (
+						{showPreparedPrompts ? (
 							<div className={styles.suggestionList}>
 								{UNRECOGNIZED_SUGGESTIONS.map((option) => (
 									<button
