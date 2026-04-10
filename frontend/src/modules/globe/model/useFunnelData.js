@@ -9,14 +9,9 @@ export function useFunnelData() {
 	const pointsPerLevel = useMemo(() => funnel.getPointsPerLevel(), [funnel])
 	const [getEntityLabel, setGetEntityLabel] = useState(() => funnel.getEntityLabel)
 
+	// Источник истины — данные приложения/API. Не загружаем Excel из public.
 	useEffect(() => {
-		funnel
-			.loadFunnelFromExcel()
-			.then(funnel.buildFunnelFromEntities)
-			.then((built) => {
-				if (built && built.getEntityLabel) setGetEntityLabel(() => built.getEntityLabel)
-			})
-			.catch(() => {})
+		setGetEntityLabel(() => funnel.getEntityLabel)
 	}, [funnel])
 
 	return { pointsPerLevel, getEntityLabel }

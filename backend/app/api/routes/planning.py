@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.models.tables import PlanningCase
+from app.models.tables import PlanningCase, Scenario
 from app.schemas.planning import PlanningBoardUpdateBody, PlanningCaseOut, PlanningCaseSummary
+from app.seed.board_demo_snapshots import board_fallback_do_burenie, board_fallback_hantos
 from app.services.planning_assembly import build_board_payload
 from app.services.planning_persist import replace_board_from_payload
 
@@ -83,4 +84,44 @@ def get_case(case_id: uuid.UUID, db: Session = Depends(get_db)):
         updated_at=c.updated_at,
         data_source=c.data_source,
         board=board,
+    )
+
+
+@router.post("/cases/{case_id}/reset-demo", response_model=PlanningCaseOut)
+def reset_case_to_demo(case_id: uuid.UUID, db: Session = Depends(get_db)):
+    """
+    Возвращает доску planning_case к дефолтному демо-шаблону по сценарию.
+    Используется expo-режимом "Начать с начала".
+    """
+    c = db.get(PlanningCase, case_id)
+    if not c:
+        raise HTTPException(404, "planning case not found")
+
+    scenario = db.get(Scenario, c.scenario_id) if c.scenario_id else None
+    ext = (scenario.external_code or "") if scenario else ""
+    name = (scenario.name or "") if scenario else ""
+
+    is_do_burenie = (
+        ext == "SC-17081"
+        or ("Управление добычей" in name and "бурения" in name)
+    )
+    parsed = board_fallback_do_burenie() if is_do_burenie else board_fallback_hantos()
+
+    board = {
+        "stages": parsed.stages,
+        "tasks": parsed.tasks,
+        "connections": parsed.connections,
+    }
+    replace_board_from_payload(db, case_id, board)
+    db.commit()
+    db.refresh(c)
+    out_board = build_board_payload(db, case_id)
+    return PlanningCaseOut(
+        id=c.id,
+        scenario_id=c.scenario_id,
+        asset_id=c.asset_id,
+        created_at=c.created_at,
+        updated_at=c.updated_at,
+        data_source=c.data_source,
+        board=out_board,
     )

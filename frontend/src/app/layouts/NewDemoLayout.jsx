@@ -11,6 +11,7 @@ import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/plann
 import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController"
 import { useBpmCommandBridge } from "./hooks/useBpmCommandBridge"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
+import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
 
@@ -141,6 +142,7 @@ export default function NewDemoLayout() {
 
 	return (
 		<div className={styles.shell} data-new-demo-shell="true">
+			<ExpoIdleResetGuard routePrefix={routePrefix} />
 			<NewDemoHeader />
 			<div className={styles.body}>
 				<NewDemoSidebar />

@@ -11,6 +11,7 @@ import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/plann
 import { HeaderMain } from "../../shared/ui/Header/HeaderMain"
 import { SidebarMain } from "../../shared/ui/Sidebar/SidebarMain"
 import { SecondarySidebar } from "../../shared/ui/SecondarySidebar/SecondarySidebar"
+import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { useLegacyHashNavigation } from "./hooks/useLegacyHashNavigation"
@@ -269,6 +270,7 @@ export const AppLayout = () => {
 
 	return (
 		<div className={`${styles.app} ${styles["app-with-sidebar"]}`}>
+			<ExpoIdleResetGuard routePrefix={routePrefix} />
 			<HeaderMain />
 
 			<div className={styles["app-body"]}>

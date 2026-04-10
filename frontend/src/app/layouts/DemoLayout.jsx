@@ -12,6 +12,7 @@ import { getScenarioGraphNodesFromBoard } from "../../modules/planning/lib/plann
 import { DemoHeader } from "./demo/DemoHeader"
 import { DemoSidebar } from "./demo/DemoSidebar"
 import { DemoSecondarySidebar } from "./demo/DemoSecondarySidebar"
+import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController"
@@ -303,6 +304,7 @@ export default function DemoLayout() {
 			data-demo-stand-shell="true"
 			className={`app app-with-sidebar ${styles.app} ${styles["app-with-sidebar"]} app--demo app--demo-stand-4k ${isDemoFace ? "app--demo-stand-face" : ""}`}
 		>
+			<ExpoIdleResetGuard routePrefix={routePrefix} />
 			{isDemoFace ? (
 				<div className="app-demo-globe-fixed">
 					<div className="app-demo-globe-transform">

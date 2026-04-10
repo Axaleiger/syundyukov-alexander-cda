@@ -4,4 +4,5 @@ import { create } from "zustand"
 export const useAdminStore = create((set) => ({
 	adminSubTab: "roles",
 	setAdminSubTab: (v) => set({ adminSubTab: v }),
+	resetExpoPreset: () => set({ adminSubTab: "roles" }),
 }))
