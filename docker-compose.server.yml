@@ -32,6 +32,10 @@ services:
       dockerfile: Dockerfile.nginx
       args:
         VITE_GROQ_API_KEY: ${VITE_GROQ_API_KEY:-}
+        VITE_EXPO: ${VITE_EXPO:-}
+        VITE_EXPO_DISABLE_TABS: ${VITE_EXPO_DISABLE_TABS:-}
+        VITE_EXPO_ARM_DELAY_MS: ${VITE_EXPO_ARM_DELAY_MS:-}
+        VITE_EXPO_IDLE_MS: ${VITE_EXPO_IDLE_MS:-}
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"

@@ -19,12 +19,19 @@ jobs:
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          VITE_EXPO: ${{ secrets.VITE_EXPO }}
+          VITE_EXPO_DISABLE_TABS: ${{ secrets.VITE_EXPO_DISABLE_TABS }}
+          VITE_EXPO_ARM_DELAY_MS: ${{ secrets.VITE_EXPO_ARM_DELAY_MS }}
+          VITE_EXPO_IDLE_MS: ${{ secrets.VITE_EXPO_IDLE_MS }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script_stop: true
+          envs: VITE_GROQ_API_KEY,VITE_EXPO,VITE_EXPO_DISABLE_TABS,VITE_EXPO_ARM_DELAY_MS,VITE_EXPO_IDLE_MS
           script: |
             set -euo pipefail
             REF="${{ github.ref_name }}"
@@ -32,4 +39,9 @@ jobs:
             git fetch origin
             git checkout "$REF"
             git pull --ff-only origin "$REF"
+            export VITE_GROQ_API_KEY="${VITE_GROQ_API_KEY:-}"
+            export VITE_EXPO="${VITE_EXPO:-}"
+            export VITE_EXPO_DISABLE_TABS="${VITE_EXPO_DISABLE_TABS:-}"
+            export VITE_EXPO_ARM_DELAY_MS="${VITE_EXPO_ARM_DELAY_MS:-}"
+            export VITE_EXPO_IDLE_MS="${VITE_EXPO_IDLE_MS:-}"
             docker compose -f docker-compose.server.yml --env-file .env up -d --build
