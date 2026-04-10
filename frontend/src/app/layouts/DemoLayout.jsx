@@ -24,6 +24,17 @@ import DemoStandRightPanel from "../../demo-stand/components/RightPanel.jsx"
 import RussiaGlobe from "../../demo-stand/components/RussiaGlobe.jsx"
 import { demoFaceMapAssetSelect } from "../../modules/face/lib/demoFaceMapAssetSelect.js"
 
+function getDisabledTabsFromEnv() {
+	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
+	if (!raw) return new Set()
+	return new Set(
+		raw
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean),
+	)
+}
+
 /**
  * Shell демо-стенда: классы документа, модификаторы стенда, Outlet.
  * Префикс маршрута задаётся stand definition + StandProvider.
@@ -182,6 +193,15 @@ export default function DemoLayout() {
 		if (!openConfiguratorFromPlanning) return
 		setOpenConfiguratorFromPlanning(false)
 	}, [openConfiguratorFromPlanning, setOpenConfiguratorFromPlanning])
+
+	useEffect(() => {
+		const disabled = getDisabledTabsFromEnv()
+		if (!disabled.size) return
+		const raw = (location.pathname || "").replace(/\/$/, "")
+		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		if (!disabled.has(segment)) return
+		navigate(standHref(routePrefix, "planning"), { replace: true })
+	}, [location.pathname, navigate, routePrefix])
 
 	const aiAssistantAndThinkingDrawer = (
 		<>

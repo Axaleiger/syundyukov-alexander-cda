@@ -9,6 +9,8 @@ import {
 import { useNavigate, useOutletContext } from "react-router-dom"
 
 import appLayoutStyles from "../../app/layouts/AppLayout.module.css"
+import { useStand } from "../../app/stands/standContext"
+import { standHref } from "../../app/stands/standPathUtils"
 import BPMBoard from "../../modules/planning/ui/BPMBoard"
 import { normalizePlanningBoardPayload } from "../../modules/planning/lib/planningApiBoard"
 import { serializeBoardForSave } from "../../modules/planning/lib/serializeBoardForSave"
@@ -34,6 +36,7 @@ async function resolveScenarioIdFromApi(title) {
 
 export function PlanningPage() {
 	const navigate = useNavigate()
+	const { routePrefix } = useStand()
 	const { onBpmCommandConsumed } = useOutletContext() || {}
 
 	const {
@@ -196,6 +199,10 @@ export function PlanningPage() {
 		[navigate, setSelectedScenarioId, setSelectedScenarioName],
 	)
 
+	const handleBackToScenarios = useCallback(() => {
+		navigate(standHref(routePrefix, "scenarios"))
+	}, [navigate, routePrefix])
+
 	if (servicePageName) {
 		return (
 			<div
@@ -286,7 +293,7 @@ export function PlanningPage() {
 						initialConnections={bpmConnections ?? undefined}
 						selectedAssetName={selectedAssetPoint?.name}
 						highlightCardName={bpmHighlight}
-						onClose={() => navigate("/scenarios")}
+						onClose={handleBackToScenarios}
 						onBoardChange={handleBoardChange}
 						aiMode={aiMode}
 						setAiMode={setAiMode}

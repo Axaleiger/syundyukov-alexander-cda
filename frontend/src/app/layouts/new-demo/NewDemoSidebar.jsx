@@ -9,6 +9,17 @@ import ontologyIcon from "../../../shared/assets/icons/ontology.svg"
 import resultsIcon from "../../../shared/assets/icons/results.svg"
 import adminIcon from "../../../shared/assets/icons/admin.svg"
 
+function getDisabledTabsFromEnv() {
+	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
+	if (!raw) return new Set()
+	return new Set(
+		raw
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean),
+	)
+}
+
 const NAV_ITEMS = [
 	{ id: "face", label: "Лицо", icon: faceIcon },
 	{ id: "scenarios", label: "Сценарии", icon: scenariosIcon },
@@ -20,6 +31,7 @@ const NAV_ITEMS = [
 
 export function NewDemoSidebar() {
 	const { routePrefix } = useStand()
+	const disabledTabs = getDisabledTabsFromEnv()
 
 	return (
 		<aside className={styles.sidebar}>
@@ -27,9 +39,15 @@ export function NewDemoSidebar() {
 				{NAV_ITEMS.map((item) => (
 					<NavLink
 						key={item.id}
-						to={standHref(routePrefix, item.id)}
+						to={disabledTabs.has(item.id) ? "#" : standHref(routePrefix, item.id)}
+						onClick={(e) => {
+							if (!disabledTabs.has(item.id)) return
+							e.preventDefault()
+						}}
 						className={({ isActive }) =>
-							`${styles.navItem} ${isActive ? styles.navItemActive : ""}`
+							`${styles.navItem} ${isActive ? styles.navItemActive : ""} ${
+								disabledTabs.has(item.id) ? styles.navItemDisabled : ""
+							}`
 						}
 						end={item.id === "face"}
 						aria-label={item.label}
