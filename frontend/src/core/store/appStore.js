@@ -1,8 +1,11 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import { DEFAULT_FLOW_CODE } from "../../modules/ontology/lib/ontologyBootstrap.js"
 import { SCENARIO_STAGE_FILTERS } from "../data/static/scenariosData.js"
 
-export const useAppStore = create((set) => ({
+export const useAppStore = create(
+	persist(
+		(set) => ({
 	// UI
 	aiMode: false,
 	setAiMode: (v) => set({ aiMode: v }),
@@ -136,4 +139,14 @@ export const useAppStore = create((set) => ({
 
 	showConfiguratorDoc: false,
 	setShowConfiguratorDoc: (v) => set({ showConfiguratorDoc: v }),
-}))
+		}),
+		{
+			name: "cda-app-store",
+			version: 1,
+			partialize: (s) => ({
+				selectedScenarioId: s.selectedScenarioId,
+				selectedScenarioName: s.selectedScenarioName,
+			}),
+		},
+	),
+)

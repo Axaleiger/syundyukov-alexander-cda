@@ -35,6 +35,14 @@ const AI_STAGE_NAME_2 = 'ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП 2'
 /** Пустой шаблон этапов только для режима createPlanningCase (ИИ); доска с сервера — только из API. */
 const DEFAULT_CREATE_STAGES = ['Подготовка', 'Реализация', 'Контроль']
 
+function nextUniqueStageName(existingStages, base = 'Новый этап') {
+  const set = new Set(existingStages || [])
+  if (!set.has(base)) return base
+  let i = 2
+  while (set.has(`${base} ${i}`)) i += 1
+  return `${base} ${i}`
+}
+
 function getInitials(name) {
   if (!name || !String(name).trim()) return '?'
   const parts = String(name).trim().split(/\s+/)
@@ -804,11 +812,13 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
   }, [stages, tasks])
 
   const addStage = useCallback(() => {
-    const name = 'Новый этап'
-    setStages((s) => [name, ...s])
-    setTasks((t) => ({ ...t, [name]: [] }))
-    setEditingStage(0)
-    setStageNameEdit(name)
+    setStages((s) => {
+      const name = nextUniqueStageName(s, 'Новый этап')
+      setTasks((t) => (t[name] ? t : ({ ...t, [name]: [] })))
+      setEditingStage(0)
+      setStageNameEdit(name)
+      return [name, ...s]
+    })
   }, [])
 
   const handleDropAt = useCallback((targetStage, insertBeforeIndex) => {
