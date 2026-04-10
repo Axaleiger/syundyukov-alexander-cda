@@ -1,3 +1,4 @@
+import React from "react"
 import { StandProvider } from "./standContext"
 
 export function StandShellRoute({ stand }) {

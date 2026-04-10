@@ -8,7 +8,14 @@ const apiProxyTarget =
 
 export default defineConfig({
   base: process.env.VITE_BASE || '/',
-  plugins: [react()],
+  plugins: [
+    react({
+      jsxRuntime: 'automatic',
+    }),
+  ],
+  esbuild: {
+    jsx: 'automatic',
+  },
   server: {
     port: 3000,
     host: true,

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import date, datetime
 from pathlib import Path
@@ -106,6 +107,47 @@ def _upsert_org_units(session: Session) -> dict[str, Any]:
         )
         orgs[key] = oid
     return orgs
+
+
+def _map_face_points_path() -> Path:
+    here = Path(__file__).resolve()
+    backend = here.parents[2]
+    return backend / "seed_data" / "map_face_points.json"
+
+
+def _upsert_map_face_assets(session: Session) -> None:
+    """Точки карты главной: slug + geo; не пересекаются с месторождениями сценариев."""
+    path = _map_face_points_path()
+    if not path.is_file():
+        return
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        return
+    for sort_i, row in enumerate(raw):
+        slug = row.get("id")
+        if not slug:
+            continue
+        name = row.get("name") or slug
+        lon = row.get("lon")
+        lat = row.get("lat")
+        if lon is None or lat is None:
+            continue
+        city = row.get("city")
+        aid = seed_uuid("asset", f"map:{slug}")
+        session.merge(
+            Asset(
+                id=aid,
+                display_name=name,
+                asset_type="map_point",
+                slug=slug,
+                city=city,
+                map_sort_order=sort_i,
+                org_unit_id=None,
+                geo_lat=float(lat),
+                geo_lon=float(lon),
+                metadata_={"source": "map_face_points.json"},
+            )
+        )
 
 
 def _upsert_regions_and_assets(session: Session, orgs: dict[str, Any]) -> dict[str, Any]:
@@ -425,6 +467,7 @@ def run_seed(session: Session, exports_dir: Path | None = None) -> None:
 
     orgs = _upsert_org_units(session)
     ra = _upsert_regions_and_assets(session, orgs)
+    _upsert_map_face_assets(session)
     assets_map = ra["assets"]
     stage_by_key = _upsert_production_stages(session)
     _upsert_business_directions(session)

@@ -49,6 +49,8 @@ function mapScenarioRow(raw, stageIdToLabel, assetIdToAsset) {
 		stages: "—",
 		do: doLabel,
 		field,
+		/** ISO от API — для фильтра по периоду (точнее dd.mm.yyyy). */
+		createdAtSort: raw.createdAt ?? null,
 		status: raw.status || "—",
 		approved: Boolean(raw.isApproved),
 		dateCreated: formatDateRu(raw.createdAt),
