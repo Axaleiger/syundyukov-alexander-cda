@@ -612,10 +612,12 @@ function ScenarioGraph({
 
   return (
     <div className="w-full">
-      <h3 className={`${chrome.drawerTitle} ${isBoardLayout ? '' : chrome.drawerTitleSpaced}`}>Граф сценария</h3>
+      {!isBoardLayout && (
+        <h3 className={`${chrome.drawerTitle} ${chrome.drawerTitleSpaced}`}>Граф сценария</h3>
+      )}
       <div
         ref={containerRef}
-        className={`relative ${isBoardLayout ? "h-[420px]" : "h-[560px]"} w-full cursor-grab overflow-hidden rounded-2xl border active:cursor-grabbing ${isNewDemo ? "border-sky-400/40" : "border-slate-700/50"} ${isNewDemo ? "bg-[#03182d]" : "bg-[#0a0e14]"}`}
+        className={`relative ${isBoardLayout ? "h-[590px]" : "h-[560px]"} w-full cursor-grab overflow-hidden rounded-2xl border active:cursor-grabbing ${isNewDemo ? "border-sky-400/40" : "border-slate-700/50"} ${isNewDemo ? "bg-[#03182d]" : "bg-[#0a0e14]"}`}
         style={{
           touchAction: 'none',
           backgroundImage:

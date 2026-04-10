@@ -16,10 +16,14 @@ export function NewDemoLifecycleCard({
 			}`}
 			onClick={onToggle}
 			aria-expanded={isActive}
-			aria-label={isActive ? "Свернуть блок ЖЦ Актива" : "Открыть блок ЖЦ Актива"}
+			aria-label={
+				isActive
+					? "Свернуть блок жизненного цикла актива"
+					: "Открыть блок жизненного цикла актива"
+			}
 		>
 			<div className={styles.lifecycleCardHeader}>
-				<p className={styles.lifecycleCardTitle}>ЖЦ Актива</p>
+				<p className={styles.lifecycleCardTitle}>Жизненный цикл актива</p>
 			</div>
 			<div className={styles.lifecycleCardBody}>
 				{isCompact ? null : (

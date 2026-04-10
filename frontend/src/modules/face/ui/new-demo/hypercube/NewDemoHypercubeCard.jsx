@@ -12,7 +12,7 @@ export function NewDemoHypercubeCard({ isActive, isCompact, onToggle, model }) {
 			aria-label={isActive ? "Свернуть блок гиперкуба" : "Открыть блок гиперкуба"}
 		>
 			<div className={styles.cardHeader}>
-				<p className={styles.cardTitle}>Гиперкуб рычагов влияния</p>
+				<p className={styles.cardTitle}>Окно возможностей</p>
 			</div>
 			<div className={styles.cardBody}>
 				{isCompact ? null : (

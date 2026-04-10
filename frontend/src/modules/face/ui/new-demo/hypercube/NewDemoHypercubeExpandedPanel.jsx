@@ -23,12 +23,11 @@ export function NewDemoHypercubeExpandedPanel({ onClose, model }) {
 
 	return (
 		<div className={styles.expandedRoot}>
-			<section className={styles.modal} aria-label="Гиперкуб рычагов влияния">
+			<section className={styles.modal} aria-label="Окно возможностей">
 				<header className={styles.header}>
 					<div className={styles.headerLeft}>
 						<p className={styles.title}>
-							<span>Гиперкуб рычагов</span>
-							<span>влияния</span>
+							<span>Окно возможностей</span>
 						</p>
 						<button
 							type="button"

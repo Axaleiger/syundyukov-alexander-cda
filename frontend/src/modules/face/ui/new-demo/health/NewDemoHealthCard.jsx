@@ -26,10 +26,10 @@ export function NewDemoHealthCard({
 			onClick={onToggle}
 			onKeyDown={handleKeyDown}
 			aria-expanded={isActive}
-			aria-label={isActive ? "Свернуть карту здоровья ЦД" : "Открыть карту здоровья ЦД"}
+			aria-label={isActive ? "Свернуть цифровую зрелость ЦД" : "Открыть цифровую зрелость ЦД"}
 		>
 			<div className={styles.healthCardHeader}>
-				<p className={styles.healthCardTitle}>Карта здоровья ЦД</p>
+				<p className={styles.healthCardTitle}>Цифровая зрелость ЦД</p>
 			</div>
 			<div className={styles.healthCardBody}>
 				<div className={styles.healthCardRosePreview}>

@@ -125,7 +125,7 @@ export function NewDemoLifecycleExpandedPanel({
 						type="button"
 						className={styles.closeBtn}
 						onClick={onClose}
-						aria-label="Закрыть панель ЖЦ Актива"
+						aria-label="Закрыть панель жизненного цикла актива"
 					>
 						×
 					</button>

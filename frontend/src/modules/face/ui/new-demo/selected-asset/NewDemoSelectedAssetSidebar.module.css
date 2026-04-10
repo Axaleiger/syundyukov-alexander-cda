@@ -1,89 +1,65 @@
-.expandedRoot {
-	position: absolute;
-	inset: 0;
-	z-index: 4;
+.sidebarRoot {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 6;
 	display: flex;
-	align-items: flex-start;
 	justify-content: center;
-	padding: 80px 80px 20px;
+	padding: 0 24px max(8px, env(safe-area-inset-bottom));
 	pointer-events: none;
 }
 
 .panel {
 	composes: surfaceGlass from "../NewDemoDesignSystem.module.css";
-	position: relative;
 	pointer-events: auto;
-	width: min(1060px, 100%);
-	max-width: min(1000px, 95vw);
-	max-height: calc(100vh - 140px);
-	border-radius: 10px;
-	box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
-	padding: 30px;
+	width: min(971px, calc(100vw - 48px));
+	border-radius: 10px 10px 0 0;
+	padding: 12px 14px 12px;
 	display: flex;
 	flex-direction: column;
-	gap: 18px;
+	gap: 10px;
 	color: #e2e8f0;
-	overflow: auto;
+	animation: slideUp 180ms ease-out;
+}
+
+@keyframes slideUp {
+	from {
+		transform: translateY(16px);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
 }
 
 .header {
 	display: flex;
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
-	gap: 14px;
+	gap: 10px;
 }
 
 .title {
 	margin: 0;
-	font-size: 13px;
+	font-size: 12px;
 	color: #7dd3fc;
 	letter-spacing: .05em;
 	text-transform: uppercase;
 }
 
 .assetName {
-	margin: 6px 0 0;
-	font-size: 22px;
+	margin: 4px 0 0;
+	font-size: 18px;
 	font-weight: 700;
 	color: #f8fafc;
 }
 
-.headerActions {
-	display: inline-flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.resetBtn,
 .closeBtn {
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	background: rgba(255, 255, 255, 0.08);
+	composes: closeButton from "../NewDemoDesignSystem.module.css";
 	color: rgba(255, 255, 255, 0.92);
 	cursor: pointer;
-	transition: border-color 150ms ease, background-color 150ms ease;
-}
-
-.resetBtn {
-	composes: buttonBase from "../NewDemoDesignSystem.module.css";
-	border-radius: 10px;
-	padding: 7px 10px;
-	font-size: 12px;
-}
-
-.closeBtn {
-	composes: buttonBase from "../NewDemoDesignSystem.module.css";
-	composes: closeButton from "../NewDemoDesignSystem.module.css";
-	width: 34px;
-	height: 34px;
-	border-radius: 10px;
-	font-size: 22px;
-	line-height: 1;
-}
-
-.resetBtn:hover,
-.closeBtn:hover {
-	border-color: rgba(47, 180, 233, 0.6);
-	background: rgba(255, 255, 255, 0.13);
 }
 
 .statusRow {
@@ -91,12 +67,12 @@
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	padding: 10px 12px;
+	padding: 8px 10px;
 	background: rgba(30, 41, 59, 0.62);
 }
 
 .statusLabel {
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #cbd5e1;
 }
@@ -120,35 +96,35 @@
 	color: #94a3b8;
 }
 
-.section {
-	composes: surfaceInner from "../NewDemoDesignSystem.module.css";
-	padding: 14px;
-}
-
-.sectionTitle {
-	margin: 0 0 10px;
-	font-size: 14px;
-	font-weight: 700;
-	color: #e2e8f0;
-}
-
-.emptyState {
-	margin: 0;
-	font-size: 13px;
-	color: #94a3b8;
-}
-
-.rows {
+.tabsRow {
 	display: flex;
-	flex-direction: column;
-	gap: 14px;
-	flex: 0 0 auto;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding-bottom: 0;
+}
+
+.tabButton {
+	composes: selectableControl from "../NewDemoDesignSystem.module.css";
+	color: #cbd5e1;
+	padding: 7px 10px;
+	font-size: 12px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.tabButtonActive {
+	composes: selectableControlActive from "../NewDemoDesignSystem.module.css";
+	color: #fff;
+}
+
+.contentArea {
+	overflow: visible;
+	padding-right: 0;
 }
 
 .sectionRow {
 	composes: surfaceInner from "../NewDemoDesignSystem.module.css";
 	padding: 12px;
-	flex: 0 0 auto;
 }
 
 .sectionNote {
@@ -311,13 +287,8 @@
 	flex: 0 0 auto;
 }
 
-.cornerIndicator {
-	position: absolute;
-	right: 16px;
-	bottom: 16px;
-	width: 12px;
-	height: 10px;
-	background-color: rgba(47, 180, 233, 1);
-	clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
-	transform: rotate(180deg);
+.emptyState {
+	margin: 0;
+	font-size: 13px;
+	color: #94a3b8;
 }

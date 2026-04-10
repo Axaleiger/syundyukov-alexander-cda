@@ -30,6 +30,19 @@ export function ThinkingDrawerShell({
 	isNewDemo = false,
 }) {
 	if (!thinkingPanelOpen) return null
+	const [newDemoGraphBuildComplete, setNewDemoGraphBuildComplete] = React.useState(false)
+
+	React.useEffect(() => {
+		if (!thinkingPanelOpen || !isNewDemo || thinkingConfirmPhase !== "brain") {
+			setNewDemoGraphBuildComplete(false)
+		}
+	}, [thinkingPanelOpen, isNewDemo, thinkingConfirmPhase])
+
+	const showNewDemoRecalculate =
+		Boolean(selectedDecisionPathId) &&
+		Boolean(appliedDecisionPathId) &&
+		selectedDecisionPathId !== appliedDecisionPathId &&
+		Boolean(handleRecalculateDecision)
 
 	const closePanel = () => {
 		setThinkingPanelOpen(false)
@@ -77,10 +90,9 @@ export function ThinkingDrawerShell({
 					onRecalculate={handleRecalculateDecision}
 					awaitingConfirm={thinkingAwaitingConfirm}
 					onConfirm={handleThinkingConfirm}
-					onClosePanel={() => {
-						thinkingChainRevealedRef.current = true
-						closePanel()
-					}}
+					onGraphBuildCompleteChange={
+						isNewDemo ? setNewDemoGraphBuildComplete : undefined
+					}
 					isNewDemo={isNewDemo}
 				/>
 			) : (
@@ -159,22 +171,52 @@ export function ThinkingDrawerShell({
 				className={`${styles.drawer} ${isThinkingDrawerCollapsed ? styles.drawerCollapsed : ""} ${isNewDemo ? styles.drawerNewDemo : ""}`}
 				data-new-demo-thinking={isNewDemo ? "true" : undefined}
 			>
-				{!isNewDemo && (
-					<div className={styles.head}>
-						<h3 className={styles.title}>Режим мышления</h3>
-						<button
-							type="button"
-							className={styles.close}
-							onClick={closePanel}
-							aria-label="Закрыть"
-						>
-							×
-						</button>
-					</div>
-				)}
+				<div className={`${styles.head} ${isNewDemo ? styles.headNewDemo : ""}`}>
+					<h3 className={`${styles.title} ${isNewDemo ? styles.titleNewDemo : ""}`}>Режим мышления</h3>
+					<button
+						type="button"
+						className={`${styles.close} ${isNewDemo ? styles.closeNewDemo : ""}`}
+						onClick={closePanel}
+						aria-label="Закрыть"
+					>
+						×
+					</button>
+				</div>
 				<div className={`${styles.body} ${isNewDemo ? styles.bodyNewDemo : ""}`}>
 					{renderBody()}
 				</div>
+				{isNewDemo && thinkingConfirmPhase === "brain" && newDemoGraphBuildComplete && (
+					<footer className={styles.footerNewDemo}>
+						{thinkingAwaitingConfirm && (
+							<button
+								type="button"
+								className={`${styles.exit} ${styles.exitNewDemo} ${styles.footerActionBtn} ${styles.footerConfirmBtn}`}
+								onClick={handleThinkingConfirm}
+							>
+								Согласовать предлагаемый сценарий
+							</button>
+						)}
+						{showNewDemoRecalculate && (
+							<button
+								type="button"
+								className={`${styles.exit} ${styles.exitNewDemo} ${styles.footerActionBtn}`}
+								onClick={handleRecalculateDecision}
+							>
+								Пересчитать
+							</button>
+						)}
+						<button
+							type="button"
+							className={`${styles.exit} ${styles.exitNewDemo} ${styles.footerActionBtn}`}
+							onClick={() => {
+								thinkingChainRevealedRef.current = true
+								closePanel()
+							}}
+						>
+							Закрыть панель
+						</button>
+					</footer>
+				)}
 			</div>
 		</>
 	)

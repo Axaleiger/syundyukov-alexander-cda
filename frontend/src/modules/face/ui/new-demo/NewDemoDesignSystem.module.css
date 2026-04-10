@@ -1,0 +1,94 @@
+.surfaceGlass {
+	background:
+		linear-gradient(0deg, rgba(224, 242, 254, 0.14) 0%, rgba(224, 242, 254, 0.04) 100%),
+		linear-gradient(0deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.04) 100%),
+		linear-gradient(0deg, rgba(7, 23, 45, 0.56) 0%, rgba(3, 12, 26, 0.7) 100%);
+	backdrop-filter: blur(5px);
+	-webkit-backdrop-filter: blur(5px);
+	border-top: 1px solid rgba(224, 242, 254, 0.18);
+	border-right: 1px solid rgba(103, 232, 249, 0.3);
+	border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+	border-left: 1px solid rgba(5, 15, 30, 0.24);
+	box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+}
+
+.surfaceInner {
+	border: 1px solid rgba(148, 163, 184, 0.24);
+	background: rgba(15, 23, 42, 0.5);
+	border-radius: 10px;
+}
+
+.buttonBase {
+	border-radius: 10px;
+	border: 1px solid rgba(125, 211, 252, 0.46);
+	background: rgba(7, 33, 61, 0.46);
+	color: rgba(232, 240, 247, 0.94);
+	transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.buttonBase:hover {
+	border-color: rgba(47, 180, 233, 0.62);
+	background: rgba(10, 44, 79, 0.55);
+}
+
+.buttonPrimary {
+	border-radius: 10px;
+	border-color: rgba(141, 219, 255, 0.62);
+	background: linear-gradient(180deg, rgba(67, 118, 155, 0.7) 0%, rgba(49, 93, 127, 0.78) 100%);
+	color: #fff;
+}
+
+.buttonPrimary:hover {
+	border-color: rgba(167, 229, 255, 0.74);
+	background: linear-gradient(180deg, rgba(76, 129, 168, 0.78) 0%, rgba(57, 103, 138, 0.82) 100%);
+}
+
+.buttonGhost {
+	border: 1px solid rgba(148, 163, 184, 0.36);
+	background: rgba(15, 23, 42, 0.35);
+	color: rgba(226, 232, 240, 0.9);
+	border-radius: 10px;
+}
+
+.buttonGhost:hover {
+	border-color: rgba(56, 189, 248, 0.62);
+	background: rgba(14, 116, 144, 0.24);
+}
+
+.selectableControl {
+	border: 1px solid rgba(226, 232, 240, 0.34);
+	border-radius: 10px;
+	background: linear-gradient(180deg, rgba(15, 23, 42, 0.46) 0%, rgba(15, 23, 42, 0.3) 100%);
+	color: rgba(226, 232, 240, 0.9);
+	transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.selectableControl:hover {
+	border-color: rgba(191, 219, 254, 0.52);
+	background: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.34) 100%);
+}
+
+.selectableControlActive {
+	border-color: #e66b21;
+	background: linear-gradient(180deg, rgba(37, 22, 15, 0.46) 0%, rgba(37, 22, 15, 0.3) 100%);
+	color: #fff;
+	box-shadow: 0 0 0 1px rgba(230, 107, 33, 0.22);
+}
+
+.closeButton {
+	width: 34px;
+	height: 34px;
+	border-radius: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: rgba(255, 255, 255, 0.08);
+	color: rgba(255, 255, 255, 0.92);
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.closeButton:hover {
+	border-color: rgba(47, 180, 233, 0.6);
+	background: rgba(255, 255, 255, 0.13);
+}

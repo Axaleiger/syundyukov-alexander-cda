@@ -1,4 +1,5 @@
 .shell {
+	--new-demo-overlay-safe-left: 64px;
 	height: 100vh;
 	display: grid;
 	grid-template-rows: 100px minmax(0, 1fr);
