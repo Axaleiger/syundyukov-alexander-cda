@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useRepositories } from "../../../../../app/providers/DataRepositoriesProvider"
-import { useAssetScenarioComparison } from "../../../../../widgets/right-panel/RightPanel/model/useAssetScenarioComparison"
+import { useMergedAssetScenarioComparison } from "../../../../../widgets/right-panel/RightPanel/model/useMergedAssetScenarioComparison"
 import { ScenarioMetricRow } from "../../../../../widgets/right-panel/RightPanel/ScenarioMetricRow"
 import { STRATEGY_DECISIONS } from "../../../data/strategyDecisions"
 import styles from "./NewDemoSelectedAssetSidebar.module.css"
@@ -23,11 +23,12 @@ export function NewDemoSelectedAssetSidebar({
 	assetStatusLabel,
 	assetStatusIcon,
 	scenarioComparisonRevision = 0,
+	agreedInfluenceLine = null,
 	onClose,
 	panelRef,
 }) {
 	const { mapGlobe } = useRepositories()
-	const { metricDefs: scenarioMetricDefs, comparison } = useAssetScenarioComparison(assetId)
+	const { metricDefs: scenarioMetricDefs, comparison } = useMergedAssetScenarioComparison(assetId)
 	const [activeTab, setActiveTab] = useState(TAB_KEYS.scenarios)
 	const showAiDeltas = scenarioComparisonRevision > 0
 	const twinsChain = useMemo(() => {
@@ -69,6 +70,11 @@ export function NewDemoSelectedAssetSidebar({
 					</span>
 					<span className={styles.revisionLabel}>Ревизия: {scenarioComparisonRevision}</span>
 				</div>
+				{agreedInfluenceLine ? (
+					<p className={styles.aiInfluenceNote} title={agreedInfluenceLine}>
+						{agreedInfluenceLine}
+					</p>
+				) : null}
 
 				<nav className={styles.tabsRow} aria-label="Разделы выбранного актива">
 					{TAB_ITEMS.map((tab) => (

@@ -28,10 +28,39 @@ export const useAppStore = create(
 	agreedInfluenceLine: null,
 	setAgreedInfluenceLine: (v) => set({ agreedInfluenceLine: v }),
 
+	/** Пресет доски ИИ (base_drilling | fcf_no_drill | opex_reduction) после перехода на планирование */
+	aiAssistantPreset: null,
+	setAiAssistantPreset: (v) => set({ aiAssistantPreset: v }),
+
+	/**
+	 * Согласованный на главной пресет доски ИИ — снова показывается на /planning без URL (до сброса сессии).
+	 * @type {string | null}
+	 */
+	agreedAiPlanningBoardPreset: null,
+	setAgreedAiPlanningBoardPreset: (v) => set({ agreedAiPlanningBoardPreset: v }),
+
+	/**
+	 * Активный пресет потока «лицо → мышление» (для панели сценария и графа до закрытия drawer).
+	 * @type {string | null}
+	 */
+	aiFaceBrainPreset: null,
+	setAiFaceBrainPreset: (v) => set({ aiFaceBrainPreset: v }),
+
+	/**
+	 * Дельты метрик для «консенсусного» сценария после согласования плана ИИ (panels.md).
+	 * @type {Record<string, { amount: number, favorable: boolean }> | null}
+	 */
+	aiScenarioMetricDeltaOverride: null,
+	setAiScenarioMetricDeltaOverride: (v) => set({ aiScenarioMetricDeltaOverride: v }),
+
+	/** Сброс контекста главной (карта/ИИ), без отмены согласованного пресета планирования — он сбрасывается в resetExpoPreset. */
 	resetDemoFaceScenarioWorkflow: () =>
 		set({
 			faceSelectedScenarioTitle: null,
 			agreedInfluenceLine: null,
+			aiAssistantPreset: null,
+			aiFaceBrainPreset: null,
+			aiScenarioMetricDeltaOverride: null,
 		}),
 
 	cdPageNode: null,
@@ -150,6 +179,10 @@ export const useAppStore = create(
 			selectedAssetId: null,
 			faceSelectedScenarioTitle: null,
 			agreedInfluenceLine: null,
+			aiAssistantPreset: null,
+			agreedAiPlanningBoardPreset: null,
+			aiFaceBrainPreset: null,
+			aiScenarioMetricDeltaOverride: null,
 			cdPageNode: null,
 			scenarioComparisonRevision: 0,
 			hypercubeCaseIntro: false,
@@ -179,6 +212,7 @@ export const useAppStore = create(
 			partialize: (s) => ({
 				selectedScenarioId: s.selectedScenarioId,
 				selectedScenarioName: s.selectedScenarioName,
+				agreedAiPlanningBoardPreset: s.agreedAiPlanningBoardPreset,
 			}),
 		},
 	),

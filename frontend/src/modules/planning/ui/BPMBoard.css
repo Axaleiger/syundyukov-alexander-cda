@@ -714,27 +714,40 @@
   gap: 12px;
 }
 
+/* Обёртка: sticky на элементе без rotate — иначе липкость ломается в части браузеров */
+.bpm-add-stage-vertical-wrap {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  align-self: stretch;
+  flex-shrink: 0;
+  display: flex;
+  margin-left: 4px;
+  box-shadow: 6px 0 16px -2px rgba(0, 40, 70, 0.12);
+  border-radius: var(--bpm-radius);
+  background: var(--bpm-bg-default, #f0f4f7);
+}
+
 .bpm-add-stage-vertical {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  padding: 10px 8px;
+  padding: 10px 10px;
   height: auto;
   min-height: 80px;
-  align-self: stretch;
+  min-width: 44px;
+  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-family: var(--bpm-font);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--bpm-control-ghost-typo);
   background: var(--bpm-control-ghost-bg);
-  border: none;
+  border: 1px solid rgba(0, 65, 102, 0.12);
   border-radius: var(--bpm-radius);
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
-  margin-left: 4px;
 }
 
 .bpm-add-stage-vertical:hover {
@@ -2539,4 +2552,91 @@
   font-weight: inherit;
   color: inherit;
   color: var(--bpm-typo-primary, #002033);
+}
+
+/* Дублирующая кнопка в тулбаре — всегда видна при горизонтальном скролле доски */
+.bpm-toolbar-add-stage {
+  flex-shrink: 0;
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Анимация «ИИ выстраивает сценарий» после перехода с размышления */
+.bpm-board--ai-reveal:not(.bpm-board--ai-reveal-done) .bpm-stage-column {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-stage-column {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.52s cubic-bezier(0.22, 1, 0.36, 1), transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--bpm-stage-reveal-delay, 0ms);
+}
+
+.bpm-board--ai-reveal:not(.bpm-board--ai-reveal-done) .bpm-card {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.46s ease, transform 0.46s ease;
+  transition-delay: var(--bpm-card-reveal-delay, 0ms);
+}
+
+.bpm-board--ai-reveal:not(.bpm-board--ai-reveal-done) .bpm-card .bpm-card-meta-row,
+.bpm-board--ai-reveal:not(.bpm-board--ai-reveal-done) .bpm-card .bpm-card-section-header {
+  opacity: 0;
+  transform: translateY(3px);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-meta-row,
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-section-header {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.38s ease, transform 0.38s ease;
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-meta > .bpm-card-meta-row:nth-child(1) {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 80ms);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-meta > .bpm-card-meta-row:nth-child(2) {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 145ms);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-meta > .bpm-card-meta-row:nth-child(3) {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 210ms);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-meta > .bpm-card-meta-row:nth-child(4) {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 275ms);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-body > .bpm-card-section-block:nth-child(1) .bpm-card-section-header {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 330ms);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-body > .bpm-card-section-block:nth-child(3) .bpm-card-section-header {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 390ms);
+}
+
+.bpm-board--ai-reveal.bpm-board--ai-reveal-done .bpm-card .bpm-card-body > .bpm-card-section-block:nth-child(5) .bpm-card-section-header {
+  transition-delay: calc(var(--bpm-card-reveal-delay, 0ms) + 450ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bpm-board--ai-reveal .bpm-stage-column,
+  .bpm-board--ai-reveal .bpm-card,
+  .bpm-board--ai-reveal .bpm-card .bpm-card-meta-row,
+  .bpm-board--ai-reveal .bpm-card .bpm-card-section-header {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
 }

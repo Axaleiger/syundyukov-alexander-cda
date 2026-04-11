@@ -3,8 +3,11 @@
  * Без внешнего API. «Сформируй кейс по X» → createPlanningCase с topic; «упор на NPV» и т.п. → focusMetric.
  */
 
+import { DEMO_AI_ASSISTANT_SUGGESTIONS } from './demoAiAssistantSuggestions.js'
+
 export const SCENARIO_IDS = {
   createPlanningCase: 'createPlanningCase',
+  aiFaceToPlanning: 'aiFaceToPlanning',
   focusMetric: 'focusMetric',
   buildFullProject: 'buildFullProject',
   analyzeRisks: 'analyzeRisks',
@@ -53,6 +56,13 @@ function normalize(text) {
   return String(text || '').toLowerCase().trim()
 }
 
+/** Нормализованные эталоны трёх кнопок (см. demoAiAssistantSuggestions.js). */
+const NORM_DEMO_AI_LINES = DEMO_AI_ASSISTANT_SUGGESTIONS.map((s) => normalize(s))
+/** Прежняя формулировка второй кнопки — для совпадения по вставленному/сохранённому тексту. */
+const NORM_LEGACY_FCF_BUTTON = normalize(
+	"Сформируй сквозной сценарий ребаланса CAPEX и отказ от бурения новых скважин",
+)
+
 function extractTopic(text) {
   const norm = normalize(text)
   for (const re of TOPIC_PREFIXES) {
@@ -63,6 +73,67 @@ function extractTopic(text) {
   if (afterKейс && afterKейс[1]) return afterKейс[1].trim().replace(/\s+/g, ' ')
   const afterSkvoznoi = norm.match(/сквозн(?:ой|ой\s+бизнес(?:-|\s)сценарий|ой\s+бизнес(?:-|\s)процесс)\s+(?:по|на тему|:)\s*(.+?)(?:\s*$|\.|,)/)
   if (afterSkvoznoi && afterSkvoznoi[1]) return afterSkvoznoi[1].trim().replace(/\s+/g, ' ')
+  return null
+}
+
+/**
+ * Три готовые кнопки — эталонные строки DEMO_AI_ASSISTANT_SUGGESTIONS; смысл блоков — panels.md (п.1–3).
+ * Сначала точное совпадение с кнопкой, затем мягкие правила (голос, опечатки).
+ */
+function detectDemoAiThreeButtons(norm, text) {
+  if (norm === NORM_DEMO_AI_LINES[0]) {
+    return {
+      scenarioId: SCENARIO_IDS.createPlanningCase,
+      confidence: 0.99,
+      topic: extractTopic(text) || 'управление базовой добычей',
+    }
+  }
+  if (norm === NORM_DEMO_AI_LINES[1] || norm === NORM_LEGACY_FCF_BUTTON) {
+    return {
+      scenarioId: SCENARIO_IDS.aiFaceToPlanning,
+      confidence: 0.99,
+      preset: 'fcf_no_drill',
+      topic: extractTopic(text) || 'ребаланс CAPEX без нового бурения',
+    }
+  }
+  if (norm === NORM_DEMO_AI_LINES[2]) {
+    return {
+      scenarioId: SCENARIO_IDS.aiFaceToPlanning,
+      confidence: 0.99,
+      preset: 'opex_reduction',
+      topic: extractTopic(text) || 'удельный OPEX и энергозатраты',
+    }
+  }
+  if (
+    (norm.includes('удельн') || norm.includes('удельного')) &&
+    (norm.includes('opex') || norm.includes('опекс')) &&
+    (norm.includes('энерго') || norm.includes('энергозатрат'))
+  ) {
+    return {
+      scenarioId: SCENARIO_IDS.aiFaceToPlanning,
+      confidence: 0.98,
+      preset: 'opex_reduction',
+      topic: extractTopic(text) || 'удельный OPEX и энергозатраты',
+    }
+  }
+  if (
+    (norm.includes('capex') || norm.includes('капекс') || norm.includes('ребаланс')) &&
+    (norm.includes('бурен') || norm.includes('скважин'))
+  ) {
+    return {
+      scenarioId: SCENARIO_IDS.aiFaceToPlanning,
+      confidence: 0.98,
+      preset: 'fcf_no_drill',
+      topic: extractTopic(text) || 'ребаланс CAPEX без нового бурения',
+    }
+  }
+  if (norm.includes('сквозной') && norm.includes('базовой добыч')) {
+    return {
+      scenarioId: SCENARIO_IDS.createPlanningCase,
+      confidence: 0.98,
+      topic: extractTopic(text) || 'управление базовой добычей',
+    }
+  }
   return null
 }
 
@@ -89,11 +160,14 @@ function detectFocusMetric(text) {
 /**
  * Определить сценарий, уверенность и опционально topic/metric.
  * @param { string } text
- * @returns {{ scenarioId: string | null, confidence: number, topic?: string, metric?: string }}
+ * @returns {{ scenarioId: string | null, confidence: number, topic?: string, metric?: string, preset?: string }}
  */
 export function classifyIntent(text) {
   const norm = normalize(text)
   if (!norm) return { scenarioId: null, confidence: 0 }
+
+  const demoThree = detectDemoAiThreeButtons(norm, text)
+  if (demoThree) return demoThree
 
   const caseResult = detectCreatePlanningCase(text)
   if (caseResult) return { scenarioId: SCENARIO_IDS.createPlanningCase, confidence: caseResult.confidence, topic: caseResult.topic }

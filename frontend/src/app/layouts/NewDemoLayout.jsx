@@ -28,6 +28,7 @@ function getDisabledTabsFromEnv() {
 
 export default function NewDemoLayout() {
 	const [thinkingConfirmCounter, setThinkingConfirmCounter] = useState(0)
+	const [aiAssistantCloseSignal, setAiAssistantCloseSignal] = useState(0)
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { routePrefix } = useStand()
@@ -59,6 +60,7 @@ export default function NewDemoLayout() {
 		setFlowCode,
 		bpmStages,
 		bpmTasks,
+		setAiFaceBrainPreset,
 		setBpmCommand,
 		setScenarioComparisonRevision,
 		setConfiguratorInitialNodes,
@@ -67,6 +69,9 @@ export default function NewDemoLayout() {
 		setShowBpm,
 		setHypercubeCaseIntro,
 		setConfiguratorNodeCommand,
+		setAiAssistantPreset,
+		selectedAssetId,
+		setSelectedAssetId,
 	} = useAppStore()
 
 	const setResultsDashboardFocus = useResultsStore((s) => s.setResultsDashboardFocus)
@@ -94,7 +99,7 @@ export default function NewDemoLayout() {
 		setBpmCommand,
 	})
 
-	const { bpmCommandConsumedRef } = useBpmCommandBridge({
+	const { onBpmCommandConsumed, bpmCommandConsumedRef } = useBpmCommandBridge({
 		flowCode,
 		setFlowCode,
 		setBpmCommand,
@@ -107,12 +112,18 @@ export default function NewDemoLayout() {
 	})
 
 	const graphNodesForThinking = useMemo(() => {
+		if (thinkingGraphNodes?.length) return thinkingGraphNodes
 		if (bpmStages?.length && bpmTasks) {
 			const fromBoard = getScenarioGraphNodesFromBoard(bpmStages, bpmTasks)
 			if (fromBoard.length) return fromBoard
 		}
 		return thinkingGraphNodes
 	}, [bpmStages, bpmTasks, thinkingGraphNodes])
+
+	useEffect(() => {
+		if (thinkingPanelOpen) return
+		setAiFaceBrainPreset(null)
+	}, [thinkingPanelOpen, setAiFaceBrainPreset])
 
 	const setActiveTab = useCallback(
 		(tab) => {
@@ -124,6 +135,18 @@ export default function NewDemoLayout() {
 			else if (tab === "admin") navigate(standHref(routePrefix, "admin"))
 		},
 		[navigate, routePrefix],
+	)
+
+	const navigateToPlanningAfterAi = useCallback(
+		({ preset }) => {
+			if (!preset) return
+			setAiAssistantPreset(preset)
+			setBpmCommand({ scenarioId: "loadAiPresetBoard", params: { preset } })
+			const href = standHref(routePrefix, "planning")
+			navigate(`${href}?aiFromThinking=1&preset=${encodeURIComponent(preset)}`)
+			setAiAssistantCloseSignal((n) => n + 1)
+		},
+		[navigate, routePrefix, setBpmCommand, setAiAssistantPreset],
 	)
 
 	const handleThinkingConfirmForNewDemo = useCallback(() => {
@@ -148,14 +171,18 @@ export default function NewDemoLayout() {
 				<NewDemoSidebar />
 				<main className={styles.main}>
 					<div className={styles.mainInner}>
-						<Outlet />
+						<Outlet context={{ onBpmCommandConsumed }} />
 					</div>
 				</main>
 			</div>
 			<NewDemoAIAssistantWidget
 				visible
+				selectedAssetId={selectedAssetId}
+				setSelectedAssetId={setSelectedAssetId}
+				assistantCloseSignal={aiAssistantCloseSignal}
 				setActiveTab={setActiveTab}
 				setBpmCommand={setBpmCommand}
+				navigateToPlanningAfterAi={navigateToPlanningAfterAi}
 				setResultsDashboardFocus={setResultsDashboardFocus}
 				setHypercubeCaseIntro={setHypercubeCaseIntro}
 				setConfiguratorNodeCommand={setConfiguratorNodeCommand}

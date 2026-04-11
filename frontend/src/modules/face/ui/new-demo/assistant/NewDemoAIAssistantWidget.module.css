@@ -192,10 +192,40 @@
 	line-height: 1.2;
 }
 
+.assetPickScroll {
+	max-height: min(52vh, 360px);
+	overflow-y: auto;
+	margin-top: 4px;
+	padding-right: 4px;
+}
+
+.assetPickName {
+	display: block;
+	font-weight: 500;
+}
+
+.assetPickCity {
+	display: block;
+	margin-top: 2px;
+	font-size: 11px;
+	line-height: 1.3;
+	opacity: 0.78;
+}
+
 .suggestionList {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+}
+
+.suggestionButtonReset {
+	border-color: rgba(248, 113, 113, 0.45);
+	color: rgba(254, 226, 226, 0.95);
+}
+
+.suggestionButtonReset:hover {
+	border-color: rgba(252, 165, 165, 0.55);
+	background: rgba(127, 29, 29, 0.22);
 }
 
 .suggestionButton {

@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { useFaceData } from "./useFaceData"
 import { useAppStore } from "../../../core/store/appStore"
 import { demoFaceMapAssetSelect } from "../lib/demoFaceMapAssetSelect"
+import { PANELS_SCENARIO_CONTENT } from "../../ai/lib/panelsScenarioContent.js"
 
 /**
  * Общая модель главной (face): данные роз, выбор актива, переходы в сценарии/планирование.
@@ -11,6 +12,7 @@ import { demoFaceMapAssetSelect } from "../lib/demoFaceMapAssetSelect"
  */
 export function useFacePageModel(pathPrefix = "") {
 	const navigate = useNavigate()
+	const [searchParams, setSearchParams] = useSearchParams()
 
 	const {
 		mapPointsData,
@@ -33,7 +35,35 @@ export function useFacePageModel(pathPrefix = "") {
 		setCdPageNode,
 		hypercubeCaseIntro,
 		resetDemoFaceScenarioWorkflow,
+		setAgreedInfluenceLine,
+		setScenarioComparisonRevision,
+		setAiScenarioMetricDeltaOverride,
 	} = useAppStore()
+
+	const aiReturn = searchParams.get("aiReturn")
+	const aiPresetParam = searchParams.get("preset")
+	useEffect(() => {
+		if (aiReturn !== "1") return
+		const block = aiPresetParam ? PANELS_SCENARIO_CONTENT[aiPresetParam] : null
+		if (block) {
+			const line = `ИИ: ${block.cards[0]?.title ?? "Сценарий"}. Панель (panels.md): ${block.tableLines.join(" · ")}`
+			setAgreedInfluenceLine(line)
+			setAiScenarioMetricDeltaOverride(block.metricDeltas)
+			setScenarioComparisonRevision((n) => n + 1)
+		}
+		const next = new URLSearchParams(searchParams)
+		next.delete("aiReturn")
+		next.delete("preset")
+		setSearchParams(next, { replace: true })
+	}, [
+		aiReturn,
+		aiPresetParam,
+		searchParams,
+		setSearchParams,
+		setAgreedInfluenceLine,
+		setScenarioComparisonRevision,
+		setAiScenarioMetricDeltaOverride,
+	])
 
 	const [selectedLeftStageIndex, setSelectedLeftStageIndex] = useState(null)
 	const [selectedRightObjectIndex, setSelectedRightObjectIndex] = useState(null)

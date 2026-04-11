@@ -29,7 +29,6 @@ export function ThinkingDrawerShell({
 	handleRecalculateDecision,
 	isNewDemo = false,
 }) {
-	if (!thinkingPanelOpen) return null
 	const [newDemoGraphBuildComplete, setNewDemoGraphBuildComplete] = React.useState(false)
 
 	React.useEffect(() => {
@@ -37,6 +36,8 @@ export function ThinkingDrawerShell({
 			setNewDemoGraphBuildComplete(false)
 		}
 	}, [thinkingPanelOpen, isNewDemo, thinkingConfirmPhase])
+
+	if (!thinkingPanelOpen) return null
 
 	const showNewDemoRecalculate =
 		Boolean(selectedDecisionPathId) &&

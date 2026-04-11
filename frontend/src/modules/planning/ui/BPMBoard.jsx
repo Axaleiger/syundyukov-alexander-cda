@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, SYSTEMS_LIST, cardMatchesHighlight } from '../data/bpmData'
+import { AI_PLANNING_BOARD_PRESETS } from '../data/aiPlanningBoardPresets.js'
 
 /** Генерирует данные для одной ИИ-карточки: id (AI + 5 цифр), исполнитель, согласующий, даты */
 function getAiCardData(seed) {
@@ -34,6 +35,12 @@ const AI_STAGE_NAME_2 = 'ИИ-АВТОПРЕДЛОЖЕННЫЙ ЭТАП 2'
 
 /** Пустой шаблон этапов только для режима createPlanningCase (ИИ); доска с сервера — только из API. */
 const DEFAULT_CREATE_STAGES = ['Подготовка', 'Реализация', 'Контроль']
+
+/** CSS-переменная задержки появления карточки при анимации «ИИ строит доску». */
+function bpmCardRevealStyle(animate, stageIdx, cardIdx) {
+  if (!animate) return undefined
+  return { '--bpm-card-reveal-delay': `${stageIdx * 120 + cardIdx * 58}ms` }
+}
 
 function nextUniqueStageName(existingStages, base = 'Новый этап') {
   const set = new Set(existingStages || [])
@@ -418,7 +425,7 @@ function lessSaturated(hex, factor = 0.5) {
   return `hsl(${h}, ${Math.round(s * factor)}%, ${l}%)`
 }
 
-function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed }) {
+function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed, animateAiBoardReveal = false }) {
   const isCreatePlanningCase = bpmCommand?.scenarioId === 'createPlanningCase'
   const [stages, setStages] = useState(() => {
     if (isCreatePlanningCase) return [...DEFAULT_CREATE_STAGES]
@@ -473,6 +480,24 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
   const aiSuggestionPlacementsRef = React.useRef(null)
   const draggedAiCardRef = React.useRef(null)
   const boardRef = React.useRef(null)
+
+  const [aiRevealDone, setAiRevealDone] = useState(() => !animateAiBoardReveal)
+  useEffect(() => {
+    if (!animateAiBoardReveal) {
+      setAiRevealDone(true)
+      return undefined
+    }
+    if (!stages?.length) {
+      setAiRevealDone(false)
+      return undefined
+    }
+    const startTimer = window.setTimeout(() => {
+      setAiRevealDone(true)
+    }, 240)
+    return () => {
+      clearTimeout(startTimer)
+    }
+  }, [animateAiBoardReveal, stages])
 
   const removeAiCard = useCallback((aiId) => {
     setRemovedAiCardIds((prev) => new Set(prev).add(aiId))
@@ -635,6 +660,21 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
     if (processedBpmCommandRef.current === bpmCommand) return
     processedBpmCommandRef.current = bpmCommand
     const scenarioId = bpmCommand.scenarioId
+    if (scenarioId === 'loadAiPresetBoard') {
+      const preset = bpmCommand.params?.preset
+      const data = preset ? AI_PLANNING_BOARD_PRESETS[preset] : null
+      if (data) {
+        setStages([...data.stages])
+        setTasks({ ...data.tasks })
+        setConnections(Array.isArray(data.connections) ? [...data.connections] : [])
+        setAiCaseStageNames(new Set())
+        setAiCaseCardIds(new Set())
+        onBpmCommandConsumed?.({ switchToOntology: false, flowCode: bpmToMermaid(data.stages, data.tasks) })
+      } else {
+        onBpmCommandConsumed?.({ switchToOntology: false })
+      }
+      return
+    }
     const currentStages = stagesRef.current
     const d = new Date()
     const baseTask = {
@@ -1173,6 +1213,9 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
             </div>
             <div className="bpm-board-header-divider" />
             <div className="bpm-toolbar-row">
+              <button type="button" className="bpm-btn bpm-btn-ghost bpm-toolbar-add-stage" onClick={addStage} title="Добавить этап (колонку) слева на доске">
+                + Этап
+              </button>
               <input
                 type="text"
                 className="bpm-search"
@@ -1274,10 +1317,17 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
             </div>
           </div>
           <div className="bpm-board-row">
-          <button type="button" className="bpm-add-stage-vertical" onClick={addStage} title="Добавить этап">
-            + Добавить этап
-          </button>
-      <div className="bpm-board" ref={boardRef} onDragOver={(e) => e.preventDefault()}>
+          <div className="bpm-add-stage-vertical-wrap">
+            <button type="button" className="bpm-add-stage-vertical" onClick={addStage} title="Добавить этап">
+              + Добавить этап
+            </button>
+          </div>
+      <div
+        className={`bpm-board ${animateAiBoardReveal ? 'bpm-board--ai-reveal' : ''} ${aiRevealDone ? 'bpm-board--ai-reveal-done' : ''}`}
+        ref={boardRef}
+        onDragOver={(e) => e.preventDefault()}
+        aria-busy={animateAiBoardReveal && !aiRevealDone}
+      >
         {connectionsMode && connectionLines.length > 0 && (
           <div className="bpm-connections-overlay" aria-hidden>
             <svg className="bpm-connections-svg" width="100%" height="100%">
@@ -1291,6 +1341,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
           <React.Fragment key={stageName}>
           <div
             className={`bpm-stage-column ${(stageName === AI_STAGE_NAME || stageName === AI_STAGE_NAME_2) ? 'bpm-stage-ai-suggestion' : ''} ${aiCaseStageNames.has(stageName) ? 'bpm-stage-ai-suggestion' : ''} ${stageName === AI_STAGE_NAME && aiStageAgreed ? 'bpm-stage-column-agreed' : ''} ${stageName === AI_STAGE_NAME_2 && aiStage2Agreed ? 'bpm-stage-column-agreed' : ''} ${draggedStageIndex === stageIdx ? 'bpm-stage-column-dragging' : ''}`}
+            style={animateAiBoardReveal ? { '--bpm-stage-reveal-delay': `${stageIdx * 125}ms` } : undefined}
             onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}
             onDrop={(e) => { e.preventDefault(); if (draggedStageIndex != null) handleStageDrop(e, stageIdx); else handleStageDropWithAi(stageName, (tasks[stageName] || []).length, e); }}
           >
@@ -1319,7 +1370,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                       return (
                         <React.Fragment key={aiId}>
                           <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                          <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                          <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} style={bpmCardRevealStyle(animateAiBoardReveal, stageIdx, taskIdx)} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
                             <div className="bpm-card-top-row">
                               <span className="bpm-card-id">{aiId}</span>
                               <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
@@ -1436,7 +1487,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                     return (
                       <React.Fragment key={task.id}>
                         <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                        <div className="bpm-card" draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                        <div className="bpm-card" style={bpmCardRevealStyle(animateAiBoardReveal, stageIdx, taskIdx)} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
                           <div className="bpm-card-top-row">
                             <span className="bpm-card-id">№{task.id}</span>
                             <span className="bpm-card-badge bpm-card-badge-in-work">В РАБОТЕ</span>
@@ -1484,7 +1535,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                       return (
                         <React.Fragment key={aiId}>
                           <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                          <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME_2, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                          <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} style={bpmCardRevealStyle(animateAiBoardReveal, stageIdx, taskIdx)} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME_2, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
                             <div className="bpm-card-top-row">
                               <span className="bpm-card-id">{aiId}</span>
                               <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
@@ -1601,7 +1652,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                     return (
                       <React.Fragment key={task.id}>
                         <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                        <div className="bpm-card" draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME_2, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                        <div className="bpm-card" style={bpmCardRevealStyle(animateAiBoardReveal, stageIdx, taskIdx)} draggable onDragStart={(e) => handleDragStart(e, AI_STAGE_NAME_2, taskIdx)} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDropAt(AI_STAGE_NAME_2, taskIdx); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
                           <div className="bpm-card-top-row">
                             <span className="bpm-card-id">№{task.id}</span>
                             <span className="bpm-card-badge bpm-card-badge-in-work">В РАБОТЕ</span>
@@ -1664,7 +1715,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                     return (
                       <React.Fragment key={`ai-${item.cardKey}-${stageName}`}>
                         <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => handleStageDropWithAi(stageName, i, e)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
-                        <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} draggable onDragStart={(e) => { draggedAiCardRef.current = { stageName, fromIndex: i, cardKey: item.cardKey }; e.dataTransfer.setData('text/plain', JSON.stringify({ stageName, taskIdx: i, aiCardKey: item.cardKey })); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { draggedAiCardRef.current = null; }} onDrop={(e) => handleStageDropWithAi(stageName, i, e)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
+                        <div className={`bpm-card bpm-card-ai-suggestion ${agreed ? 'bpm-card-ai-agreed' : ''}`} style={bpmCardRevealStyle(animateAiBoardReveal, stageIdx, i)} draggable onDragStart={(e) => { draggedAiCardRef.current = { stageName, fromIndex: i, cardKey: item.cardKey }; e.dataTransfer.setData('text/plain', JSON.stringify({ stageName, taskIdx: i, aiCardKey: item.cardKey })); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { draggedAiCardRef.current = null; }} onDrop={(e) => handleStageDropWithAi(stageName, i, e)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }}>
                           <div className="bpm-card-top-row">
                             <span className="bpm-card-id">{displayId}</span>
                             <span className="bpm-card-badge bpm-card-badge-in-work">ИИ</span>
@@ -1795,6 +1846,7 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                     <div className="bpm-drop-zone bpm-drop-zone-inline" onDrop={(e) => handleStageDropWithAi(stageName, i, e, dropTaskIdx)} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.stopPropagation(); }} />
                     <div
                       className={`bpm-card ${isAiCaseCard ? 'bpm-card-ai-suggestion ' + (agreedAiCase ? 'bpm-card-ai-agreed' : '') : ''} ${isHighlight ? 'bpm-card-highlight' : ''} ${(task.name || '').trim() === 'Реинжениринг' ? 'bpm-card-reinjing' : ''} ${connectionFrom && connectionFrom.stageName === stageName && connectionFrom.taskId === task.id ? 'bpm-card-connection-from' : ''}`}
+                      style={bpmCardRevealStyle(animateAiBoardReveal, stageIdx, i)}
                       data-connection-stage={stageName}
                       data-connection-id={task.id}
                       draggable

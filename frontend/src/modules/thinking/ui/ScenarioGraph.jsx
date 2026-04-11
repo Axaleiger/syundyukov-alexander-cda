@@ -8,8 +8,6 @@ import {
   scenarioGraphNodes,
 } from '../lib/scenarioGraphData'
 
-const { width: WIDTH, height: HEIGHT } = scenarioGraphDimensions
-
 const LINE_HEIGHT = 13
 const ZOOM_MIN = 0.12
 const ZOOM_MAX = 2.8
@@ -185,7 +183,7 @@ const NodeIcon = memo(function NodeIcon({ type }) {
   )
 })
 
-function computeBBoxForNodeIds(ids, nodesById, boxById) {
+function computeBBoxForNodeIds(ids, nodesById, boxById, viewW, viewH) {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
@@ -204,7 +202,7 @@ function computeBBoxForNodeIds(ids, nodesById, boxById) {
     maxY = Math.max(maxY, bottom)
   }
   if (!Number.isFinite(minX)) {
-    return { minX: 0, minY: 0, maxX: WIDTH, maxY: HEIGHT, cx: WIDTH / 2, cy: HEIGHT / 2, bw: WIDTH, bh: HEIGHT }
+    return { minX: 0, minY: 0, maxX: viewW, maxY: viewH, cx: viewW / 2, cy: viewH / 2, bw: viewW, bh: viewH }
   }
   const cx = (minX + maxX) / 2
   const cy = (minY + maxY) / 2
@@ -213,12 +211,12 @@ function computeBBoxForNodeIds(ids, nodesById, boxById) {
   return { minX, minY, maxX, maxY, cx, cy, bw, bh }
 }
 
-function viewFromBBox(bbox) {
-  const z = Math.min(WIDTH / bbox.bw, HEIGHT / bbox.bh) * 0.94
+function viewFromBBox(bbox, viewW, viewH) {
+  const z = Math.min(viewW / bbox.bw, viewH / bbox.bh) * 0.94
   const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
   return {
     zoom,
-    pan: { x: WIDTH / 2 - zoom * bbox.cx, y: HEIGHT / 2 - zoom * bbox.cy },
+    pan: { x: viewW / 2 - zoom * bbox.cx, y: viewH / 2 - zoom * bbox.cy },
   }
 }
 
@@ -342,7 +340,24 @@ function ScenarioGraph({
   graphComplete = false,
   isNewDemo = false,
   isBoardLayout = false,
+  graphBundle = null,
 }) {
+  const nodes = graphBundle?.nodes ?? scenarioGraphNodes
+  const edges = graphBundle?.edges ?? scenarioGraphEdges
+  const dimensions = graphBundle?.dimensions ?? scenarioGraphDimensions
+  const WIDTH = dimensions.width
+  const HEIGHT = dimensions.height
+  const optimalEdgeKeys = graphBundle?.optimalEdgeKeys ?? optimalScenarioEdgeKeys
+  const optimalNodeIds = graphBundle?.optimalNodeIds ?? optimalScenarioNodeIds
+  const visualTone = graphBundle?.visualTone ?? 'default'
+
+  const gridColor =
+    visualTone === 'fcf'
+      ? 'rgba(251, 191, 36, 0.085)'
+      : visualTone === 'opex'
+        ? 'rgba(196, 181, 253, 0.09)'
+        : 'rgba(47, 180, 233, 0.08)'
+
   const palette = isNewDemo
     ? {
         startFill: 'rgba(17, 51, 83, 0.9)',
@@ -429,37 +444,37 @@ function ScenarioGraph({
   })
 
   const visibleNodes = useMemo(
-    () => scenarioGraphNodes.filter((node) => visibleNodeIds.has(node.id)),
-    [visibleNodeIds]
+    () => nodes.filter((node) => visibleNodeIds.has(node.id)),
+    [visibleNodeIds, nodes]
   )
   const visibleIds = visibleNodeIds
   const visibleEdges = useMemo(
-    () => scenarioGraphEdges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to)),
-    [visibleIds]
+    () => edges.filter((edge) => visibleIds.has(edge.from) && visibleIds.has(edge.to)),
+    [visibleIds, edges]
   )
 
   const nodesById = useMemo(() => {
     const m = new Map()
-    scenarioGraphNodes.forEach((n) => m.set(n.id, n))
+    nodes.forEach((n) => m.set(n.id, n))
     return m
-  }, [])
+  }, [nodes])
 
   const incomingCount = useMemo(() => {
     const c = new Map()
-    for (const n of scenarioGraphNodes) c.set(n.id, 0)
-    for (const e of scenarioGraphEdges) {
+    for (const n of nodes) c.set(n.id, 0)
+    for (const e of edges) {
       c.set(e.to, (c.get(e.to) || 0) + 1)
     }
     return c
-  }, [])
+  }, [nodes, edges])
 
   const boxById = useMemo(() => {
     const m = new Map()
-    for (const n of scenarioGraphNodes) {
+    for (const n of nodes) {
       m.set(n.id, estimateRenderedBox(n, isNewDemo))
     }
     return m
-  }, [isNewDemo])
+  }, [nodes, isNewDemo])
 
   const edgeLayouts = useMemo(() => {
     return visibleEdges.map((edge, idx) => {
@@ -471,7 +486,7 @@ function ScenarioGraph({
       if (!fb || !tb) return null
       const d = createSmoothBezierPath(from, to, fb, tb, edge)
       const ekey = `${edge.from}|${edge.to}`
-      const isOptimalEdge = graphComplete && optimalScenarioEdgeKeys.has(ekey)
+      const isOptimalEdge = graphComplete && optimalEdgeKeys.has(ekey)
       const baseW = isNewDemo ? Math.max(1.2, idx % 8 === 0 ? 1.8 : 1.2) : Math.max(2.2, idx % 7 === 0 ? 2.8 : 2.2)
       const isNewEdge = enteringNodeIds.has(edge.to) && visibleNodeIds.has(edge.from)
       return {
@@ -482,12 +497,12 @@ function ScenarioGraph({
         isNewEdge,
       }
     })
-  }, [visibleEdges, graphComplete, nodesById, boxById, enteringNodeIds, visibleNodeIds, isNewDemo])
+  }, [visibleEdges, graphComplete, nodesById, boxById, enteringNodeIds, visibleNodeIds, isNewDemo, optimalEdgeKeys])
 
   const nodeLayouts = useMemo(() => {
     const m = new Map()
-    for (const node of scenarioGraphNodes) {
-      const { w: bw, h: rectH, box } = estimateRenderedBox(node)
+    for (const node of nodes) {
+      const { w: bw, h: rectH, box } = estimateRenderedBox(node, isNewDemo)
       const left = node.x - bw / 2
       const top = node.y - rectH / 2
       const iconPad = box.iconPad ?? 26
@@ -498,7 +513,7 @@ function ScenarioGraph({
       const textBlockH = linesClamped.length * LINE_HEIGHT
       const textStartY = rectH / 2 - textBlockH / 2 + LINE_HEIGHT * 0.72
       const styles = nodeStyleByType(node.type, palette)
-      const isOptimal = graphComplete && optimalScenarioNodeIds.has(node.id)
+      const isOptimal = graphComplete && optimalNodeIds.has(node.id)
       const strokeColor = isOptimal ? palette.optimalNodeStroke : styles.stroke
       const strokeW = isOptimal ? (isNewDemo ? 3.2 : OPT_NODE_STROKE_W) : (isNewDemo ? 0.9 : 1.2)
       const fillCol = isOptimal ? palette.optimalNodeFill : styles.fill
@@ -523,7 +538,7 @@ function ScenarioGraph({
       })
     }
     return m
-  }, [graphComplete, isNewDemo])
+  }, [graphComplete, isNewDemo, nodes, optimalNodeIds])
 
   const animateToView = useCallback(
     (targetZoom, targetPan) => {
@@ -552,31 +567,31 @@ function ScenarioGraph({
   )
 
   const fitAllVisible = useCallback(() => {
-    const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById)
-    const v = viewFromBBox(bbox)
+    const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT)
+    const v = viewFromBBox(bbox, WIDTH, HEIGHT)
     animateToView(v.zoom, v.pan)
-  }, [visibleIds, nodesById, boxById, animateToView])
+  }, [visibleIds, nodesById, boxById, animateToView, WIDTH, HEIGHT])
 
   const fitOptimalOnly = useCallback(() => {
-    const ids = [...optimalScenarioNodeIds].filter((id) => visibleIds.has(id))
-    const bbox = computeBBoxForNodeIds(ids, nodesById, boxById)
-    const v = viewFromBBox(bbox)
+    const ids = [...optimalNodeIds].filter((id) => visibleIds.has(id))
+    const bbox = computeBBoxForNodeIds(ids, nodesById, boxById, WIDTH, HEIGHT)
+    const v = viewFromBBox(bbox, WIDTH, HEIGHT)
     animateToView(v.zoom, v.pan)
-  }, [visibleIds, nodesById, boxById, animateToView])
+  }, [visibleIds, nodesById, boxById, animateToView, optimalNodeIds, WIDTH, HEIGHT])
 
   useEffect(() => {
     if (visibleIds.size === 0) return
     if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
     fitDebounceRef.current = setTimeout(() => {
       fitDebounceRef.current = null
-      const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById)
-      const v = viewFromBBox(bbox)
+      const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT)
+      const v = viewFromBBox(bbox, WIDTH, HEIGHT)
       animateToView(v.zoom, v.pan)
     }, FIT_DEBOUNCE_MS)
     return () => {
       if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
     }
-  }, [visibleIds, graphComplete, nodesById, boxById, animateToView])
+  }, [visibleIds, graphComplete, nodesById, boxById, animateToView, WIDTH, HEIGHT])
 
   useEffect(() => {
     const el = containerRef.current
@@ -599,7 +614,7 @@ function ScenarioGraph({
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [applyViewTransform])
+  }, [applyViewTransform, WIDTH, HEIGHT])
 
   const zoomIn = () => {
     const nz = Math.min(ZOOM_MAX, zoomRef.current * 1.18)
@@ -621,7 +636,7 @@ function ScenarioGraph({
         style={{
           touchAction: 'none',
           backgroundImage:
-            `linear-gradient(${palette.canvasGrid} 1px, transparent 1px), linear-gradient(90deg, ${palette.canvasGrid} 1px, transparent 1px)`,
+            `linear-gradient(${gridColor} 1px, transparent 1px), linear-gradient(90deg, ${gridColor} 1px, transparent 1px)`,
           backgroundSize: '28px 28px',
         }}
         onPointerDown={(e) => {
@@ -658,7 +673,11 @@ function ScenarioGraph({
             className="pointer-events-none absolute inset-0 z-0"
             style={{
               background:
-                'radial-gradient(120% 90% at 55% 52%, rgba(25, 110, 186, 0.18) 0%, rgba(5, 33, 66, 0.18) 52%, rgba(3, 18, 37, 0.08) 100%), radial-gradient(65% 45% at 50% 50%, rgba(51, 181, 255, 0.12) 0%, rgba(51, 181, 255, 0.03) 60%, rgba(51, 181, 255, 0) 100%)',
+                visualTone === 'fcf'
+                  ? 'radial-gradient(120% 90% at 52% 48%, rgba(180, 83, 9, 0.2) 0%, rgba(55, 28, 6, 0.2) 52%, rgba(18, 10, 4, 0.08) 100%), radial-gradient(65% 45% at 48% 52%, rgba(251, 191, 36, 0.14) 0%, rgba(251, 191, 36, 0.04) 60%, rgba(251, 191, 36, 0) 100%)'
+                  : visualTone === 'opex'
+                    ? 'radial-gradient(120% 90% at 55% 52%, rgba(109, 40, 217, 0.16) 0%, rgba(30, 15, 55, 0.2) 52%, rgba(8, 6, 22, 0.08) 100%), radial-gradient(65% 45% at 50% 50%, rgba(167, 139, 250, 0.14) 0%, rgba(167, 139, 250, 0.04) 60%, rgba(167, 139, 250, 0) 100%)'
+                    : 'radial-gradient(120% 90% at 55% 52%, rgba(25, 110, 186, 0.18) 0%, rgba(5, 33, 66, 0.18) 52%, rgba(3, 18, 37, 0.08) 100%), radial-gradient(65% 45% at 50% 50%, rgba(51, 181, 255, 0.12) 0%, rgba(51, 181, 255, 0.03) 60%, rgba(51, 181, 255, 0) 100%)',
             }}
           />
         )}
@@ -771,7 +790,7 @@ function ScenarioGraph({
               })}
             </g>
 
-            {scenarioGraphNodes.map((node) => {
+            {nodes.map((node) => {
               const visible = visibleIds.has(node.id)
               const layout = nodeLayouts.get(node.id)
               if (!layout) return null

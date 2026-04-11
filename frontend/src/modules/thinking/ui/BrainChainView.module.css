@@ -73,6 +73,10 @@
   color: #cbd5e1;
 }
 
+.graphCaptionAbove {
+  margin: 0 0 0.5rem;
+}
+
 .placeholder {
   list-style: none;
   margin: 0;
@@ -352,6 +356,18 @@
   border: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.boardScenarioCaption {
+  margin: 0 0 8px 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(186, 230, 253, 0.9);
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .boardGraphWrap {

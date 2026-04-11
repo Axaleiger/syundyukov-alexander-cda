@@ -10,9 +10,11 @@ import { NewDemoHypercubeExpandedPanel } from "./hypercube/NewDemoHypercubeExpan
 import { NewDemoLifecycleCard } from "./lifecycle/NewDemoLifecycleCard"
 import { NewDemoLifecycleExpandedPanel } from "./lifecycle/NewDemoLifecycleExpandedPanel"
 import { NewDemoSelectedAssetSidebar } from "./selected-asset/NewDemoSelectedAssetSidebar"
+import { useAppStore } from "../../../../core/store/appStore"
 import styles from "./NewDemoFaceView.module.css"
 
 export function NewDemoFaceView() {
+	const agreedInfluenceLine = useAppStore((s) => s.agreedInfluenceLine)
 	const { routePrefix } = useStand()
 	const [activeTopPanel, setActiveTopPanel] = useState(null)
 	const [lifecycleViewMode, setLifecycleViewMode] = useState("sum")
@@ -187,6 +189,7 @@ export function NewDemoFaceView() {
 						assetStatusLabel={assetStatusLabel}
 						assetStatusIcon={assetStatusIcon}
 						scenarioComparisonRevision={scenarioComparisonRevision}
+						agreedInfluenceLine={agreedInfluenceLine}
 						onClose={handleClearSelectedAsset}
 						panelRef={assetSidebarPanelRef}
 					/>

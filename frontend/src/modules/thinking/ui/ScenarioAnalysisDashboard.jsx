@@ -48,7 +48,20 @@ function NumberedRecommendationList({ items, isNewDemo = false }) {
   )
 }
 
-function ScenarioAnalysisDashboard({ visible = false, isNewDemo = false }) {
+/**
+ * @param {{ title: string, bullets: string[] } | null} [primaryCard]
+ * @param {{ title: string, bullets: string[] } | null} [secondaryCard]
+ * @param {typeof kpiRows} [kpiRowsData]
+ */
+function ScenarioAnalysisDashboard({
+  visible = false,
+  isNewDemo = false,
+  scenarioBranchCount = SCENARIO_BRANCH_COUNT,
+  optimalVariant = OPTIMAL_SCENARIO_VARIANT,
+  primaryCard = null,
+  secondaryCard = null,
+  kpiRowsData = null,
+}) {
   const metricMeta = {
     NPV: { label: 'Чистая приведённая стоимость портфеля (NPV)', higherIsGood: true },
     IRR: { label: 'Внутренняя норма доходности проекта (IRR)', higherIsGood: true },
@@ -57,6 +70,16 @@ function ScenarioAnalysisDashboard({ visible = false, isNewDemo = false }) {
     CAPEX: { label: 'Капитальные затраты (CAPEX)', higherIsGood: false },
     OPEX: { label: 'Операционные затраты (OPEX)', higherIsGood: false },
   }
+
+  const pCard = primaryCard ?? {
+    title: 'Ввод новых скважин/Зарезка боковых стволов скважин',
+    bullets: recommendations.vnsZbs,
+  }
+  const sCard = secondaryCard ?? {
+    title: 'Геолого-технические мероприятия',
+    bullets: recommendations.gtm,
+  }
+  const rows = kpiRowsData ?? kpiRows
 
   const checkIcon = (
     <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isNewDemo ? "bg-sky-400/20 text-sky-200" : "bg-emerald-500/15 text-emerald-700"}`}>
@@ -82,7 +105,7 @@ function ScenarioAnalysisDashboard({ visible = false, isNewDemo = false }) {
     >
       <DashboardIconRow icon={checkIcon} isNewDemo={isNewDemo}>
         <p className={`m-0 text-sm font-semibold leading-5 ${isNewDemo ? "text-slate-100" : "text-slate-700"}`}>
-          Проанализировано {SCENARIO_BRANCH_COUNT} сценариев. Оптимальный — Вариант {OPTIMAL_SCENARIO_VARIANT}
+          Проанализировано {scenarioBranchCount} сценариев. Оптимальный — Вариант {optimalVariant}
         </p>
       </DashboardIconRow>
 
@@ -90,17 +113,17 @@ function ScenarioAnalysisDashboard({ visible = false, isNewDemo = false }) {
         <article className={`rounded-lg border transition-colors duration-200 ${isNewDemo ? "border-sky-400/30 bg-slate-900/35 p-4 hover:bg-slate-900/55" : "border-slate-200 bg-slate-100 p-4 hover:bg-slate-200/80"}`}>
           <div className={`flex items-start gap-2 ${isNewDemo ? "mb-2.5" : "mb-3"}`}>
             <span className="h-8 w-1 shrink-0 rounded-full bg-emerald-400" />
-            <h5 className={`text-sm font-semibold leading-5 ${isNewDemo ? "text-slate-100" : "text-emerald-800"}`}>Ввод новых скважин/Зарезка боковых стволов скважин</h5>
+            <h5 className={`text-sm font-semibold leading-5 ${isNewDemo ? "text-slate-100" : "text-emerald-800"}`}>{pCard.title}</h5>
           </div>
-          <NumberedRecommendationList items={recommendations.vnsZbs} isNewDemo={isNewDemo} />
+          <NumberedRecommendationList items={pCard.bullets} isNewDemo={isNewDemo} />
         </article>
 
         <article className={`rounded-lg border transition-colors duration-200 ${isNewDemo ? "border-sky-400/30 bg-slate-900/35 p-4 hover:bg-slate-900/55" : "border-slate-200 bg-slate-100 p-4 hover:bg-slate-200/80"}`}>
           <div className={`flex items-start gap-2 ${isNewDemo ? "mb-2.5" : "mb-3"}`}>
             <span className="h-8 w-1 shrink-0 rounded-full bg-sky-400" />
-            <h5 className={`text-sm font-semibold leading-5 ${isNewDemo ? "text-slate-100" : "text-sky-800"}`}>Геолого-технические мероприятия</h5>
+            <h5 className={`text-sm font-semibold leading-5 ${isNewDemo ? "text-slate-100" : "text-sky-800"}`}>{sCard.title}</h5>
           </div>
-          <NumberedRecommendationList items={recommendations.gtm} isNewDemo={isNewDemo} />
+          <NumberedRecommendationList items={sCard.bullets} isNewDemo={isNewDemo} />
         </article>
       </div>
 
@@ -110,7 +133,7 @@ function ScenarioAnalysisDashboard({ visible = false, isNewDemo = false }) {
 
       <div className={`rounded-lg border ${isNewDemo ? "border-sky-400/30 bg-slate-900/35 p-4" : "border-slate-200 bg-slate-100 p-4"}`}>
         <div className={isNewDemo ? "space-y-1.5" : "space-y-2"}>
-          {kpiRows.map((row) => {
+          {rows.map((row) => {
             const meta = metricMeta[row.metric] || { label: row.metric, higherIsGood: true }
             const isPositiveDelta = String(row.delta || '').trim().startsWith('+')
             const isGood = isPositiveDelta ? meta.higherIsGood : !meta.higherIsGood

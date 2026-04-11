@@ -6,7 +6,7 @@ import {
 	useRef,
 	useState,
 } from "react"
-import { useNavigate, useOutletContext } from "react-router-dom"
+import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom"
 
 import appLayoutStyles from "../../app/layouts/AppLayout.module.css"
 import { useStand } from "../../app/stands/standContext"
@@ -16,28 +16,65 @@ import { normalizePlanningBoardPayload } from "../../modules/planning/lib/planni
 import { serializeBoardForSave } from "../../modules/planning/lib/serializeBoardForSave"
 import { useAppStore } from "../../core/store/appStore"
 import { bpmToMermaid } from "../../modules/planning/lib/bpmToMermaid"
-import mapPointsData from "../../core/data/static/mapPoints.json"
+import { useMapPointsData } from "../../modules/globe/model/useMapPointsData"
 import { API_V1_PREFIX, apiFetch } from "../../core/data/repositories/http/httpClient.js"
+import {
+	AI_PLANNING_BOARD_PRESETS,
+	AI_PLANNING_PRESET_SCENARIO_NAMES,
+} from "../../modules/planning/data/aiPlanningBoardPresets.js"
+
+const PLANNING_CASES_LIST_URL = `${API_V1_PREFIX}/planning/cases`
+
+function normalizeScenarioTitle(s) {
+	return String(s || "")
+		.trim()
+		.toLowerCase()
+		.replace(/[\u201c\u201d\u201e\u00ab\u00bb]/g, '"')
+}
 
 /**
+ * UUID сценария по имени (короткому или полному) или по коду SC-… из списка API.
  * @param {string} title
  * @returns {Promise<string | null>}
  */
 async function resolveScenarioIdFromApi(title) {
 	if (!title || typeof title !== "string") return null
 	const list = await apiFetch(`${API_V1_PREFIX}/scenarios`)
-	const n = title.trim().toLowerCase()
-	const hit = list.find((s) => {
-		const sn = (s.name || "").toLowerCase()
-		return sn.includes(n) || n.includes(sn.slice(0, Math.min(36, sn.length)))
-	})
-	return hit ? String(hit.id) : null
+	if (!Array.isArray(list)) return null
+	const n = normalizeScenarioTitle(title)
+
+	const byExact = list.find((s) => normalizeScenarioTitle(s.name) === n)
+	if (byExact) return String(byExact.id)
+
+	const byPrefix = list.find((s) =>
+		normalizeScenarioTitle(s.name).startsWith(n),
+	)
+	if (byPrefix) return String(byPrefix.id)
+
+	const byContains = list.find((s) =>
+		normalizeScenarioTitle(s.name).includes(n),
+	)
+	if (byContains) return String(byContains.id)
+
+	const code = title.trim().match(/^SC-\d+/i)
+	if (code) {
+		const c = code[0].toUpperCase()
+		const byExt = list.find(
+			(s) => String(s.externalCode || "").toUpperCase() === c,
+		)
+		if (byExt) return String(byExt.id)
+	}
+
+	return null
 }
 
 export function PlanningPage() {
 	const navigate = useNavigate()
 	const { routePrefix } = useStand()
 	const { onBpmCommandConsumed } = useOutletContext() || {}
+	const [searchParams, setSearchParams] = useSearchParams()
+	const aiFromThinking = searchParams.get("aiFromThinking") === "1"
+	const presetFromUrl = searchParams.get("preset") || ""
 
 	const {
 		selectedScenarioName,
@@ -58,7 +95,13 @@ export function PlanningPage() {
 		setFlowCode,
 		servicePageName,
 		setServicePageName,
+		aiAssistantPreset,
+		setAiAssistantPreset,
+		agreedAiPlanningBoardPreset,
+		setAgreedAiPlanningBoardPreset,
 	} = useAppStore()
+
+	const mapPointsData = useMapPointsData()
 
 	const disabledTabs = useMemo(() => {
 		const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
@@ -106,8 +149,93 @@ export function PlanningPage() {
 			selectedAssetId
 				? mapPointsData.find((p) => p.id === selectedAssetId)
 				: null,
-		[selectedAssetId],
+		[selectedAssetId, mapPointsData],
 	)
+
+	/** Пресет xlsx: из URL при переходе или из стора после поглощения loadAiPresetBoard. */
+	const resolvedAiPresetKey = useMemo(() => {
+		if (aiFromThinking && presetFromUrl && AI_PLANNING_BOARD_PRESETS[presetFromUrl])
+			return presetFromUrl
+		if (aiAssistantPreset && AI_PLANNING_BOARD_PRESETS[aiAssistantPreset])
+			return aiAssistantPreset
+		if (
+			agreedAiPlanningBoardPreset &&
+			AI_PLANNING_BOARD_PRESETS[agreedAiPlanningBoardPreset]
+		)
+			return agreedAiPlanningBoardPreset
+		return null
+	}, [
+		aiFromThinking,
+		presetFromUrl,
+		aiAssistantPreset,
+		agreedAiPlanningBoardPreset,
+	])
+
+	const resolvedAiPresetBoard = resolvedAiPresetKey
+		? AI_PLANNING_BOARD_PRESETS[resolvedAiPresetKey]
+		: null
+
+	/** Доска из пресета ИИ должна оставаться на экране после onBpmCommandConsumed (bpmCommand → null). */
+	const aiPresetPlanningActive = Boolean(
+		bpmCommand?.scenarioId === "loadAiPresetBoard" || resolvedAiPresetBoard,
+	)
+
+	useEffect(() => {
+		if (!aiFromThinking || !presetFromUrl) return
+		const presetBoard = AI_PLANNING_BOARD_PRESETS[presetFromUrl]
+		if (!presetBoard) return
+		setSelectedScenarioId(null)
+		setPlanningCaseId(null)
+		setSelectedScenarioName(presetBoard.scenarioName)
+		setBoardMountKey(`ai-preset-${presetFromUrl}-${Date.now()}`)
+	}, [
+		aiFromThinking,
+		presetFromUrl,
+		setPlanningCaseId,
+		setSelectedScenarioId,
+		setSelectedScenarioName,
+	])
+
+	const handleAiPlanningAgreeReturn = useCallback(() => {
+		const preset = presetFromUrl || aiAssistantPreset
+		if (!preset) return
+		setAgreedAiPlanningBoardPreset(preset)
+		setAiAssistantPreset(null)
+		const next = new URLSearchParams(searchParams)
+		next.delete("aiFromThinking")
+		next.delete("preset")
+		setSearchParams(next, { replace: true })
+		const faceBase = standHref(routePrefix, "face")
+		navigate(`${faceBase}?aiReturn=1&preset=${encodeURIComponent(preset)}`)
+	}, [
+		aiAssistantPreset,
+		navigate,
+		presetFromUrl,
+		routePrefix,
+		searchParams,
+		setAgreedAiPlanningBoardPreset,
+		setAiAssistantPreset,
+		setSearchParams,
+	])
+
+	/** После согласования на главной имя сценария в сторе может отличаться от пресета доски. */
+	useEffect(() => {
+		if (!agreedAiPlanningBoardPreset || aiFromThinking || aiAssistantPreset) return
+		const board = AI_PLANNING_BOARD_PRESETS[agreedAiPlanningBoardPreset]
+		if (!board?.scenarioName) return
+		if (selectedScenarioName === board.scenarioName) return
+		setSelectedScenarioName(board.scenarioName)
+		setSelectedScenarioId(null)
+		setPlanningCaseId(null)
+	}, [
+		agreedAiPlanningBoardPreset,
+		aiAssistantPreset,
+		aiFromThinking,
+		selectedScenarioName,
+		setPlanningCaseId,
+		setSelectedScenarioId,
+		setSelectedScenarioName,
+	])
 
 	// После reset preset selectedScenarioId может быть null, а имя дефолтного сценария уже есть.
 	// Восстанавливаем scenarioId через API, чтобы Planning не оставался пустым.
@@ -129,6 +257,20 @@ export function PlanningPage() {
 
 	useEffect(() => {
 		if (!selectedScenarioId) {
+			// Доска из пресета ИИ (xlsx): в API может не быть scenarioId — не сбрасывать key,
+			// иначе BPMBoard перемонтируется и теряет данные после loadAiPresetBoard.
+			const keepAiPresetBoard =
+				(aiFromThinking &&
+					presetFromUrl &&
+					AI_PLANNING_BOARD_PRESETS[presetFromUrl]) ||
+				(agreedAiPlanningBoardPreset &&
+					AI_PLANNING_BOARD_PRESETS[agreedAiPlanningBoardPreset]) ||
+				(selectedScenarioName &&
+					AI_PLANNING_PRESET_SCENARIO_NAMES.has(selectedScenarioName))
+			if (keepAiPresetBoard) {
+				setPlanningCaseId(null)
+				return
+			}
 			setBoardMountKey("default")
 			setPlanningCaseId(null)
 			return
@@ -141,14 +283,33 @@ export function PlanningPage() {
 
 		;(async () => {
 			try {
-				const cases = await apiFetch(`${API_V1_PREFIX}/planning/cases`)
+				const cases = await apiFetch(PLANNING_CASES_LIST_URL)
 				if (cancelled) return
-				const match = cases.find(
-					(c) =>
-						String(c.scenarioId ?? "") ===
-						String(selectedScenarioId ?? ""),
-				)
+				const match = Array.isArray(cases)
+					? cases.find(
+							(c) =>
+								String(c.scenarioId ?? "") ===
+								String(selectedScenarioId ?? ""),
+						)
+					: null
 				if (!match) {
+					if (selectedScenarioName) {
+						try {
+							const sid = await resolveScenarioIdFromApi(
+								selectedScenarioName,
+							)
+							if (
+								!cancelled &&
+								sid &&
+								sid !== String(selectedScenarioId ?? "")
+							) {
+								setSelectedScenarioId(sid)
+								return
+							}
+						} catch {
+							/* fall through */
+						}
+					}
 					setBpmBoard(null, null, null)
 					setPlanningCaseId(null)
 					setBoardMountKey(`${selectedScenarioId}-none`)
@@ -187,7 +348,17 @@ export function PlanningPage() {
 			}
 			void flushBoardSaveRef.current()
 		}
-	}, [selectedScenarioId, setBpmBoard, setFlowCode, setPlanningCaseId])
+	}, [
+		selectedScenarioId,
+		selectedScenarioName,
+		agreedAiPlanningBoardPreset,
+		aiFromThinking,
+		presetFromUrl,
+		setBpmBoard,
+		setFlowCode,
+		setPlanningCaseId,
+		setSelectedScenarioId,
+	])
 
 	const handleBoardChange = useCallback((stages, tasks, connections) => {
 		setBpmBoard(stages, tasks, connections)
@@ -223,9 +394,17 @@ export function PlanningPage() {
 					"Проактивное управление ремонтами и приоритетами",
 			)
 			setSelectedScenarioId(sid)
+			setAiAssistantPreset(null)
+			setAgreedAiPlanningBoardPreset(null)
 			navigate("/planning")
 		},
-		[navigate, setSelectedScenarioId, setSelectedScenarioName],
+		[
+			navigate,
+			setAgreedAiPlanningBoardPreset,
+			setAiAssistantPreset,
+			setSelectedScenarioId,
+			setSelectedScenarioName,
+		],
 	)
 
 	const handleBackToScenarios = useCallback(() => {
@@ -263,20 +442,24 @@ export function PlanningPage() {
 	}
 
 	const hideBoardForCaseFetch =
+		!aiPresetPlanningActive &&
 		selectedScenarioId &&
 		planningCaseLoading &&
-		bpmCommand?.scenarioId !== "createPlanningCase"
-	/** Доска только из API: кейс в БД или режим создания кейса из ИИ — без демо-пресетов. */
+		bpmCommand?.scenarioId !== "createPlanningCase" &&
+		bpmCommand?.scenarioId !== "loadAiPresetBoard"
+	/** Доска из API, режим ИИ createPlanningCase или пресет доски из ИИ (xlsx-аналог). */
 	const showPlanningBoard =
 		!hideBoardForCaseFetch &&
 		(Boolean(planningCaseId) ||
-			bpmCommand?.scenarioId === "createPlanningCase")
+			bpmCommand?.scenarioId === "createPlanningCase" ||
+			aiPresetPlanningActive)
 
 	const showNoCaseWarning =
 		Boolean(selectedScenarioId) &&
 		!planningCaseLoading &&
 		!planningCaseId &&
-		bpmCommand?.scenarioId !== "createPlanningCase"
+		bpmCommand?.scenarioId !== "createPlanningCase" &&
+		bpmCommand?.scenarioId !== "loadAiPresetBoard"
 
 	return (
 		<div
@@ -284,7 +467,8 @@ export function PlanningPage() {
 		>
 			{selectedScenarioId &&
 				planningCaseLoading &&
-				bpmCommand?.scenarioId !== "createPlanningCase" && (
+				bpmCommand?.scenarioId !== "createPlanningCase" &&
+				bpmCommand?.scenarioId !== "loadAiPresetBoard" && (
 					<div className={appLayoutStyles["bpm-loading"]} aria-live="polite">
 						Загрузка доски планирования…
 					</div>
@@ -300,6 +484,18 @@ export function PlanningPage() {
 					выберите другой сценарий.
 				</div>
 			)}
+			{aiFromThinking && presetFromUrl && AI_PLANNING_BOARD_PRESETS[presetFromUrl] ? (
+				<div
+					className={appLayoutStyles["bpm-ai-agree-bar"]}
+					role="region"
+					aria-label="Согласование возврата после сценария ИИ"
+				>
+					<span>Сценарий сформирован ИИ помощником и требует согласования.</span>
+					<button type="button" onClick={handleAiPlanningAgreeReturn}>
+						Согласовать
+					</button>
+				</div>
+			) : null}
 			{showPlanningBoard && (
 				<Suspense
 					fallback={
@@ -314,14 +510,24 @@ export function PlanningPage() {
 						initialStages={
 							bpmCommand?.scenarioId === "createPlanningCase"
 								? undefined
-								: bpmStages
+								: resolvedAiPresetBoard
+									? resolvedAiPresetBoard.stages
+									: bpmStages
 						}
 						initialTasks={
 							bpmCommand?.scenarioId === "createPlanningCase"
 								? undefined
-								: bpmTasks
+								: resolvedAiPresetBoard
+									? resolvedAiPresetBoard.tasks
+									: bpmTasks
 						}
-						initialConnections={bpmConnections ?? undefined}
+						initialConnections={
+							bpmCommand?.scenarioId === "createPlanningCase"
+								? undefined
+								: resolvedAiPresetBoard?.connections ??
+									bpmConnections ??
+									undefined
+						}
 						selectedAssetName={selectedAssetPoint?.name}
 						highlightCardName={bpmHighlight}
 						onClose={canGoBackToScenarios ? handleBackToScenarios : undefined}
@@ -331,6 +537,11 @@ export function PlanningPage() {
 						onOpenPlanningWithScenario={handleOpenPlanningWithScenario}
 						bpmCommand={bpmCommand}
 						onBpmCommandConsumed={onBpmCommandConsumed}
+						animateAiBoardReveal={Boolean(
+							aiFromThinking &&
+								presetFromUrl &&
+								AI_PLANNING_BOARD_PRESETS[presetFromUrl],
+						)}
 					/>
 				</Suspense>
 			)}

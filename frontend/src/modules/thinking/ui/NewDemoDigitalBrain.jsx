@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef } from "react"
 import "./NewDemoDigitalBrain.css"
 
 function clamp(v, min, max) {
@@ -58,7 +58,11 @@ export default function NewDemoDigitalBrain({
 	const rafRef = useRef(0)
 	const centerRef = useRef({ x: 0, y: 0 })
 	const progressRef = useRef(0)
-	const [displayProgress, setDisplayProgress] = useState(0)
+	const graphProgressTargetRef = useRef(graphProgressPercent)
+
+	useEffect(() => {
+		graphProgressTargetRef.current = graphProgressPercent
+	}, [graphProgressPercent])
 
 	useEffect(() => {
 		const canvas = canvasRef.current
@@ -81,12 +85,10 @@ export default function NewDemoDigitalBrain({
 
 		const render = (timeMs) => {
 			const t = timeMs * 0.001
+			const g = graphProgressTargetRef.current
 			const target =
-				graphProgressPercent != null && Number.isFinite(graphProgressPercent)
-					? clamp(graphProgressPercent, 0, 100)
-					: 0
+				g != null && Number.isFinite(g) ? clamp(g, 0, 100) : 0
 			progressRef.current = smooth(progressRef.current, target, 0.08)
-			setDisplayProgress(Math.round(progressRef.current))
 
 			const width = canvas.clientWidth
 			const height = canvas.clientHeight
@@ -206,7 +208,7 @@ export default function NewDemoDigitalBrain({
 			if (rafRef.current) cancelAnimationFrame(rafRef.current)
 			ro.disconnect()
 		}
-	}, [graphProgressPercent, points])
+	}, [points])
 
 	return (
 		<div className="new-demo-brain-root">

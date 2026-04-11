@@ -7,7 +7,10 @@ export function demoFaceMapAssetSelect(pointId) {
 		setSelectedAssetId,
 		setScenarioComparisonRevision,
 	} = useAppStore.getState()
-	resetDemoFaceScenarioWorkflow()
+	/** Снятие выделения с точки — не сбрасываем face-workflow (иначе теряется согласованный пресет планирования и пр.). */
+	if (pointId) {
+		resetDemoFaceScenarioWorkflow()
+	}
 	setSelectedAssetId(pointId || null)
 	setScenarioComparisonRevision(0)
 }

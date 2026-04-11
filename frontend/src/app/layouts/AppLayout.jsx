@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useCallback, useMemo } from "react"
+import React, { Suspense, useEffect, useCallback, useMemo, useState } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import styles from "./AppLayout.module.css"
 import { useAppStore } from "../../core/store/appStore"
@@ -67,6 +67,7 @@ export const AppLayout = () => {
 		setBpmHighlight,
 		selectedScenarioName,
 		selectedAssetId,
+		setSelectedAssetId,
 		bpmStages,
 		bpmTasks,
 		bpmCommand,
@@ -83,7 +84,11 @@ export const AppLayout = () => {
 		setHypercubeCaseIntro,
 		setConfiguratorNodeCommand,
 		setServicePageName,
+		setAiAssistantPreset,
 	} = useAppStore()
+
+	const [aiAssistantCloseSignal, setAiAssistantCloseSignal] = useState(0)
+	const [thinkingConfirmCounter, setThinkingConfirmCounter] = useState(0)
 
 	const setResultsDashboardFocus = useResultsStore((s) => s.setResultsDashboardFocus)
 	const setAdminSubTab = useAdminStore((s) => s.setAdminSubTab)
@@ -153,6 +158,25 @@ export const AppLayout = () => {
 		[navigate, routePrefix],
 	)
 
+	const navigateToPlanningAfterAi = useCallback(
+		({ preset }) => {
+			if (!preset) return
+			setAiAssistantPreset(preset)
+			setBpmCommand({ scenarioId: "loadAiPresetBoard", params: { preset } })
+			const href = standHref(routePrefix, "planning")
+			navigate(
+				`${href}?aiFromThinking=1&preset=${encodeURIComponent(preset)}`,
+			)
+			setAiAssistantCloseSignal((n) => n + 1)
+		},
+		[navigate, routePrefix, setBpmCommand, setAiAssistantPreset],
+	)
+
+	const handleThinkingConfirmWithCounter = useCallback(() => {
+		handleThinkingConfirm()
+		setThinkingConfirmCounter((c) => c + 1)
+	}, [handleThinkingConfirm])
+
 	const path = (location.pathname || "").replace(/\/$/, "") || "/"
 	const isThinkingDrawerCollapsed =
 		path.endsWith("/planning") || path.endsWith("/ontology")
@@ -177,7 +201,13 @@ export const AppLayout = () => {
 	const aiAssistantAndThinkingDrawer = (
 		<>
 			<AIAssistantWidget
+				appearance="classic"
 				visible={aiMode}
+				selectedAssetId={selectedAssetId}
+				setSelectedAssetId={setSelectedAssetId}
+				assistantCloseSignal={aiAssistantCloseSignal}
+				navigateToPlanningAfterAi={navigateToPlanningAfterAi}
+				thinkingConfirmCounter={thinkingConfirmCounter}
 				setActiveTab={setActiveTab}
 				setBpmCommand={setBpmCommand}
 				setResultsDashboardFocus={setResultsDashboardFocus}
@@ -205,7 +235,7 @@ export const AppLayout = () => {
 				setThinkingCurrentMessage={setThinkingCurrentMessage}
 				isThinkingDrawerCollapsed={isThinkingDrawerCollapsed}
 				showCollapsedBrainMinimal={showCollapsedBrainMinimal}
-				handleThinkingConfirm={handleThinkingConfirm}
+				handleThinkingConfirm={handleThinkingConfirmWithCounter}
 				thinkingSteps={thinkingSteps}
 				thinkingCurrentMessage={thinkingCurrentMessage}
 				thinkingPaused={thinkingPaused}

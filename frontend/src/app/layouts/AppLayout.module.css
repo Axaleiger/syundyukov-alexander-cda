@@ -29,6 +29,36 @@
   font-size: 0.9rem;
 }
 
+.bpm-ai-agree-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0.75rem 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  color: #1e3a5f;
+  font-size: 0.9rem;
+}
+
+.bpm-ai-agree-bar button {
+  flex-shrink: 0;
+  padding: 0.5rem 1.1rem;
+  border-radius: 8px;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bpm-ai-agree-bar button:hover {
+  background: #1d4ed8;
+}
+
 .app-main {
   flex: 1;
   overflow: auto;

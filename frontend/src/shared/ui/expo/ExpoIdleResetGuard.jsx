@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
-import { standHref } from "../../../app/stands/standPathUtils"
-import { API_V1_PREFIX, apiFetch } from "../../../core/data/repositories/http/httpClient"
-import { useAppStore } from "../../../core/store/appStore"
-import { useThinkingStore } from "../../../modules/thinking/model/thinkingStore"
-import { useResultsStore } from "../../../modules/results/model/resultsStore"
-import { useAdminStore } from "../../../modules/admin/model/adminStore"
-import { useOntologyStore } from "../../../modules/ontology/model/ontologyStore"
 import styles from "./ExpoIdleResetGuard.module.css"
+import { restartDemoSessionFromPreset } from "../../lib/restartDemoSessionFromPreset"
 
 const EXPO_ENABLED = String(import.meta.env.VITE_EXPO || "").trim() === "1"
 const IDLE_LIMIT_MS = Number.isFinite(Number(import.meta.env.VITE_EXPO_IDLE_MS))
@@ -19,14 +13,6 @@ const START_DELAY_AFTER_FIRST_ACTION_MS = Number.isFinite(
 	? Number(import.meta.env.VITE_EXPO_ARM_DELAY_MS)
 	: 30_000
 
-/** Полный URL главной face с учётом Vite `base` (без SPA navigate — только полная перезагрузка). */
-function faceHomeUrl(routePrefix) {
-	const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "")
-	const path = standHref(routePrefix, "face")
-	const pathOnly = path.startsWith("/") ? path : `/${path}`
-	return `${window.location.origin}${base}${pathOnly}`
-}
-
 export function ExpoIdleResetGuard({ routePrefix = "" }) {
 	const location = useLocation()
 	const [started, setStarted] = useState(false)
@@ -37,13 +23,6 @@ export function ExpoIdleResetGuard({ routePrefix = "" }) {
 	const startTimerRef = useRef(null)
 	const tickingRef = useRef(null)
 	const resetInProgressRef = useRef(false)
-
-	const resetApp = useAppStore((s) => s.resetExpoPreset)
-	const selectedScenarioId = useAppStore((s) => s.selectedScenarioId)
-	const resetThinking = useThinkingStore((s) => s.resetExpoPreset)
-	const resetResults = useResultsStore((s) => s.resetExpoPreset)
-	const resetAdmin = useAdminStore((s) => s.resetExpoPreset)
-	const resetOntology = useOntologyStore((s) => s.resetExpoPreset)
 
 	const variant = useMemo(
 		() =>
@@ -121,38 +100,7 @@ export function ExpoIdleResetGuard({ routePrefix = "" }) {
 	const restartFromPreset = async () => {
 		if (resetInProgressRef.current) return
 		resetInProgressRef.current = true
-
-		// 1) Откат доски в БД к дефолтному шаблону (если есть выбранный сценарий).
-		try {
-			if (selectedScenarioId) {
-				const cases = await apiFetch(`${API_V1_PREFIX}/planning/cases`)
-				const match = Array.isArray(cases)
-					? cases.find((c) => String(c.scenarioId ?? "") === String(selectedScenarioId))
-					: null
-				if (match?.id) {
-					await apiFetch(
-						`${API_V1_PREFIX}/planning/cases/${match.id}/reset-demo`,
-						{ method: "POST" },
-					)
-				}
-			}
-		} catch {
-			// Не блокируем reset UI, даже если API reset недоступен.
-		}
-
-		// 2) Сброс сторов (ошибки не должны рвать async — иначе unhandled rejection).
-		try {
-			resetThinking?.()
-			resetResults?.()
-			resetAdmin?.()
-			resetOntology?.()
-			resetApp?.()
-		} catch (e) {
-			console.warn("[expo] resetExpoPreset stores", e)
-		}
-
-		// 3) Одна полная навигация без navigate()+reload() — стабильнее для React Router 7.
-		window.location.assign(faceHomeUrl(routePrefix))
+		await restartDemoSessionFromPreset(routePrefix)
 	}
 
 	if (!EXPO_ENABLED) return null
@@ -192,7 +140,6 @@ export function ExpoIdleResetGuard({ routePrefix = "" }) {
 								onClick={() => {
 									void restartFromPreset().catch((e) => {
 										console.warn("[expo] restartFromPreset", e)
-										window.location.assign(faceHomeUrl(routePrefix))
 									})
 								}}
 							>

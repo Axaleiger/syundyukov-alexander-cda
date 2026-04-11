@@ -96,6 +96,17 @@
 	color: #94a3b8;
 }
 
+.aiInfluenceNote {
+	margin: 0;
+	padding: 8px 10px;
+	font-size: 12px;
+	line-height: 1.35;
+	color: #a5f3fc;
+	background: rgba(14, 116, 144, 0.35);
+	border-radius: 8px;
+	border: 1px solid rgba(34, 211, 238, 0.35);
+}
+
 .tabsRow {
 	display: flex;
 	flex-wrap: wrap;

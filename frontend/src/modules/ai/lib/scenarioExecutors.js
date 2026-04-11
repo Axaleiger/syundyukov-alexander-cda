@@ -1,10 +1,10 @@
 /**
  * Исполнители сценариев ИИ-помощника.
- * Контекст: setActiveTab, setBpmCommand, setResultsDashboardFocus, addThinkingStep, isPaused.
- * Третий аргумент: topic (для createPlanningCase) или metric (для focusMetric).
+ * Контекст: setActiveTab, setBpmCommand, setResultsDashboardFocus, addThinkingStep, isPaused, navigateToPlanningAfterAi.
+ * Третий аргумент: topic (строка) или { preset, topic } для aiFaceToPlanning.
  */
 
-import { generateSmartStepsDetailed } from './llmStepGenerator.js'
+import { runAiFacePlanningFlow } from './aiFacePlanningFlow.js'
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -12,94 +12,18 @@ function delay(ms) {
 
 const STEP_DELAY = 650
 
-const CASE_INTRO_DURATION_MS = 2500
-const DEFAULT_STEPS = [
-  'Оценка объёмов', 'Планирование сроков', 'Назначение исполнителей', 'Согласование',
-  'Контроль выполнения', 'Отчётность', 'Корректировка плана', 'Итоговая приёмка',
-]
-
-const GRAPH_STAGES = ['Подготовка', 'Реализация', 'Контроль']
-const GRAPH_SERVICES = [
-  'СПЕКТР', 'Б6К', 'EXOIL', 'ЦД well', 'ГибрИМА', 'ЭРА ИСКРА', 'ЭраРемонты', 'ИПА',
-  'ЦДРБ', 'Бурение', 'ЦД этапов', 'ЦД объектов', 'Интеграция', 'Аналитика', 'Отчётность',
-  'Сервис согласования', 'Хранилище', 'API шлюз', 'Нотификации', 'Дашборд',
-]
-
-function getThinkingGraphNodes(topic) {
-  const topicLabel = topic || 'планирование'
-  return [
-    ...GRAPH_STAGES,
-    `Кейс: ${topicLabel}`,
-    ...DEFAULT_STEPS,
-    'Сбор данных', 'Утверждение плана', 'Идентификация рисков', 'Матрица рисков',
-    ...GRAPH_SERVICES,
-  ]
-}
-
 /**
- * Создание кейса планирования: сначала вкладка «Главная страница», гиперкуб раскрывает уровни и ярко подсвечивает древо этапов и точек; затем переход на Планирование и создание карточек.
+ * Создание кейса планирования: главная → мышление → согласование → планирование с доской «бурение/добыча».
  */
 export async function createPlanningCase(ctx, topic) {
-  const { setActiveTab, setShowBpm, setThinkingPhase, setThinkingGraphNodes, addThinkingStep, isPaused, waitForUserConfirm } = ctx
-  const topicLabel = topic || 'планирование'
+  await runAiFacePlanningFlow(ctx, 'base_drilling', topic)
+}
 
-  if (isPaused?.()) return
-  if (typeof setThinkingPhase === 'function') setThinkingPhase('brain')
-  if (typeof setThinkingGraphNodes === 'function') {
-    setThinkingGraphNodes(getThinkingGraphNodes(topicLabel).map((label, i) => ({ id: `g-${i}`, label })))
-  }
-  addThinkingStep?.('Начинаю с главной страницы…')
-  if (typeof setShowBpm === 'function') setShowBpm(false)
-  if (typeof setActiveTab === 'function') setActiveTab('face')
-  await delay(700)
-  if (isPaused?.()) return
-  addThinkingStep?.('Формирую цепочку сценария…')
-  await delay(900)
-  if (isPaused?.()) return
-  addThinkingStep?.('Анализ контекста и этапов…')
-  await delay(850)
-  if (isPaused?.()) return
-  addThinkingStep?.('Связи между узлами цепочки…')
-  await delay(850)
-  if (isPaused?.()) return
-  addThinkingStep?.('Валидация цепочки…')
-  await delay(850)
-  if (isPaused?.()) return
-  addThinkingStep?.('Готово к согласованию цепочки.')
-  await delay(500)
-  if (isPaused?.()) return
-  if (typeof waitForUserConfirm === 'function') {
-    await waitForUserConfirm(
-      'Проверьте цепочку размышлений и нажмите «Согласовать предлагаемый сценарий» — обновится панель «Сравнение сценариев развития актива» справа.',
-      { phase: 'brain', refreshScenarioPanel: true }
-    )
-  } else {
-    await delay(800)
-  }
-  if (isPaused?.()) return
-
-  let steps = DEFAULT_STEPS
-  try {
-    const generated = await generateSmartStepsDetailed(topicLabel)
-    if (Array.isArray(generated?.steps) && generated.steps.length > 0) steps = generated.steps
-    if (generated?.source === 'fallback') {
-      const reason = generated?.reason ? ` (${generated.reason})` : ''
-      addThinkingStep?.(`ИИ-шаги недоступны${reason}. Использую статический список.`)
-    }
-  } catch (_) {
-    steps = DEFAULT_STEPS
-    addThinkingStep?.('ИИ-шаги недоступны (exception). Использую статический список.')
-  }
-  if (isPaused?.()) return
-  addThinkingStep?.('Пересчитываю экономику сценариев для выбранного актива…')
-  await delay(600)
-  if (isPaused?.()) return
-  for (let i = 0; i < Math.min(4, steps.length); i += 1) {
-    addThinkingStep?.(`Учитываю: ${steps[i]}…`)
-    await delay(420)
-    if (isPaused?.()) return
-  }
-  addThinkingStep?.('Сценарии обновлены в панели сравнения справа.')
+/** Три готовые кнопки демо: пресет fcf_no_drill | opex_reduction | (createPlanningCase → base_drilling). */
+export async function aiFaceToPlanning(ctx, payload) {
+  const preset = payload?.preset ?? 'fcf_no_drill'
+  const topic = payload?.topic
+  await runAiFacePlanningFlow(ctx, preset, topic)
 }
 
 /**
@@ -210,6 +134,7 @@ export async function addPlanningStage(ctx, stageName) {
 
 const EXECUTORS = {
   createPlanningCase,
+  aiFaceToPlanning,
   focusMetric,
   focusNPV,
   buildFullProject,
@@ -224,9 +149,13 @@ const EXECUTORS = {
  * Запустить исполнитель по ID сценария.
  * @param { string } scenarioId
  * @param { object } context
- * @param { string } [topicOrMetric] — тема для кейса или метрика для focusMetric
+ * @param { string | { preset?: string, topic?: string } } [topicOrMetric] — тема, метрика или payload для aiFaceToPlanning
  */
 export async function runScenario(scenarioId, context, topicOrMetric) {
+  if (scenarioId === 'aiFaceToPlanning') {
+    await aiFaceToPlanning(context, topicOrMetric)
+    return
+  }
   const fn = EXECUTORS[scenarioId]
   if (!fn) return
   await fn(context, topicOrMetric)

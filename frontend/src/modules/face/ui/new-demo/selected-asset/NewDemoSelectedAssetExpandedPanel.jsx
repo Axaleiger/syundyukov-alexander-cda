@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { useRepositories } from "../../../../../app/providers/DataRepositoriesProvider"
-import { useAssetScenarioComparison } from "../../../../../widgets/right-panel/RightPanel/model/useAssetScenarioComparison"
+import { useMergedAssetScenarioComparison } from "../../../../../widgets/right-panel/RightPanel/model/useMergedAssetScenarioComparison"
 import { ScenarioMetricRow } from "../../../../../widgets/right-panel/RightPanel/ScenarioMetricRow"
 import { STRATEGY_DECISIONS } from "../../../data/strategyDecisions"
 import styles from "./NewDemoSelectedAssetExpandedPanel.module.css"
@@ -15,7 +15,7 @@ export function NewDemoSelectedAssetExpandedPanel({
 	onClearSelection,
 }) {
 	const { mapGlobe } = useRepositories()
-	const { metricDefs: scenarioMetricDefs, comparison } = useAssetScenarioComparison(assetId)
+	const { metricDefs: scenarioMetricDefs, comparison } = useMergedAssetScenarioComparison(assetId)
 	const showAiDeltas = scenarioComparisonRevision > 0
 	const twinsChain = useMemo(() => {
 		const chains = mapGlobe.getChains()

@@ -22,9 +22,10 @@ function mulberry32(seed) {
   }
 }
 
-function createRng(k) {
-  const seed = (GRAPH_RANDOM_SEED ^ (Math.imul(k, 0x9e3779b1) >>> 0)) >>> 0
-  return mulberry32(seed)
+function createRngForGraph(k, graphSalt = 0) {
+	const salt = graphSalt >>> 0
+	const seed = (GRAPH_RANDOM_SEED ^ salt ^ (Math.imul(k, 0x9e3779b1) >>> 0)) >>> 0
+	return mulberry32(seed)
 }
 
 /** Роли: контекст → аналитика → ветки → веха → сводка → итог */
@@ -323,59 +324,64 @@ function computeRevealWaves(allNodes, allEdges) {
   return wave
 }
 
-function buildGraph() {
-  const nodes = []
-  const edges = []
+/**
+ * @param {{ graphSalt?: number, queryLabel: string, genLabel: string, optimalVariant: number }} opts
+ */
+function buildScenarioGraphCore(opts) {
+	const { graphSalt = 0, queryLabel, genLabel, optimalVariant } = opts
+	const nodes = []
+	const edges = []
 
-  nodes.push({
-    id: 'userQuery',
-    label: 'Анализ пользовательского запроса',
-    type: 'start',
-    x: 0,
-    y: 0,
-  })
+	nodes.push({
+		id: "userQuery",
+		label: queryLabel,
+		type: "start",
+		x: 0,
+		y: 0,
+	})
 
-  nodes.push({
-    id: 'generation',
-    label: 'Генерация и ранжирование сценариев',
-    type: 'start',
-    x: 0,
-    y: 0,
-  })
-  edges.push({ from: 'userQuery', to: 'generation' })
+	nodes.push({
+		id: "generation",
+		label: genLabel,
+		type: "start",
+		x: 0,
+		y: 0,
+	})
+	edges.push({ from: "userQuery", to: "generation" })
 
-  for (let k = 1; k <= N; k++) {
-    const rng = createRng(k)
-    const sid = `scenario-${k}`
-    nodes.push({
-      id: sid,
-      label: `Сценарий ${k}`,
-      type: 'scenario',
-      x: 0,
-      y: 0,
-    })
-    edges.push({ from: 'generation', to: sid })
+	for (let k = 1; k <= N; k++) {
+		const rng = createRngForGraph(k, graphSalt)
+		const sid = `scenario-${k}`
+		nodes.push({
+			id: sid,
+			label: `Сценарий ${k}`,
+			type: "scenario",
+			x: 0,
+			y: 0,
+		})
+		edges.push({ from: "generation", to: sid })
 
-    const branch = buildBranch(k, rng)
-    for (const n of branch.nodes) {
-      const { level: _lv, ...rest } = n
-      nodes.push(rest)
-    }
-    for (const e of branch.edges) edges.push(e)
-  }
+		const branch = buildBranch(k, rng)
+		for (const n of branch.nodes) {
+			const { level: _lv, ...rest } = n
+			nodes.push(rest)
+		}
+		for (const e of branch.edges) edges.push(e)
+	}
 
-  const { width: graphWidth, height: graphHeight } = applyWorkflowLayout(nodes, edges)
+	const { width: graphWidth, height: graphHeight } = applyWorkflowLayout(nodes, edges)
 
-  const waveMap = computeRevealWaves(nodes, edges)
-  for (const n of nodes) {
-    n.revealWave = waveMap.get(n.id) ?? 0
-  }
+	const waveMap = computeRevealWaves(nodes, edges)
+	for (const n of nodes) {
+		n.revealWave = waveMap.get(n.id) ?? 0
+	}
 
-  const maxRevealWave = Math.max(...nodes.map((n) => n.revealWave), 0)
+	const maxRevealWave = Math.max(...nodes.map((n) => n.revealWave), 0)
 
-  const optimal = computeOptimalScenarioClosure(edges, optimalScenarioRootId)
+	const optimalRootId = `scenario-${optimalVariant}`
+	const optimal = computeOptimalScenarioClosure(edges, optimalRootId)
 
-  return { nodes, edges, graphWidth, graphHeight, maxRevealWave, optimal }
+	return { nodes, edges, graphWidth, graphHeight, maxRevealWave, optimal }
 }
 
 function computeOptimalScenarioClosure(edges, rootId) {
@@ -408,7 +414,73 @@ function computeOptimalScenarioClosure(edges, rootId) {
   return { nodeIds, edgeKeys }
 }
 
-const built = buildGraph()
+const built = buildScenarioGraphCore({
+	graphSalt: 0,
+	queryLabel: "Анализ пользовательского запроса",
+	genLabel: "Генерация и ранжирование сценариев",
+	optimalVariant: OPTIMAL_SCENARIO_VARIANT,
+})
+
+/** @param {typeof built} raw @param {string} [visualTone] */
+function toScenarioGraphBundle(raw, visualTone = "default") {
+	return {
+		nodes: raw.nodes,
+		edges: raw.edges,
+		dimensions: { width: raw.graphWidth, height: raw.graphHeight },
+		maxRevealWave: raw.maxRevealWave,
+		optimalNodeIds: raw.optimal.nodeIds,
+		optimalEdgeKeys: raw.optimal.edgeKeys,
+		visualTone,
+	}
+}
+
+export const defaultScenarioGraphBundle = toScenarioGraphBundle(built, "default")
+
+/** Пресеты ИИ (лицо → планирование): отдельная топология/подписи/акцентная ветка. */
+const AI_SCENARIO_GRAPH_PRESETS = {
+	base_drilling: {
+		queryLabel: "Запрос: добыча и программа бурения",
+		genLabel: "Генерация и ранжирование 18 сценариев",
+		optimalVariant: 7,
+		graphSalt: 0x5a11_0001,
+		visualTone: "drilling",
+	},
+	fcf_no_drill: {
+		queryLabel: "Запрос: FCF без новых скважин",
+		genLabel: "Ранжирование сценариев CAPEX / FCF",
+		optimalVariant: 3,
+		graphSalt: 0x7c22_0002,
+		visualTone: "fcf",
+	},
+	opex_reduction: {
+		queryLabel: "Запрос: удельный OPEX и энергия",
+		genLabel: "Сценарии сжатия OPEX при добыче",
+		optimalVariant: 5,
+		graphSalt: 0x3e55_0003,
+		visualTone: "opex",
+	},
+}
+
+const presetGraphBundleCache = new Map()
+
+/**
+ * Граф для панели «Мышление» new-demo по пресету доски ИИ.
+ * @param {string | null | undefined} preset
+ */
+export function getScenarioGraphBundleForAiPreset(preset) {
+	if (!preset || !AI_SCENARIO_GRAPH_PRESETS[preset]) return defaultScenarioGraphBundle
+	if (!presetGraphBundleCache.has(preset)) {
+		const p = AI_SCENARIO_GRAPH_PRESETS[preset]
+		const raw = buildScenarioGraphCore({
+			graphSalt: p.graphSalt,
+			queryLabel: p.queryLabel,
+			genLabel: p.genLabel,
+			optimalVariant: p.optimalVariant,
+		})
+		presetGraphBundleCache.set(preset, toScenarioGraphBundle(raw, p.visualTone))
+	}
+	return presetGraphBundleCache.get(preset)
+}
 
 export const scenarioGraphNodes = built.nodes
 export const scenarioGraphEdges = built.edges

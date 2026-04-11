@@ -1,19 +1,26 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import ScenarioGraph from './ScenarioGraph'
-import DigitalBrain from './DigitalBrain'
 import NewDemoDigitalBrain from './NewDemoDigitalBrain'
 import ScenarioAnalysisDashboard from './ScenarioAnalysisDashboard'
 import styles from './BrainChainView.module.css'
 import chrome from './thinkingDrawerChrome.module.css'
 import {
+  defaultScenarioGraphBundle,
+  getScenarioGraphBundleForAiPreset,
   kpiRows,
   recommendations,
   SCENARIO_BRANCH_COUNT,
   OPTIMAL_SCENARIO_VARIANT,
-  scenarioGraphEdges,
-  scenarioGraphNodes,
 } from '../lib/scenarioGraphData'
+import {
+  mergeKpiDeltasFromTableLines,
+  getBrainOptimalVariantForPreset,
+  getBrainScenarioBranchCount,
+} from '../lib/brainPanelKpi.js'
 import { buildPredsOuts, revealDelayMs } from '../lib/graphRevealSchedule'
+import { useAppStore } from '../../../core/store/appStore.js'
+import { PANELS_SCENARIO_CONTENT } from '../../ai/lib/panelsScenarioContent.js'
+import { AI_PLANNING_BOARD_PRESETS } from '../../planning/data/aiPlanningBoardPresets.js'
 
 /** Убираем дубликаты по label (оставляем первое вхождение) */
 function uniqueStepsByLabel(steps) {
@@ -40,25 +47,61 @@ function BrainChainView({
   onConfirm,
   onGraphBuildCompleteChange,
   isNewDemo = false,
+  graphNodes: _graphNodesFromLayout = [],
 }) {
+  const aiFaceBrainPreset = useAppStore((s) => s.aiFaceBrainPreset)
+  const panelsBlock =
+    aiFaceBrainPreset && PANELS_SCENARIO_CONTENT[aiFaceBrainPreset]
+      ? PANELS_SCENARIO_CONTENT[aiFaceBrainPreset]
+      : null
+  const boardTitle =
+    aiFaceBrainPreset && AI_PLANNING_BOARD_PRESETS[aiFaceBrainPreset]?.scenarioName
+      ? AI_PLANNING_BOARD_PRESETS[aiFaceBrainPreset].scenarioName
+      : null
+  const kpiRowsForBrain = useMemo(() => {
+    if (!panelsBlock?.tableLines) return kpiRows
+    const merged = mergeKpiDeltasFromTableLines(panelsBlock.tableLines)
+    return merged || kpiRows
+  }, [panelsBlock])
+  const scenarioBranchCount = panelsBlock ? getBrainScenarioBranchCount() : SCENARIO_BRANCH_COUNT
+  const optimalVariant = panelsBlock
+    ? getBrainOptimalVariantForPreset(aiFaceBrainPreset)
+    : OPTIMAL_SCENARIO_VARIANT
+  const recCardPrimary = panelsBlock?.cards?.[0]
+  const recCardSecondary = panelsBlock?.cards?.[1]
+
+  const activeGraphBundle = useMemo(() => {
+    if (aiFaceBrainPreset) return getScenarioGraphBundleForAiPreset(aiFaceBrainPreset)
+    return defaultScenarioGraphBundle
+  }, [aiFaceBrainPreset])
+
+  const graphNodesForReveal = useMemo(
+    () => activeGraphBundle.nodes,
+    [activeGraphBundle],
+  )
+  const graphEdgesForReveal = useMemo(
+    () => activeGraphBundle.edges,
+    [activeGraphBundle],
+  )
+
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
   const fullCount = stepsUnique.length
   const [visibleCount, setVisibleCount] = useState(() => (chainAlreadyRevealed ? fullCount : 0))
   const graphSessionSeedRef = useRef(0x5f3759df)
   const [visibleNodeIds, setVisibleNodeIds] = useState(() =>
-    chainAlreadyRevealed ? new Set(scenarioGraphNodes.map((n) => n.id)) : new Set()
+    chainAlreadyRevealed ? new Set(graphNodesForReveal.map((n) => n.id)) : new Set(),
   )
   const graphBuildComplete = useMemo(() => {
     if (chainAlreadyRevealed) return true
-    const n = scenarioGraphNodes.length
+    const n = graphNodesForReveal.length
     return n > 0 && visibleNodeIds.size >= n
-  }, [chainAlreadyRevealed, visibleNodeIds])
+  }, [chainAlreadyRevealed, visibleNodeIds, graphNodesForReveal])
   const graphTargetPercent = useMemo(() => {
     if (chainAlreadyRevealed) return 100
-    const n = scenarioGraphNodes.length
+    const n = graphNodesForReveal.length
     if (n === 0) return 0
     return (visibleNodeIds.size / n) * 100
-  }, [chainAlreadyRevealed, visibleNodeIds])
+  }, [chainAlreadyRevealed, visibleNodeIds, graphNodesForReveal])
   const visibleSteps = useMemo(
     () => stepsUnique.slice(0, visibleCount),
     [stepsUnique, visibleCount]
@@ -89,15 +132,15 @@ function BrainChainView({
 
   useEffect(() => {
     if (!chainAlreadyRevealed) return
-    setVisibleNodeIds(new Set(scenarioGraphNodes.map((n) => n.id)))
-  }, [chainAlreadyRevealed])
+    setVisibleNodeIds(new Set(graphNodesForReveal.map((n) => n.id)))
+  }, [chainAlreadyRevealed, graphNodesForReveal])
 
   useEffect(() => {
     if (chainAlreadyRevealed) return undefined
 
     const sessionSeed = graphSessionSeedRef.current
-    const nodeIds = scenarioGraphNodes.map((n) => n.id)
-    const { preds, outs } = buildPredsOuts(nodeIds, scenarioGraphEdges)
+    const nodeIds = graphNodesForReveal.map((n) => n.id)
+    const { preds, outs } = buildPredsOuts(nodeIds, graphEdgesForReveal)
     const visible = new Set()
     const queued = new Set()
     const timeouts = []
@@ -130,7 +173,7 @@ function BrainChainView({
     return () => {
       timeouts.forEach(clearTimeout)
     }
-  }, [chainAlreadyRevealed])
+  }, [chainAlreadyRevealed, graphNodesForReveal, graphEdgesForReveal])
 
   useEffect(() => {
     if (!onGraphBuildCompleteChange) return
@@ -184,12 +227,18 @@ function BrainChainView({
         </div>
 
         <section className={styles.boardGraphSection}>
+          {boardTitle ? (
+            <p className={styles.boardScenarioCaption} title={boardTitle}>
+              Сценарий: {boardTitle}
+            </p>
+          ) : null}
           <div className={styles.boardGraphWrap}>
             <ScenarioGraph
               visibleNodeIds={visibleNodeIds}
               graphComplete={graphBuildComplete}
               isNewDemo
               isBoardLayout
+              graphBundle={activeGraphBundle}
             />
           </div>
         </section>
@@ -201,7 +250,7 @@ function BrainChainView({
           <div className={styles.boardProgressInner}>
             <div className={styles.boardProgressMeter} aria-hidden />
             <p className={styles.boardProgressText}>
-              Проанализировано {SCENARIO_BRANCH_COUNT} сценариев. Оптимальный — Вариант {OPTIMAL_SCENARIO_VARIANT}
+              Проанализировано {scenarioBranchCount} сценариев. Оптимальный — Вариант {optimalVariant}
             </p>
           </div>
         </section>
@@ -211,9 +260,11 @@ function BrainChainView({
           aria-hidden={!graphBuildComplete}
         >
           <article className={`${styles.boardCard} ${styles.boardRecommendationCard} ${styles.boardRecommendationCardPrimary}`}>
-            <h4 className={styles.boardRecommendationTitle}>Ввод новых скважин/Зарезка боковых стволов скважин</h4>
+            <h4 className={styles.boardRecommendationTitle}>
+              {recCardPrimary?.title ?? 'Ввод новых скважин/Зарезка боковых стволов скважин'}
+            </h4>
             <ol className={styles.boardRecommendationList}>
-              {recommendations.vnsZbs.slice(0, 3).map((item, idx) => (
+              {(recCardPrimary?.bullets ?? recommendations.vnsZbs).slice(0, 3).map((item, idx) => (
                 <li key={item} className={styles.boardRecommendationItem}>
                   <span className={styles.boardRecommendationIndex}>{idx + 1}</span>
                   <span className={styles.boardRecommendationText}>{item}</span>
@@ -223,9 +274,11 @@ function BrainChainView({
           </article>
 
           <article className={`${styles.boardCard} ${styles.boardRecommendationCard} ${styles.boardRecommendationCardSecondary}`}>
-            <h4 className={styles.boardRecommendationTitle}>Геолого-технические мероприятия</h4>
+            <h4 className={styles.boardRecommendationTitle}>
+              {recCardSecondary?.title ?? 'Геолого-технические мероприятия'}
+            </h4>
             <ol className={styles.boardRecommendationList}>
-              {recommendations.gtm.slice(0, 3).map((item, idx) => (
+              {(recCardSecondary?.bullets ?? recommendations.gtm).slice(0, 3).map((item, idx) => (
                 <li key={item} className={styles.boardRecommendationItem}>
                   <span className={styles.boardRecommendationIndex}>{idx + 1}</span>
                   <span className={styles.boardRecommendationText}>{item}</span>
@@ -242,9 +295,10 @@ function BrainChainView({
           <article className={`${styles.boardCard} ${styles.boardKpiCard}`}>
             <h4 className={styles.boardSectionTitle}>Ключевые показатели эффективности</h4>
             <div className={styles.boardKpiTable}>
-              {kpiRows.map((row) => {
+              {kpiRowsForBrain.map((row) => {
                 const meta = metricMeta[row.metric] || { label: row.metric, higherIsGood: true }
-                const isPositiveDelta = String(row.delta || '').trim().startsWith('+')
+                const d = String(row.delta || '').trim()
+                const isPositiveDelta = d.startsWith('+')
                 const isGood = isPositiveDelta ? meta.higherIsGood : !meta.higherIsGood
                 return (
                   <div key={row.metric} className={styles.boardKpiRow}>
@@ -267,22 +321,20 @@ function BrainChainView({
     <div className={`${styles.root} ${isNewDemo ? styles.rootNewDemo : ''}`}>
       <div className={styles.top}>
         <div className={styles.brainWrap}>
-          {isNewDemo ? (
-            <NewDemoDigitalBrain graphProgressPercent={graphTargetPercent} />
-          ) : (
-            <DigitalBrain
-              isThinking={!graphBuildComplete}
-              graphProgressPercent={graphTargetPercent}
-              isNewDemo={isNewDemo}
-            />
-          )}
+          <NewDemoDigitalBrain graphProgressPercent={graphTargetPercent} />
         </div>
       </div>
       <div className={styles.graphWrap}>
+        {boardTitle ? (
+          <p className={`${styles.caption} ${styles.graphCaptionAbove}`} title={boardTitle}>
+            Сценарий: {boardTitle}
+          </p>
+        ) : null}
         <ScenarioGraph
           visibleNodeIds={visibleNodeIds}
           graphComplete={graphBuildComplete}
-          isNewDemo={isNewDemo}
+          isNewDemo
+          graphBundle={activeGraphBundle}
         />
       </div>
       <div className={styles.under} aria-label="Список действий">
@@ -305,7 +357,23 @@ function BrainChainView({
             })
           )}
         </ul>
-        <ScenarioAnalysisDashboard visible={graphBuildComplete} isNewDemo={isNewDemo} />
+        <ScenarioAnalysisDashboard
+          visible={graphBuildComplete}
+          isNewDemo={false}
+          scenarioBranchCount={scenarioBranchCount}
+          optimalVariant={optimalVariant}
+          primaryCard={
+            recCardPrimary
+              ? { title: recCardPrimary.title, bullets: recCardPrimary.bullets }
+              : null
+          }
+          secondaryCard={
+            recCardSecondary
+              ? { title: recCardSecondary.title, bullets: recCardSecondary.bullets }
+              : null
+          }
+          kpiRowsData={kpiRowsForBrain}
+        />
         {stepsUnique.length > 0 && (
           <div className={styles.actions}>
             {awaitingConfirm && onConfirm && (
