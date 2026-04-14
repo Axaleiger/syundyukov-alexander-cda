@@ -1,15 +1,41 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useFunnelData } from "./useFunnelData"
 import { CASE_TREE_STEPS } from "../ui/Hypercube3D/hypercube3DCaseTree"
+import { getHypercubeBaseForAsset, HYPERCUBE_SCALE_MAX } from "./hypercubeAssetBases.js"
 
 function toMillions(pct, scale) {
 	return ((pct / 100) * scale).toFixed(2)
 }
 
+function factorNpv(slider) {
+	return 0.75 + 0.5 * (slider / 100)
+}
+
+function factorReserves(slider) {
+	return 0.9 + 0.2 * (slider / 100)
+}
+
+function factorExtraction(slider) {
+	return 0.85 + 0.3 * (slider / 100)
+}
+
+function clampScene(v, maxScale) {
+	if (!maxScale || maxScale <= 0) return 0
+	return Math.max(0, Math.min(100, (v / maxScale) * 100))
+}
+
 /**
  * Состояние гиперкуба: рычаги, фильтры, fullscreen, case-tree подсветка, sceneProps для сцены.
+ * @param {object} opts
+ * @param {string | null | undefined} [opts.selectedAssetId] — выбранный актив (new-demo)
+ * @param {boolean} [opts.useAssetHypercubeBases] — базы и ±% от hypercubeAssetBases.js
  */
-export function useHypercube3DModel({ onOpenBpm, highlightCaseTree }) {
+export function useHypercube3DModel({
+	onOpenBpm,
+	highlightCaseTree,
+	selectedAssetId,
+	useAssetHypercubeBases = false,
+}) {
 	const { pointsPerLevel, getEntityLabel } = useFunnelData()
 	const [npv, setNpv] = useState(50)
 	const [reserves, setReserves] = useState(50)
@@ -64,9 +90,53 @@ export function useHypercube3DModel({ onOpenBpm, highlightCaseTree }) {
 		return () => document.removeEventListener("fullscreenchange", onFullscreenChange)
 	}, [])
 
-	const npvMillions = toMillions(npv, 800)
-	const reservesMillions = toMillions(reserves, 120)
-	const extractionMillions = toMillions(extraction, 15)
+	const assetBase = useMemo(
+		() => (useAssetHypercubeBases ? getHypercubeBaseForAsset(selectedAssetId) : null),
+		[useAssetHypercubeBases, selectedAssetId],
+	)
+
+	useEffect(() => {
+		if (!useAssetHypercubeBases) return
+		setNpv(50)
+		setReserves(50)
+		setExtraction(50)
+	}, [selectedAssetId, useAssetHypercubeBases])
+
+	const npvMillions = useMemo(() => {
+		if (!useAssetHypercubeBases) return toMillions(npv, 800)
+		const v = assetBase.npv * factorNpv(npv)
+		return v.toFixed(2)
+	}, [useAssetHypercubeBases, assetBase, npv])
+
+	const reservesMillions = useMemo(() => {
+		if (!useAssetHypercubeBases) return toMillions(reserves, 120)
+		const v = assetBase.reserves * factorReserves(reserves)
+		return v.toFixed(2)
+	}, [useAssetHypercubeBases, assetBase, reserves])
+
+	const extractionMillions = useMemo(() => {
+		if (!useAssetHypercubeBases) return toMillions(extraction, 15)
+		const v = assetBase.extraction * factorExtraction(extraction)
+		return v.toFixed(2)
+	}, [useAssetHypercubeBases, assetBase, extraction])
+
+	const sceneNpv = useMemo(() => {
+		if (!useAssetHypercubeBases) return npv
+		const v = assetBase.npv * factorNpv(npv)
+		return clampScene(v, HYPERCUBE_SCALE_MAX.npv)
+	}, [useAssetHypercubeBases, assetBase, npv])
+
+	const sceneReserves = useMemo(() => {
+		if (!useAssetHypercubeBases) return reserves
+		const v = assetBase.reserves * factorReserves(reserves)
+		return clampScene(v, HYPERCUBE_SCALE_MAX.reserves)
+	}, [useAssetHypercubeBases, assetBase, reserves])
+
+	const sceneExtraction = useMemo(() => {
+		if (!useAssetHypercubeBases) return extraction
+		const v = assetBase.extraction * factorExtraction(extraction)
+		return clampScene(v, HYPERCUBE_SCALE_MAX.extraction)
+	}, [useAssetHypercubeBases, assetBase, extraction])
 
 	const closeFunnel = useCallback(() => {
 		setSelectedVariantId(null)
@@ -86,9 +156,9 @@ export function useHypercube3DModel({ onOpenBpm, highlightCaseTree }) {
 	}, [isFullscreen])
 
 	const sceneProps = {
-		npv,
-		reserves,
-		extraction,
+		npv: sceneNpv,
+		reserves: sceneReserves,
+		extraction: sceneExtraction,
 		pointsPerLevel,
 		onPointClick: setSelectedVariantId,
 		selectedVariantId,
@@ -129,5 +199,6 @@ export function useHypercube3DModel({ onOpenBpm, highlightCaseTree }) {
 		closeFunnel,
 		handleToggleFullscreen,
 		sceneProps,
+		useAssetHypercubeBases,
 	}
 }

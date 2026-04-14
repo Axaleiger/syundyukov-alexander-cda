@@ -1,10 +1,13 @@
 import { NewDemoWindRoseMetricList } from "./NewDemoWindRoseMetricList"
 import { NewDemoExpandedLeftWindRoseRadar } from "./NewDemoExpandedLeftWindRoseRadar"
 import { NewDemoExpandedRightWindRoseRadar } from "./NewDemoExpandedRightWindRoseRadar"
+import {
+	getNewDemoHealthStageLabel,
+	getNewDemoHealthStageRoseLabel,
+} from "./newDemoHealthStageLabels"
 import styles from "./NewDemoHealth.module.css"
 
 export function NewDemoHealthExpandedPanel({
-	PRODUCTION_STAGES,
 	leftData,
 	rightData,
 	selectedLeftStageIndex,
@@ -15,7 +18,7 @@ export function NewDemoHealthExpandedPanel({
 }) {
 	return (
 		<div className={styles.expandedRoot}>
-			<section className={styles.expandedPanel} aria-label="Цифровая зрелость ЦД">
+			<section className={styles.expandedPanel} aria-label="Зрелость цифровых двойников">
 				<div className={styles.expandedPanelGlow} aria-hidden />
 				<button
 					type="button"
@@ -26,16 +29,19 @@ export function NewDemoHealthExpandedPanel({
 					×
 				</button>
 				<header className={styles.expandedHeader}>
-					<p className={styles.expandedTitle}>Цифровая зрелость ЦД</p>
+					<p className={styles.expandedTitle}>Зрелость цифровых двойников</p>
 				</header>
 				<div className={styles.expandedWindRoseContainer}>
 					<section className={styles.expandedWindRoseItem}>
-						<h3 className={styles.expandedBlockTitle}>1. ЦД производственных этапов</h3>
+						<h3 className={styles.expandedBlockTitle}>
+							1. Цифровые двойники
+						</h3>
 						<div className={styles.expandedChartBox}>
 							<NewDemoExpandedLeftWindRoseRadar
 								data={leftData}
 								selectedIndex={selectedLeftStageIndex}
 								onSegmentClick={onLeftSegmentClick}
+								getItemLabel={(item) => getNewDemoHealthStageRoseLabel(item.name)}
 							/>
 						</div>
 						<div className={styles.expandedWindRoseContent}>
@@ -43,11 +49,12 @@ export function NewDemoHealthExpandedPanel({
 								data={leftData}
 								selectedIndex={selectedLeftStageIndex}
 								onSegmentClick={onLeftSegmentClick}
+								getItemLabel={(item) => getNewDemoHealthStageLabel(item.name)}
 							/>
 						</div>
 					</section>
 					<section className={styles.expandedWindRoseItem}>
-						<h3 className={styles.expandedBlockTitle}>2. ЦД объектов</h3>
+						<h3 className={styles.expandedBlockTitle}>2. Цифровые двойники объектов</h3>
 						<div className={styles.expandedChartBox}>
 							<NewDemoExpandedRightWindRoseRadar
 								data={rightData}

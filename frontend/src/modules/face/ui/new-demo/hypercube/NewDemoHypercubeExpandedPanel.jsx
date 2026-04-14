@@ -7,7 +7,7 @@ import styles from "./NewDemoHypercubeExpandedPanel.module.css"
 const VARIANT_FILTERS = [
 	{ key: null, label: "Все варианты" },
 	{ key: "applicable", label: "Применимые" },
-	{ key: "legitimate", label: "Легитимные" },
+	{ key: "legitimate", label: "Уверенные" },
 	{ key: "inapplicable", label: "Неприменимые" },
 ]
 export function NewDemoHypercubeExpandedPanel({ onClose, model }) {
@@ -23,11 +23,11 @@ export function NewDemoHypercubeExpandedPanel({ onClose, model }) {
 
 	return (
 		<div className={styles.expandedRoot}>
-			<section className={styles.modal} aria-label="Окно возможностей">
+			<section className={styles.modal} aria-label="Бизнес возможности">
 				<header className={styles.header}>
 					<div className={styles.headerLeft}>
 						<p className={styles.title}>
-							<span>Окно возможностей</span>
+							<span>Бизнес возможности</span>
 						</p>
 						<button
 							type="button"
@@ -55,15 +55,15 @@ export function NewDemoHypercubeExpandedPanel({ onClose, model }) {
 				<div className={`${styles.content} ${isFunnelOpen ? styles.contentExpanded : ""}`}>
 					<aside className={styles.infoZone}>
 						<div className={styles.sectionBlock}>
-							<p className={styles.groupTitle}>Параметры в млн</p>
+							<p className={styles.groupTitle}>Управление целеполаганием</p>
 						</div>
 						<label className={styles.controlRow}>
-							<span className={styles.controlName}>NVP, млн руб</span>
+							<span className={styles.controlName}>NPV, млн руб</span>
 							<strong>{model.npvMillions}</strong>
 							<input type="range" min="0" max="100" value={model.npv} onChange={(e) => model.setNpv(Number(e.target.value))} />
 						</label>
 						<label className={styles.controlRow}>
-							<span className={styles.controlName}>Запасы, млн руб</span>
+							<span className={styles.controlName}>Запасы, млн т</span>
 							<strong>{model.reservesMillions}</strong>
 							<input
 								type="range"
@@ -169,19 +169,21 @@ export function NewDemoHypercubeExpandedPanel({ onClose, model }) {
 					<article className={styles.metricCard}>
 						<p className={styles.metricTitle}>NPV</p>
 						<p className={styles.metricValue}>
-							(оперативный рычаг — деньги за год): {model.npv}% ({model.npvMillions} млн руб)
+							(оперативный рычаг — деньги за год): рычаг {model.npv}% · {model.npvMillions} млн руб (±25% от базы актива)
 						</p>
 					</article>
 					<article className={styles.metricCard}>
 						<p className={styles.metricTitle}>Запасы</p>
 						<p className={styles.metricValue}>
-							(стратегический рычаг — суммарная добыча нефти/КИН за 30 лет): {model.reserves}% ({model.reservesMillions} млн т)
+							(стратегический рычаг — суммарная добыча нефти/КИН за 30 лет): рычаг {model.reserves}% ·{" "}
+							{model.reservesMillions} млн т (±10% от базы актива)
 						</p>
 					</article>
 					<article className={styles.metricCard}>
 						<p className={styles.metricTitle}>Добыча</p>
 						<p className={styles.metricValue}>
-							(Q, млн т) — оперативный рычаг добычи нефти за год: {model.extraction}% ({model.extractionMillions} млн т)
+							(Q, млн т) — оперативный рычаг добычи нефти за год: рычаг {model.extraction}% ·{" "}
+							{model.extractionMillions} млн т (±15% от базы актива)
 						</p>
 					</article>
 				</div>

@@ -1,4 +1,5 @@
 import { NewDemoWindRoseRadar } from "./NewDemoWindRoseRadar"
+import { getNewDemoHealthStageRoseLabel } from "./newDemoHealthStageLabels"
 import styles from "./NewDemoHealth.module.css"
 
 export function NewDemoHealthCard({
@@ -29,7 +30,7 @@ export function NewDemoHealthCard({
 			aria-label={isActive ? "Свернуть цифровую зрелость ЦД" : "Открыть цифровую зрелость ЦД"}
 		>
 			<div className={styles.healthCardHeader}>
-				<p className={styles.healthCardTitle}>Цифровая зрелость ЦД</p>
+				<p className={styles.healthCardTitle}>Зрелость цифровых двойников</p>
 			</div>
 			<div className={styles.healthCardBody}>
 				<div className={styles.healthCardRosePreview}>
@@ -41,6 +42,7 @@ export function NewDemoHealthCard({
 							size="small"
 							showLabels
 							variant="collapsedCard"
+							getItemLabel={(item) => getNewDemoHealthStageRoseLabel(item.name)}
 						/>
 					)}
 				</div>
