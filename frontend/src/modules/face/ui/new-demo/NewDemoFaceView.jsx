@@ -10,6 +10,7 @@ import { NewDemoHypercubeExpandedPanel } from "./hypercube/NewDemoHypercubeExpan
 import { NewDemoLifecycleCard } from "./lifecycle/NewDemoLifecycleCard"
 import { NewDemoLifecycleExpandedPanel } from "./lifecycle/NewDemoLifecycleExpandedPanel"
 import { NewDemoSelectedAssetSidebar } from "./selected-asset/NewDemoSelectedAssetSidebar"
+import { NEW_DEMO_HEALTH_RIGHT_OBJECTS } from "./health/newDemoHealthRightObjects"
 import { useAppStore } from "../../../../core/store/appStore"
 import styles from "./NewDemoFaceView.module.css"
 
@@ -27,7 +28,6 @@ export function NewDemoFaceView() {
 		selectedAssetId,
 		scenarioComparisonRevision,
 		handleMapAssetSelect,
-		PRODUCTION_STAGES,
 		leftRoseData,
 		rightRoseData,
 		faceSeed,
@@ -41,7 +41,10 @@ export function NewDemoFaceView() {
 		handleLeftSegmentClick,
 		handleRightSegmentClick,
 		openPlanningWithHighlight,
-	} = useFacePageModel(routePrefix)
+	} = useFacePageModel(routePrefix, {
+		newDemoRightObjectsList: NEW_DEMO_HEALTH_RIGHT_OBJECTS,
+		newDemoPercentRange: { min: 45, max: 80 },
+	})
 
 	const selectedAsset = useMemo(
 		() => selectedAssetPoint || mapPointsData.find((point) => point.id === selectedAssetId) || null,
@@ -51,6 +54,8 @@ export function NewDemoFaceView() {
 	const hypercubeModel = useHypercube3DModel({
 		onOpenBpm: openPlanningWithHighlight,
 		highlightCaseTree: false,
+		selectedAssetId,
+		useAssetHypercubeBases: true,
 	})
 
 	const isHealthOpen = activeTopPanel === "health"
@@ -156,7 +161,6 @@ export function NewDemoFaceView() {
 				</div>
 				{isHealthOpen ? (
 					<NewDemoHealthExpandedPanel
-						PRODUCTION_STAGES={PRODUCTION_STAGES}
 						leftData={leftRoseData}
 						rightData={rightRoseData}
 						selectedLeftStageIndex={selectedLeftStageIndex}

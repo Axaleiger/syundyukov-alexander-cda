@@ -17,7 +17,12 @@ function arcPath(cx, cy, radius, start, end) {
 	].join(" ")
 }
 
-export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmentClick }) {
+export function NewDemoExpandedLeftWindRoseRadar({
+	data,
+	selectedIndex,
+	onSegmentClick,
+	getItemLabel = (item) => item.name,
+}) {
 	const items = data || []
 	const numItems = items.length
 	const angleStep = numItems > 0 ? (2 * Math.PI) / numItems : 0
@@ -107,8 +112,9 @@ export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmen
 			</svg>
 			<div className={styles.expandedLeftLabels}>
 				{segments.map((segment, idx) => {
-					const p = point(50, 50, 46, segment.spokeAngle)
+					const p = point(50, 50, 49, segment.spokeAngle)
 					const isSelected = displayedSelectedIndex != null && idx === displayedSelectedIndex
+					const label = getItemLabel(segment.item)
 					return (
 						<div
 							key={`${segment.item.name}-${idx}`}
@@ -117,7 +123,7 @@ export function NewDemoExpandedLeftWindRoseRadar({ data, selectedIndex, onSegmen
 							}`}
 							style={{ left: `${p.x}%`, top: `${p.y}%` }}
 						>
-							<span className={styles.expandedLeftLabelName}>{segment.item.name}</span>
+							<span className={styles.expandedLeftLabelName}>{label}</span>
 							<span className={styles.expandedLeftLabelValue}>
 								{Math.round(segment.item.value || 0)}%
 							</span>

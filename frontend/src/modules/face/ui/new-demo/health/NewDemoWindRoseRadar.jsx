@@ -11,6 +11,7 @@ export function NewDemoWindRoseRadar({
 	size = "large",
 	showLabels = true,
 	variant = "default",
+	getItemLabel = (item) => item.name,
 }) {
 	const isSmall = size === "small"
 	// Семантика как в main: порядок сегментов и индексы строго из `data` без ротаций.
@@ -110,6 +111,7 @@ export function NewDemoWindRoseRadar({
 					{items.map((item, idx) => {
 						const p = point(50, 50, isSmall ? 42 : 43, segments[idx].spokeAngle)
 						const isSelected = displayedSelectedIndex === idx
+						const label = getItemLabel(item)
 						return (
 							<button
 								key={`${item.name}-${idx}`}
@@ -117,9 +119,9 @@ export function NewDemoWindRoseRadar({
 								className={`${styles.ndLabel} ${isSelected ? styles.ndLabelSelected : ""}`}
 								style={{ left: `${p.x}%`, top: `${p.y}%` }}
 								onClick={() => onSegmentClick(idx)}
-								aria-label={`${item.name}, ${item.value}%`}
+								aria-label={`${label}, ${item.value}%`}
 							>
-								<span className={styles.ndLabelName}>{item.name}</span>
+								<span className={styles.ndLabelName}>{label}</span>
 								<span className={styles.ndLabelValue}>{Math.round(item.value || 0)}%</span>
 							</button>
 						)

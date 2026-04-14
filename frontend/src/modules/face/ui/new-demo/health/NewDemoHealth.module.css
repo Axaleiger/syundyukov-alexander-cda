@@ -309,6 +309,9 @@
 	font-weight: bold;
 	letter-spacing: 0.02em;
 	max-width: 90px;
+	white-space: pre-line;
+	overflow: visible;
+	text-overflow: unset;
 }
 
 .ndLabelValue {
@@ -481,12 +484,14 @@
 	font-size: 9px;
 	text-align: center;
 	color: rgba(255, 255, 255, 1);
-	max-width: 96px;
+	max-width: 110px;
 	line-height: 1.2;
 }
 
 .expandedLeftLabelName {
 	display: block;
+	white-space: pre-line;
+	overflow: visible;
 }
 
 .expandedLeftLabelValue {
