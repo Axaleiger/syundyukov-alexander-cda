@@ -22,6 +22,7 @@ export function NewDemoHypercubeCard({ isActive, isCompact, onToggle, model }) {
 								{...model.sceneProps}
 								visualPreset="newDemoMini"
 								showHtmlOverlays={false}
+								idleRotationPaused={isActive}
 							/>
 						</Canvas>
 					</div>

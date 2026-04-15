@@ -4,6 +4,23 @@ function point(cx, cy, radius, angle) {
 	return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) }
 }
 
+function labelPositionClamped(cx, cy, r, angle, margin = 7) {
+	const x = cx + r * Math.cos(angle)
+	const y = cy + r * Math.sin(angle)
+	return {
+		x: Math.min(100 - margin, Math.max(margin, x)),
+		y: Math.min(100 - margin, Math.max(margin, y)),
+	}
+}
+
+/** «ЦД энергетики» → три строки: ЦД / энергетики / % (без разрыва слов). */
+function splitCdObjectLabel(name) {
+	const s = String(name || "").trim()
+	const m = s.match(/^ЦД\s+(.+)$/)
+	if (m) return { head: "ЦД", body: m[1].trim() }
+	return { head: s, body: null }
+}
+
 function arcPath(cx, cy, radius, start, end) {
 	const startPoint = point(cx, cy, radius, start)
 	const endPoint = point(cx, cy, radius, end)
@@ -110,8 +127,11 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 			</svg>
 			<div className={styles.expandedRightLabels}>
 				{segments.map((segment, idx) => {
-					const p = point(50, 50, 46, segment.spokeAngle)
+					/* Чуть дальше от контура; clamp только от края блока. Две строки: имя / % — без разрыва слов. */
+					const p = labelPositionClamped(50, 50, 58, segment.spokeAngle)
 					const isSelected = displayedSelectedIndex != null && idx === displayedSelectedIndex
+					const { head, body } = splitCdObjectLabel(segment.item.name)
+					const pct = `${Math.round(segment.item.value || 0)}%`
 					return (
 						<div
 							key={`${segment.item.name}-${idx}`}
@@ -120,7 +140,18 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 							}`}
 							style={{ left: `${p.x}%`, top: `${p.y}%` }}
 						>
-							{segment.item.name} {Math.round(segment.item.value || 0)}%
+							{body != null ? (
+								<>
+									<span className={styles.expandedRightLabelCd}>{head}</span>
+									<span className={styles.expandedRightLabelBody}>{body}</span>
+									<span className={styles.expandedRightLabelValue}>{pct}</span>
+								</>
+							) : (
+								<>
+									<span className={styles.expandedRightLabelName}>{head}</span>
+									<span className={styles.expandedRightLabelValue}>{pct}</span>
+								</>
+							)}
 						</div>
 					)
 				})}

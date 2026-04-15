@@ -120,8 +120,10 @@ export function useFacePageModel(pathPrefix = "", options = {}) {
 		const useNewDemoPercents = newDemoRightObjectsList != null && newDemoPercentRange != null
 		if (useNewDemoPercents) {
 			const { min, max } = newDemoPercentRange
+			const stageSalt =
+				selectedLeftStageIndex == null ? 0 : (selectedLeftStageIndex + 1) * 37 + 3
 			return newDemoRightObjectsList.map((item, i) => {
-				const v = newDemoPercentInRange(seed, 2, i, min, max)
+				const v = newDemoPercentInRange(seed, 2 + stageSalt, i, min, max)
 				return { ...item, value: v, coverage: v }
 			})
 		}

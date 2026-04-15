@@ -143,6 +143,7 @@ export function NewDemoHypercubeExpandedPanel({ onClose, model }) {
 							<HypercubeR3FScene
 								{...model.sceneProps}
 								visualPreset="newDemo"
+								idleRotationPaused
 								showFunnelLevelLabels={isFunnelOpen}
 								sceneOffsetY={isFunnelOpen ? 0.92 : 0}
 								plainFunnelLayers={isFunnelOpen}

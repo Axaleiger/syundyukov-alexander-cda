@@ -1,20 +1,39 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useFrame } from "@react-three/fiber"
 import * as THREE from "three"
+import {
+	globePointIsCtaPulse,
+	newDemoRoseSyncPulseHex,
+	newDemoRoseSyncPulseMix01,
+} from "../../constants/globeCtaPulsePoints"
 import { latLngToVector3 } from "./latLngToVector3"
+
+/**
+ * Размер маркеров на глобусе `/new-demo/face` (штифт, кольца, ореол у поверхности).
+ * 1.0 ≈ прежний масштаб; увеличивайте для более крупных точек.
+ */
+export const NEW_DEMO_MAP_POINT_SIZE = 2.5
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1)
 const Y_AXIS = new THREE.Vector3(0, 1, 0)
-const RING_BASE_RADII = [0.10, 0.19, 0.28]
+const S = NEW_DEMO_MAP_POINT_SIZE
+const RING_BASE_RADII = [0.1 * S, 0.19 * S, 0.28 * S]
 const RING_ANIMATION_DELAYS = [0, 0.12, 0.22]
-const PIN_RADIUS = 0.04
-const PIN_HEIGHT = 0.11
-const RING_STROKE_WIDTH = 0.04
-const RING_GLOW_LAYER_OFFSETS = [-0.02, -0.04, -0.065]
-const RING_GLOW_LAYER_EXPAND = [0.012, 0.032, 0.058]
+const PIN_RADIUS = 0.04 * S
+const PIN_HEIGHT = 0.11 * S
+const RING_STROKE_WIDTH = 0.04 * S
+/** Смещение колец вдоль нормали от вершины штифта (вниз к сфере). */
+const RING_ANCHOR_OFFSET = -0.07 * S
+const GROUND_GLOW_SURFACE_OFFSET = 0.008 * S
+const GROUND_GLOW_RADII = [0.16 * S, 0.27 * S]
+const RING_GLOW_LAYER_OFFSETS = [-0.02 * S, -0.04 * S, -0.065 * S]
+const RING_GLOW_LAYER_EXPAND = [0.012 * S, 0.032 * S, 0.058 * S]
+const RING_GLOW_INSET = 0.006 * S
 const RING_GLOW_LAYER_OPACITY = [0.22, 0.13, 0.07]
 const SELECTED_PIN_COLOR = "#16D7FB"
 const HOVERED_PIN_COLOR = "#2CE0FF"
+/** CTA-штифт под курсором — остаётся в оранжевой палитре new-demo. */
+const CTA_HOVER_PIN_COLOR = "#f97316"
 const DEFAULT_IDLE_PIN_COLOR = "#16D7FB"
 
 function getRingScale(progress, delay) {
@@ -59,11 +78,11 @@ export function InteractiveMapPoint({
 		[normal, surfacePosition],
 	)
 	const ringPosition = useMemo(
-		() => pinTopPosition.clone().add(normal.clone().multiplyScalar(-0.07)),
+		() => pinTopPosition.clone().add(normal.clone().multiplyScalar(RING_ANCHOR_OFFSET)),
 		[normal, pinTopPosition],
 	)
 	const groundGlowPosition = useMemo(
-		() => surfacePosition.clone().add(normal.clone().multiplyScalar(0.008)),
+		() => surfacePosition.clone().add(normal.clone().multiplyScalar(GROUND_GLOW_SURFACE_OFFSET)),
 		[normal, surfacePosition],
 	)
 	const ringQuaternion = useMemo(
@@ -71,11 +90,30 @@ export function InteractiveMapPoint({
 		[normal],
 	)
 	const phaseOffset = useMemo(() => getPointPhaseOffset(point.id), [point.id])
+	const isCtaPulsePoint = useMemo(
+		() => globePointIsCtaPulse(point),
+		[point.id, point.name],
+	)
+	const pinColorScratch = useRef(new THREE.Color())
 	const resolvedPinColor = useMemo(() => {
 		if (isActive) return SELECTED_PIN_COLOR
+		if (isHovered && isCtaPulsePoint) return CTA_HOVER_PIN_COLOR
 		if (isHovered) return HOVERED_PIN_COLOR
 		return point.color || DEFAULT_IDLE_PIN_COLOR
-	}, [isActive, isHovered, point.color])
+	}, [isActive, isHovered, isCtaPulsePoint, point.color])
+
+	const ctaPulseFrameDriven = useMemo(
+		() => isCtaPulsePoint && !isActive && !isHovered,
+		[isCtaPulsePoint, isActive, isHovered],
+	)
+
+	useLayoutEffect(() => {
+		const mat = coreMaterialRef.current
+		if (!mat || !ctaPulseFrameDriven) return
+		const hex = newDemoRoseSyncPulseHex(performance.now() / 1000)
+		mat.color.set(hex)
+		mat.emissive.set(hex)
+	}, [ctaPulseFrameDriven])
 
 	useEffect(() => {
 		onPositionComputed(point.id, ringPosition)
@@ -89,10 +127,29 @@ export function InteractiveMapPoint({
 		const breathing = Math.sin(state.clock.elapsedTime * 1.8 + phaseOffset)
 
 		if (coreMaterialRef.current) {
-			// Idle microinteraction: subtle breathing only through light response.
-			coreMaterialRef.current.color.set(resolvedPinColor)
-			coreMaterialRef.current.emissive.set(resolvedPinColor)
-			coreMaterialRef.current.emissiveIntensity = isActive ? 0.92 : 0.88 + breathing * 0.04
+			const t = state.clock.elapsedTime
+			const ctaU = isCtaPulsePoint ? newDemoRoseSyncPulseMix01(t) : 0
+			const pinHex =
+				isActive
+					? SELECTED_PIN_COLOR
+					: isHovered && isCtaPulsePoint
+						? CTA_HOVER_PIN_COLOR
+						: isHovered
+							? HOVERED_PIN_COLOR
+							: isCtaPulsePoint
+								? newDemoRoseSyncPulseHex(t)
+								: resolvedPinColor
+			pinColorScratch.current.set(pinHex)
+			coreMaterialRef.current.color.copy(pinColorScratch.current)
+			coreMaterialRef.current.emissive.copy(pinColorScratch.current)
+			/* как opacity/толщина контура у розы: заметнее на пике */
+			coreMaterialRef.current.emissiveIntensity = isActive
+				? 0.92
+				: isHovered && isCtaPulsePoint
+					? 0.96
+					: isCtaPulsePoint
+						? 0.62 + ctaU * 0.42
+						: 0.88 + breathing * 0.04
 		}
 		if (groundGlowGroupRef.current) {
 			groundGlowGroupRef.current.visible = isActive || animationProgressRef.current > 0.02
@@ -120,7 +177,7 @@ export function InteractiveMapPoint({
 				child.visible = isActive || animationProgressRef.current > 0.02
 			})
 		}
-	}, [isActive, resolvedPinColor])
+	}, [isActive, isCtaPulsePoint, isHovered, resolvedPinColor, phaseOffset, ctaPulseFrameDriven])
 
 	return (
 		<group
@@ -143,20 +200,24 @@ export function InteractiveMapPoint({
 					<cylinderGeometry args={[PIN_RADIUS, PIN_RADIUS * 0.72, PIN_HEIGHT, 18]} />
 					<meshStandardMaterial
 						ref={coreMaterialRef}
-						color={resolvedPinColor}
-						emissive={resolvedPinColor}
-						emissiveIntensity={0.92}
+						{...(ctaPulseFrameDriven
+							? {}
+							: {
+									color: resolvedPinColor,
+									emissive: resolvedPinColor,
+									emissiveIntensity: 0.92,
+								})}
 					/>
 				</mesh>
 			</group>
 
 			<group ref={groundGlowGroupRef} position={groundGlowPosition} quaternion={ringQuaternion}>
 				<mesh ref={groundGlowRef}>
-					<circleGeometry args={[0.16, 36]} />
+					<circleGeometry args={[GROUND_GLOW_RADII[0], 36]} />
 					<meshBasicMaterial color="#16D7FB" transparent opacity={0.14} depthWrite={false} />
 				</mesh>
 				<mesh>
-					<circleGeometry args={[0.27, 36]} />
+					<circleGeometry args={[GROUND_GLOW_RADII[1], 36]} />
 					<meshBasicMaterial color="#16D7FB" transparent opacity={0.06} depthWrite={false} />
 				</mesh>
 			</group>
@@ -180,7 +241,7 @@ export function InteractiveMapPoint({
 				{RING_BASE_RADII.map((radius) =>
 					RING_GLOW_LAYER_OFFSETS.map((offset, layerIndex) => {
 						const expand = RING_GLOW_LAYER_EXPAND[layerIndex]
-						const innerRadius = radius - 0.006 + expand
+						const innerRadius = radius - RING_GLOW_INSET + expand
 						const outerRadius = radius + RING_STROKE_WIDTH + expand
 						return (
 							<mesh key={`${point.id}-ring-glow-${radius}-${offset}`} position={[0, 0, offset]}>

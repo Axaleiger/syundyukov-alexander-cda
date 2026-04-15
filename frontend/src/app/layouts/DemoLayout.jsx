@@ -17,7 +17,7 @@ import AIAssistantWidget from "../../modules/ai/ui/AIAssistantWidget"
 import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController"
 import { useBpmCommandBridge } from "./hooks/useBpmCommandBridge"
-import { getAppRouteSegment } from "../../shared/lib/appRouteSegment"
+import { getAppRouteSegment, getFirstEnabledStandTab } from "../../shared/lib/appRouteSegment"
 import { OPTIMAL_SCENARIO_VARIANT } from "../../modules/thinking/lib/scenarioGraphData"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
@@ -222,10 +222,9 @@ export default function DemoLayout() {
 	useEffect(() => {
 		const disabled = getDisabledTabsFromEnv()
 		if (!disabled.size) return
-		const raw = (location.pathname || "").replace(/\/$/, "")
-		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		const segment = getAppRouteSegment(location.pathname)
 		if (!disabled.has(segment)) return
-		navigate(standHref(routePrefix, "planning"), { replace: true })
+		navigate(standHref(routePrefix, getFirstEnabledStandTab(disabled)), { replace: true })
 	}, [location.pathname, navigate, routePrefix])
 
 	const aiAssistantAndThinkingDrawer = (

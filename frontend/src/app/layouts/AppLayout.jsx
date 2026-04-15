@@ -19,6 +19,7 @@ import { useThinkingDrawerController } from "./hooks/useThinkingDrawerController
 import { useBpmCommandBridge } from "./hooks/useBpmCommandBridge"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
+import { getAppRouteSegment, getFirstEnabledStandTab } from "../../shared/lib/appRouteSegment"
 
 function getDisabledTabsFromEnv() {
 	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
@@ -192,10 +193,9 @@ export const AppLayout = () => {
 	useEffect(() => {
 		const disabled = getDisabledTabsFromEnv()
 		if (!disabled.size) return
-		const raw = (location.pathname || "").replace(/\/$/, "")
-		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		const segment = getAppRouteSegment(location.pathname)
 		if (!disabled.has(segment)) return
-		navigate(standHref(routePrefix, "planning"), { replace: true })
+		navigate(standHref(routePrefix, getFirstEnabledStandTab(disabled)), { replace: true })
 	}, [location.pathname, navigate, routePrefix])
 
 	const aiAssistantAndThinkingDrawer = (

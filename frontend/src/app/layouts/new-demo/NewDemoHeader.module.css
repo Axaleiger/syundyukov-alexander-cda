@@ -30,6 +30,20 @@
 .leftSide {
 	display: flex;
 	align-items: center;
+	gap: clamp(14px, 2vw, 22px);
+}
+
+.brandLogo {
+	display: block;
+	height: clamp(36px, 4.2vw, 48px);
+	width: auto;
+	max-width: min(220px, 26vw);
+	object-fit: contain;
+	object-position: left center;
+	flex-shrink: 0;
+	/* Визуальное совпадение с оптической осью капительного заголовка */
+	transform: translateY(-6px);
+	filter: drop-shadow(0 0 12px rgba(47, 180, 233, 0.12));
 }
 
 .title {

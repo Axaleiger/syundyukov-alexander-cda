@@ -331,16 +331,19 @@
 }
 
 .boardBrainWrap {
-  padding: 4px 10px 14px;
-  height: 286px;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 10px 14px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
 }
 
 .boardBrainWrap :global(.new-demo-brain-root) {
+  flex: 1;
   width: 100%;
-  height: 100%;
+  min-height: 0;
   border-radius: 10px;
   overflow: hidden;
   background: transparent;
@@ -349,6 +352,9 @@
 .boardBrainCard {
   border-color: rgba(125, 211, 252, 0.42);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-height: 286px;
 }
 
 
