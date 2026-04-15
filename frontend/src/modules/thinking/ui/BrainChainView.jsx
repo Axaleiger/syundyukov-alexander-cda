@@ -217,9 +217,6 @@ function BrainChainView({
           </section>
 
           <section className={`${styles.boardCard} ${styles.boardBrainCard}`}>
-            <div className={styles.boardCardHead}>
-              <h3 className={`${chrome.drawerTitle} ${styles.boardTitle}`}>Цифровой мозг</h3>
-            </div>
             <div className={styles.boardBrainWrap}>
               <NewDemoDigitalBrain graphProgressPercent={graphTargetPercent} />
             </div>

@@ -223,6 +223,27 @@
 	height: 100%;
 }
 
+/*
+ * Плавное «дыхание» оранжевого контура розы (карточка + развёрнутая панель).
+ * Период 2.35s — держите в паре с NEW_DEMO_ROSE_SYNC_PULSE_SEC (globeCtaPulsePoints.js) для CTA-точек глобуса new-demo/face.
+ * Цвета пика/спада: #f97316 ↔ #e66b21 (как ROSE_ORANGE_* в globeCtaPulsePoints.js).
+ */
+@keyframes newDemoHealthRoseOutlinePulse {
+	0%,
+	100% {
+		/* #e66b21 — приглушённый */
+		stroke: rgba(230, 107, 33, 0.7);
+		stroke-width: 1.35;
+		opacity: 0.94;
+	}
+	50% {
+		/* #f97316 — тот же ряд, без жёлтого */
+		stroke: rgba(249, 115, 22, 1);
+		stroke-width: 2.05;
+		opacity: 1;
+	}
+}
+
 .ndRadarRing {
 	fill: none;
 	stroke: rgba(255, 255, 255, 0.74);
@@ -236,14 +257,15 @@
 
 .ndRadarArea {
 	fill: transparent;
-	stroke: rgba(230, 89, 7, 0.95);
+	stroke: rgba(230, 107, 33, 0.92);
 	stroke-width: 1.6;
 	stroke-linejoin: round;
 	stroke-linecap: round;
+	animation: newDemoHealthRoseOutlinePulse 1.5s ease-in-out infinite;
 }
 
 .ndRadarCore {
-	fill: rgba(251, 146, 60, 0.95);
+	fill: rgba(230, 107, 33, 0.96);
 }
 
 .ndRadarRay {
@@ -456,8 +478,27 @@
 	stroke-width: 1.5;
 }
 
+.expandedLeftContour:not(.expandedContourSelected),
+.expandedRightContour:not(.expandedContourSelected) {
+	animation: newDemoHealthRoseOutlinePulse 1.5s ease-in-out infinite;
+}
+
+.expandedLeftContour.expandedContourSelected,
+.expandedRightContour.expandedContourSelected {
+	animation: none;
+}
+
 .expandedContourSelected {
-	stroke: #FED197;
+	/* палитра new-demo, без персикового #FED197 */
+	stroke: #f97316;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ndRadarArea,
+	.expandedLeftContour:not(.expandedContourSelected),
+	.expandedRightContour:not(.expandedContourSelected) {
+		animation: none;
+	}
 }
 
 .expandedRadarHitArea {
@@ -488,6 +529,28 @@
 	line-height: 1.2;
 }
 
+/* Роза 2: для «ЦД …» — три строки (ЦД / хвост / %); иначе имя + %. */
+.expandedRightLabel {
+	max-width: 92px;
+	font-size: 9px;
+	line-height: 1.15;
+}
+
+.expandedRightLabelCd,
+.expandedRightLabelBody,
+.expandedRightLabelName {
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.expandedRightLabelValue {
+	display: block;
+	font-weight: 700;
+	color: #ffffff;
+}
+
 .expandedLeftLabelName {
 	display: block;
 	white-space: pre-line;
@@ -501,7 +564,11 @@
 }
 
 .expandedLeftLabelSelected .expandedLeftLabelName,
-.expandedRightLabelSelected {
+.expandedRightLabelSelected,
+.expandedRightLabelSelected .expandedRightLabelName,
+.expandedRightLabelSelected .expandedRightLabelCd,
+.expandedRightLabelSelected .expandedRightLabelBody,
+.expandedRightLabelSelected .expandedRightLabelValue {
 	color: #ffffff;
 }
 

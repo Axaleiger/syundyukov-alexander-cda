@@ -21,7 +21,7 @@
 	border-left: 1px solid rgba(5, 15, 30, 0.24);
 	
 	z-index: 120;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .nav {
@@ -32,6 +32,61 @@
 	width: 100%;
 	height: 100%;
 	padding: 0;
+	overflow: visible;
+}
+
+.navItemWrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	overflow: visible;
+}
+
+.navTooltip {
+	position: absolute;
+	left: calc(100% + 10px);
+	top: 50%;
+	transform: translateY(-50%);
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 0.15s ease,
+		visibility 0.15s ease;
+	z-index: 200;
+	min-width: max-content;
+	max-width: 240px;
+	padding: 8px 11px;
+	border-radius: 8px;
+	background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(7, 23, 45, 0.98) 100%);
+	border: 1px solid rgba(125, 211, 252, 0.35);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+	font-size: 12px;
+	line-height: 1.35;
+	color: rgba(248, 250, 252, 0.98);
+	text-align: left;
+}
+
+.navItemWrap:hover .navTooltip,
+.navItemWrap:focus-within .navTooltip {
+	opacity: 1;
+	visibility: visible;
+}
+
+.navTooltipTitle {
+	display: block;
+	font-weight: 700;
+}
+
+.navTooltipHint {
+	display: block;
+	margin-top: 5px;
+	font-weight: 400;
+	font-size: 11px;
+	line-height: 1.3;
+	color: rgba(226, 232, 240, 0.88);
 }
 
 .navItem {
@@ -89,4 +144,48 @@
 	-webkit-mask-repeat: no-repeat;
 	-webkit-mask-position: center;
 	-webkit-mask-size: contain;
+}
+
+.demoToast {
+	position: fixed;
+	left: 56px;
+	bottom: 28px;
+	z-index: 140;
+	max-width: min(320px, calc(100vw - 72px));
+	padding: 10px 14px;
+	border-radius: 10px;
+	background: linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(7, 23, 45, 0.99) 100%);
+	border: 1px solid rgba(125, 211, 252, 0.38);
+	box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+	font-size: 13px;
+	line-height: 1.4;
+	color: rgba(248, 250, 252, 0.98);
+	text-align: left;
+	pointer-events: none;
+	animation: demoToastIn 0.22s ease;
+}
+
+@keyframes demoToastIn {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.demoToastTitle {
+	display: block;
+	font-weight: 700;
+}
+
+.demoToastHint {
+	display: block;
+	margin-top: 6px;
+	font-weight: 400;
+	font-size: 12px;
+	line-height: 1.35;
+	color: rgba(226, 232, 240, 0.9);
 }

@@ -8,6 +8,21 @@ import overlayStyles from './HypercubeScene.module.css'
 
 const CUBE_HALF = 1.15
 const NUM_POINTS = 280
+
+/**
+ * Скорость idle-вращения гиперкуба (каркас + точки) вокруг оси Y, рад/с.
+ * Меняйте это значение, чтобы ускорить или замедлить вращение в new-demo.
+ */
+export const HYPERCUBE_IDLE_ROTATION_SPEED = 0.22
+
+function IdleRotatingHypercubeShell({ paused, children }) {
+  const ref = useRef(null)
+  useFrame((_, delta) => {
+    if (paused || !ref.current) return
+    ref.current.rotation.y += delta * HYPERCUBE_IDLE_ROTATION_SPEED
+  })
+  return <group ref={ref}>{children}</group>
+}
 const NUM_FLUX_CURVES = 28
 const PLANE_SPACING = 0.7
 
@@ -35,11 +50,31 @@ const NEW_DEMO_VARIANT_COLORS = {
   legitimate: '#E65907',
 }
 
+const NEW_DEMO_FUNNEL_POINT_CYAN = '#2FB4E9'
+const NEW_DEMO_FUNNEL_POINT_SELECTED = '#E65907'
+
+/** Плавное «дыхание» точек (масштаб): до почти точки и обратно, без смены цвета. */
+const HYPERCUBE_POINT_BREATHE_SEC = 1.25
+const HYPERCUBE_POINT_BREATHE_SCALE_MIN = 0.28
+const HYPERCUBE_POINT_BREATHE_SCALE_MAX = 1.12
+
+/** Визуальный радиус точки варианта; зона нажатия для тача/планшета больше и не «дышит». */
+const VARIANT_POINT_VISUAL_RADIUS = 0.04
+const VARIANT_POINT_PICK_RADIUS = 0.13
+
+/** Минимальный радиус hit-test для точек воронки (new-demo), кратно pointRadius. */
+function getFunnelPointPickRadius(pointRadius) {
+  return Math.max(pointRadius * 2.6, 0.056)
+}
+
 const NEW_DEMO_RISK_PALETTE = {
   low: '#eeb392',
   high: '#81d4ff',
   center: '#f5f8ff',
 }
+
+/** Не участвует в raycast — клик обрабатывает невидимая сфера большего радиуса (тач/планшет). */
+function noopRaycast() {}
 
 function getPlaneY(levelIndex) {
   return -CUBE_HALF - 0.75 - levelIndex * PLANE_SPACING
@@ -360,6 +395,7 @@ function VariantPoint({
   filterVariantType,
   palette = VARIANT_COLORS,
   glowVariantType = null,
+  attractPulse = false,
 }) {
   const basePos = useMemo(() => getVariantBasePosition(variantId), [variantId])
   const variantType = useMemo(
@@ -368,25 +404,51 @@ function VariantPoint({
   )
   const color = valueToColor(variantType, palette)
   const visible = filterVariantType == null || filterVariantType === variantType
+  const coreScaleRef = useRef(null)
+  const breathePhase = useMemo(() => (variantId % 17) * 0.21, [variantId])
+
+  useFrame((state) => {
+    const g = coreScaleRef.current
+    if (!g) return
+    if (!attractPulse) {
+      g.scale.setScalar(1)
+      return
+    }
+    const t = state.clock.elapsedTime + breathePhase
+    const w = (2 * Math.PI) / HYPERCUBE_POINT_BREATHE_SEC
+    const u = (Math.sin(t * w) + 1) / 2
+    const s = HYPERCUBE_POINT_BREATHE_SCALE_MIN + (HYPERCUBE_POINT_BREATHE_SCALE_MAX - HYPERCUBE_POINT_BREATHE_SCALE_MIN) * u
+    g.scale.setScalar(s)
+  })
+
+  const pickPointer = {
+    onClick: (e) => {
+      e.stopPropagation()
+      onPointClick(variantId)
+    },
+    onPointerDown: (e) => e.stopPropagation(),
+    onPointerOver: () => { document.body.style.cursor = 'pointer' },
+    onPointerOut: () => { document.body.style.cursor = 'default' },
+  }
+
   if (!visible) return null
   return (
     <group position={basePos}>
       {glowVariantType === variantType ? (
-        <mesh>
+        <mesh raycast={noopRaycast}>
           <sphereGeometry args={[0.068, 10, 10]} />
           <meshBasicMaterial color={color} transparent opacity={0.34} />
         </mesh>
       ) : null}
-      <mesh
-        onClick={(e) => {
-          e.stopPropagation()
-          onPointClick(variantId)
-        }}
-        onPointerOver={() => { document.body.style.cursor = 'pointer' }}
-        onPointerOut={() => { document.body.style.cursor = 'default' }}
-      >
-        <sphereGeometry args={[0.04, 10, 10]} />
-        <meshBasicMaterial color={color} />
+      <group ref={coreScaleRef}>
+        <mesh raycast={noopRaycast}>
+          <sphereGeometry args={[VARIANT_POINT_VISUAL_RADIUS, 10, 10]} />
+          <meshBasicMaterial color={color} />
+        </mesh>
+      </group>
+      <mesh {...pickPointer}>
+        <sphereGeometry args={[VARIANT_POINT_PICK_RADIUS, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -504,7 +566,59 @@ function getPointRadius(n) {
   return n > 100 ? 0.015 : n > 30 ? 0.02 : 0.025
 }
 
-function FunnelLevel({ pointsPerLevel, levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50, showHtmlOverlays = true, softRiskPalette = false, showFunnelLevelLabels = true, plainFunnelLayers = false, funnelLabelWithConnector = false, colorFunnelPointsByStatus = false, useNewDemoTreePointColors = false, onSelectedPointDetailsChange = null }) {
+function FunnelNewDemoTreePointSphere({
+  pointRadius,
+  position,
+  attractPulse,
+  selected,
+  levelIndex,
+  pointIndex,
+  onClick,
+  onPointerOver,
+  onPointerOut,
+}) {
+  const scaleRef = useRef(null)
+  const breathePhase = useMemo(() => (levelIndex * 19 + pointIndex) * 0.09, [levelIndex, pointIndex])
+  const fill = selected ? NEW_DEMO_FUNNEL_POINT_SELECTED : NEW_DEMO_FUNNEL_POINT_CYAN
+  const pickRadius = getFunnelPointPickRadius(pointRadius)
+  const pickPointer = {
+    onClick,
+    onPointerDown: (e) => e.stopPropagation(),
+    onPointerOver,
+    onPointerOut,
+  }
+
+  useFrame((state) => {
+    const g = scaleRef.current
+    if (!g) return
+    if (selected || !attractPulse) {
+      g.scale.setScalar(1)
+      return
+    }
+    const t = state.clock.elapsedTime + breathePhase
+    const w = (2 * Math.PI) / HYPERCUBE_POINT_BREATHE_SEC
+    const u = (Math.sin(t * w) + 1) / 2
+    const s = HYPERCUBE_POINT_BREATHE_SCALE_MIN + (HYPERCUBE_POINT_BREATHE_SCALE_MAX - HYPERCUBE_POINT_BREATHE_SCALE_MIN) * u
+    g.scale.setScalar(s)
+  })
+
+  return (
+    <group position={position}>
+      <group ref={scaleRef}>
+        <mesh raycast={noopRaycast}>
+          <sphereGeometry args={[pointRadius, 6, 6]} />
+          <meshBasicMaterial color={fill} />
+        </mesh>
+      </group>
+      <mesh {...pickPointer}>
+        <sphereGeometry args={[pickRadius, 12, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+    </group>
+  )
+}
+
+function FunnelLevel({ pointsPerLevel, levelIndex, levelTitle, color, onPointClick, onOpenBpm, selectedPlanePoint, filterPlanePoint, filterByStatusKey, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, getEntityLabel, showRisks, riskTint, npv = 50, reserves = 50, extraction = 50, showHtmlOverlays = true, softRiskPalette = false, showFunnelLevelLabels = true, plainFunnelLayers = false, funnelLabelWithConnector = false, colorFunnelPointsByStatus = false, useNewDemoTreePointColors = false, newDemoAttractPulseFunnel = false, onSelectedPointDetailsChange = null }) {
   const planeY = getPlaneY(levelIndex)
   const size = getPlaneSize(pointsPerLevel, levelIndex)
   const n = pointsPerLevel[levelIndex]
@@ -602,30 +716,54 @@ function FunnelLevel({ pointsPerLevel, levelIndex, levelTitle, color, onPointCli
         const planeStatus = getPlanePointStatus(levelIndex, idx)
         const statusColor = PLANE_POINT_STATUS_COLORS[planeStatus] || PLANE_POINT_STATUS_COLORS.ok
         const pointColor = useNewDemoTreePointColors
-          ? (selected ? '#E65907' : '#2FB4E9')
+          ? (selected ? NEW_DEMO_FUNNEL_POINT_SELECTED : NEW_DEMO_FUNNEL_POINT_CYAN)
           : (selected || colorFunnelPointsByStatus ? statusColor : BASE_PLANE_POINT_COLOR)
         const isHovered = hoveredPlanePoint && hoveredPlanePoint.levelIndex === levelIndex && hoveredPlanePoint.pointIndex === idx
         return (
           <group key={idx}>
-            <mesh
-              position={[x, 0.01, z]}
-              onClick={(e) => {
-                e.stopPropagation()
-                onPlanePointToggle(levelIndex, idx)
-              }}
-              onPointerOver={(e) => {
-                e.stopPropagation()
-                document.body.style.cursor = 'pointer'
-                onPlanePointHover?.({ levelIndex, pointIndex: idx })
-              }}
-              onPointerOut={() => {
-                document.body.style.cursor = 'default'
-                onPlanePointHover?.(null)
-              }}
-            >
-              <sphereGeometry args={[pointRadius, 6, 6]} />
-              <meshBasicMaterial color={pointColor} />
-            </mesh>
+            {useNewDemoTreePointColors ? (
+              <FunnelNewDemoTreePointSphere
+                pointRadius={pointRadius}
+                position={[x, 0.01, z]}
+                attractPulse={newDemoAttractPulseFunnel && !selected}
+                selected={selected}
+                levelIndex={levelIndex}
+                pointIndex={idx}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPlanePointToggle(levelIndex, idx)
+                }}
+                onPointerOver={(e) => {
+                  e.stopPropagation()
+                  document.body.style.cursor = 'pointer'
+                  onPlanePointHover?.({ levelIndex, pointIndex: idx })
+                }}
+                onPointerOut={() => {
+                  document.body.style.cursor = 'default'
+                  onPlanePointHover?.(null)
+                }}
+              />
+            ) : (
+              <mesh
+                position={[x, 0.01, z]}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPlanePointToggle(levelIndex, idx)
+                }}
+                onPointerOver={(e) => {
+                  e.stopPropagation()
+                  document.body.style.cursor = 'pointer'
+                  onPlanePointHover?.({ levelIndex, pointIndex: idx })
+                }}
+                onPointerOut={() => {
+                  document.body.style.cursor = 'default'
+                  onPlanePointHover?.(null)
+                }}
+              >
+                <sphereGeometry args={[pointRadius, 6, 6]} />
+                <meshBasicMaterial color={pointColor} />
+              </mesh>
+            )}
             {showHtmlOverlays && isHovered && getEntityLabel && (
               <Html position={[x, 0.08, z]} center className={overlayStyles.funnelTooltipWrap}>
                 <div className={`${overlayStyles.funnelEntityTooltip} ${overlayStyles.funnelPointTooltip}`}>
@@ -814,6 +952,8 @@ function FunnelOfScenarios({ pointsPerLevel, selectedVariantId, onCloseVariant, 
   const showFunnel = selectedVariantId != null || highlightCaseTree
   if (!showFunnel) return null
 
+  const newDemoAttractPulseFunnel = Boolean(useNewDemoTreePointColors && selectedPlanePoint == null)
+
   return (
     <group position={[0, 0, 0]}>
       {fluxCurvesCubeToL0.map(({ start, end }, i) => (
@@ -904,6 +1044,7 @@ function FunnelOfScenarios({ pointsPerLevel, selectedVariantId, onCloseVariant, 
           funnelLabelWithConnector={funnelLabelWithConnector}
           colorFunnelPointsByStatus={colorFunnelPointsByStatus}
           useNewDemoTreePointColors={useNewDemoTreePointColors}
+          newDemoAttractPulseFunnel={newDemoAttractPulseFunnel}
           onSelectedPointDetailsChange={onSelectedPointDetailsChange}
         />
       ))}
@@ -919,11 +1060,13 @@ const axisLabelPositions = [
   { position: [AXIS_ORIGIN, AXIS_ORIGIN, AXIS_ORIGIN + AXIS_LEN + ARROW_TIP_OFFSET + AXIS_LABEL_OFFSET], short: 'Добыча' },
 ]
 
-export function HypercubeR3FScene({ npv, reserves, extraction, pointsPerLevel, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep, visualPreset = "default", showHtmlOverlays = true, showFunnelLevelLabels = true, sceneOffsetY = 0, plainFunnelLayers = false, funnelLabelWithConnector = false, enableVerticalMousePan = false, colorFunnelPointsByStatus = false, useNewDemoTreePointColors = false, onSelectedPointDetailsChange = null, randomizeTreeBySelection = false }) {
+export function HypercubeR3FScene({ npv, reserves, extraction, pointsPerLevel, onPointClick, onOpenBpm, selectedVariantId, onCloseVariant, selectedPlanePoint, onPlanePointClick, onPlanePointToggle, onPlanePointHover, hoveredPlanePoint, filterPlanePoint, filterByStatusKey, getEntityLabel, showRisks, filterVariantType, highlightCaseTree, caseTreeRevealStep, visualPreset = "default", showHtmlOverlays = true, showFunnelLevelLabels = true, sceneOffsetY = 0, plainFunnelLayers = false, funnelLabelWithConnector = false, enableVerticalMousePan = false, colorFunnelPointsByStatus = false, useNewDemoTreePointColors = false, onSelectedPointDetailsChange = null, randomizeTreeBySelection = false, idleRotationPaused = true }) {
   const points = useMemo(() => Array.from({ length: NUM_POINTS }, (_, i) => i), [])
   const isMini = visualPreset === "newDemoMini"
   const isNewDemo = isMini || visualPreset === "newDemo"
+  const idleRotateActive = isNewDemo && !idleRotationPaused
   const allowFunnelInteractions = !isMini
+  const variantAttractPulse = isNewDemo && (isMini || selectedVariantId == null)
   const variantPalette = isNewDemo ? NEW_DEMO_VARIANT_COLORS : VARIANT_COLORS
   const wireframeColor = isMini ? '#2ecbff' : '#5b8dc9'
   const wireframeOpacity = isMini ? 0.58 : 0.75
@@ -936,13 +1079,13 @@ export function HypercubeR3FScene({ npv, reserves, extraction, pointsPerLevel, o
 
       <group position={[0, sceneOffsetY, 0]}>
         {showRisks && <RiskZones npv={npv} reserves={reserves} extraction={extraction} softPalette={isNewDemo} />}
-        <AxesFromBottomLeft
-          npv={npv}
-          reserves={reserves}
-          extraction={extraction}
-          showTickLabels={showHtmlOverlays && !isMini}
-        />
-        <group>
+        <IdleRotatingHypercubeShell paused={!idleRotateActive}>
+          <AxesFromBottomLeft
+            npv={npv}
+            reserves={reserves}
+            extraction={extraction}
+            showTickLabels={showHtmlOverlays && !isMini}
+          />
           <WireframeCube color={wireframeColor} opacity={wireframeOpacity} />
           {points.map((id) => (
             <VariantPoint
@@ -955,9 +1098,10 @@ export function HypercubeR3FScene({ npv, reserves, extraction, pointsPerLevel, o
               filterVariantType={filterVariantType}
               palette={variantPalette}
               glowVariantType={isNewDemo ? 'applicable' : null}
+              attractPulse={variantAttractPulse}
             />
           ))}
-        </group>
+        </IdleRotatingHypercubeShell>
 
         <FunnelOfScenarios
           pointsPerLevel={pointsPerLevel}
@@ -999,6 +1143,7 @@ export function HypercubeR3FScene({ npv, reserves, extraction, pointsPerLevel, o
         minPolarAngle={Math.PI / 2}
         maxPolarAngle={Math.PI / 2}
         enableRotate
+        rotateSpeed={0.72}
         minDistance={isMini ? 6 : undefined}
         maxDistance={isMini ? 6 : undefined}
       />

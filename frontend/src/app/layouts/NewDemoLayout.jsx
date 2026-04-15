@@ -14,6 +14,7 @@ import { ThinkingDrawerShell } from "./components/ThinkingDrawerShell"
 import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
+import { getAppRouteSegment, getFirstEnabledStandTab } from "../../shared/lib/appRouteSegment"
 
 function getDisabledTabsFromEnv() {
 	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
@@ -127,6 +128,8 @@ export default function NewDemoLayout() {
 
 	const setActiveTab = useCallback(
 		(tab) => {
+			const disabled = getDisabledTabsFromEnv()
+			if (disabled.has(tab)) return
 			if (tab === "face") navigate(standHref(routePrefix, "face"))
 			else if (tab === "scenarios") navigate(standHref(routePrefix, "scenarios"))
 			else if (tab === "planning") navigate(standHref(routePrefix, "planning"))
@@ -140,8 +143,14 @@ export default function NewDemoLayout() {
 	const navigateToPlanningAfterAi = useCallback(
 		({ preset }) => {
 			if (!preset) return
+			const disabled = getDisabledTabsFromEnv()
 			setAiAssistantPreset(preset)
 			setBpmCommand({ scenarioId: "loadAiPresetBoard", params: { preset } })
+			if (disabled.has("planning")) {
+				navigate(standHref(routePrefix, getFirstEnabledStandTab(disabled)), { replace: true })
+				setAiAssistantCloseSignal((n) => n + 1)
+				return
+			}
 			const href = standHref(routePrefix, "planning")
 			navigate(`${href}?aiFromThinking=1&preset=${encodeURIComponent(preset)}`)
 			setAiAssistantCloseSignal((n) => n + 1)
@@ -157,10 +166,9 @@ export default function NewDemoLayout() {
 	useEffect(() => {
 		const disabled = getDisabledTabsFromEnv()
 		if (!disabled.size) return
-		const raw = (location.pathname || "").replace(/\/$/, "")
-		const segment = raw.split("/").filter(Boolean)[0] || "face"
+		const segment = getAppRouteSegment(location.pathname)
 		if (!disabled.has(segment)) return
-		navigate(standHref(routePrefix, "planning"), { replace: true })
+		navigate(standHref(routePrefix, getFirstEnabledStandTab(disabled)), { replace: true })
 	}, [location.pathname, navigate, routePrefix])
 
 	return (

@@ -1,5 +1,6 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import Globe from "react-globe.gl"
+import { globeCtaPulseColor, globePointIsCtaPulse } from "../constants/globeCtaPulsePoints"
 import styles from "./RussiaGlobe.module.css"
 
 /**
@@ -46,6 +47,20 @@ export function RussiaGlobeGlSurface({
 		updateArrowThreeObject,
 		pointsMerge,
 	} = model
+
+	const [pulseSec, setPulseSec] = useState(0)
+	useEffect(() => {
+		let raf = 0
+		let last = 0
+		const loop = (t) => {
+			raf = requestAnimationFrame(loop)
+			if (t - last < 50) return
+			last = t
+			setPulseSec(t * 0.001)
+		}
+		raf = requestAnimationFrame(loop)
+		return () => cancelAnimationFrame(raf)
+	}, [])
 
 	if (!webglOk) {
 		return (
@@ -101,14 +116,13 @@ export function RussiaGlobeGlSurface({
 					pointLng={(d) => d.lon}
 					pointResolution={8}
 					pointsMerge={pointsMerge}
-					pointColor={(d) =>
-						selectedAssetId === d.id
-							? "#22d3ee"
-							: hoveredAssetId === d.id
-								? "#38bdf8"
-								: keyAssetIds.has(d.id)
-									? "#ef4444"
-									: "#0ea5e9"}
+					pointColor={(d) => {
+						if (selectedAssetId === d.id) return "#22d3ee"
+						if (hoveredAssetId === d.id) return "#38bdf8"
+						if (globePointIsCtaPulse(d)) return globeCtaPulseColor(pulseSec)
+						if (keyAssetIds.has(d.id)) return "#ef4444"
+						return "#0ea5e9"
+					}}
 					pointAltitude={() => 0}
 					pointRadius={(d) =>
 						selectedAssetId === d.id ? 0.32 : hoveredAssetId === d.id ? 0.29 : 0.22}

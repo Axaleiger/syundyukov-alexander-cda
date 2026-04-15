@@ -21,6 +21,10 @@ import {
   polarToCameraPosition,
   polarToCartesian,
 } from '../lib/globePolar'
+import {
+  globeCtaPulseColor,
+  globePointIsCtaPulse,
+} from '../../modules/globe/constants/globeCtaPulsePoints'
 
 const STARFIELD_URL = 'https://unpkg.com/three-globe@2.45.1/example/img/night-sky.png'
 
@@ -416,6 +420,116 @@ function BudgetPolygon({ outerRing, capColor, altitude, visible }) {
   return <mesh geometry={geom} material={capMat} />
 }
 
+function GlobeMapPointStatic({
+  p,
+  selectedAssetId,
+  hoveredAssetId,
+  keyAssetIds,
+  onPointClick,
+  onPointHover,
+}) {
+  return (
+    <mesh
+      position={polarToCartesian(p.lat, p.lon, SURFACE_REL_ALT)}
+      onClick={(e) => {
+        e.stopPropagation()
+        onPointClick?.(p)
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        onPointHover?.(p)
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation()
+        onPointHover?.(null)
+      }}
+    >
+      <sphereGeometry
+        args={[selectedAssetId === p.id ? 0.32 : hoveredAssetId === p.id ? 0.29 : 0.22, 10, 10]}
+      />
+      <meshStandardMaterial
+        color={
+          selectedAssetId === p.id
+            ? '#22d3ee'
+            : hoveredAssetId === p.id
+              ? '#38bdf8'
+              : keyAssetIds.has(p.id)
+                ? '#ef4444'
+                : '#0ea5e9'
+        }
+        emissive={selectedAssetId === p.id ? '#0891b2' : '#000000'}
+        emissiveIntensity={0.25}
+        metalness={0.2}
+        roughness={0.45}
+      />
+    </mesh>
+  )
+}
+
+function GlobeMapPointCta({
+  p,
+  selectedAssetId,
+  hoveredAssetId,
+  onPointClick,
+  onPointHover,
+}) {
+  const matRef = useRef(null)
+  const { invalidate } = useThree()
+
+  useFrame(({ clock }) => {
+    const mat = matRef.current
+    if (!mat) return
+    if (selectedAssetId === p.id) {
+      mat.color.set('#22d3ee')
+      mat.emissive.set('#0891b2')
+      mat.emissiveIntensity = 0.25
+      invalidate()
+      return
+    }
+    if (hoveredAssetId === p.id) {
+      mat.color.set('#38bdf8')
+      mat.emissive.set('#000000')
+      mat.emissiveIntensity = 0
+      invalidate()
+      return
+    }
+    mat.emissive.set('#000000')
+    mat.emissiveIntensity = 0
+    mat.color.set(globeCtaPulseColor(clock.elapsedTime))
+    invalidate()
+  })
+
+  return (
+    <mesh
+      position={polarToCartesian(p.lat, p.lon, SURFACE_REL_ALT)}
+      onClick={(e) => {
+        e.stopPropagation()
+        onPointClick?.(p)
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        onPointHover?.(p)
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation()
+        onPointHover?.(null)
+      }}
+    >
+      <sphereGeometry
+        args={[selectedAssetId === p.id ? 0.32 : hoveredAssetId === p.id ? 0.29 : 0.22, 10, 10]}
+      />
+      <meshStandardMaterial
+        ref={matRef}
+        color="#0ea5e9"
+        emissive={selectedAssetId === p.id ? '#0891b2' : '#000000'}
+        emissiveIntensity={selectedAssetId === p.id ? 0.25 : 0}
+        metalness={0.2}
+        roughness={0.45}
+      />
+    </mesh>
+  )
+}
+
 function ArrowHead({ endLat, endLng, startLat, startLng, hovered, onPointerOver, onPointerOut }) {
   const end = useMemo(() => polarToCartesian(endLat, endLng, ARC_REL_ALT), [endLat, endLng])
   const start = useMemo(() => polarToCartesian(startLat, startLng, ARC_REL_ALT), [startLat, startLng])
@@ -617,48 +731,28 @@ function GlobeScene({
             />
           )
         })}
-        {mapPointsData.map((p) => (
-          <mesh
-            key={p.id}
-            position={polarToCartesian(
-              p.lat,
-              p.lon,
-              SURFACE_REL_ALT
-            )}
-            onClick={(e) => {
-              e.stopPropagation()
-              onPointClick?.(p)
-            }}
-            onPointerOver={(e) => {
-              e.stopPropagation()
-              onPointHover?.(p)
-            }}
-            onPointerOut={(e) => {
-              e.stopPropagation()
-              onPointHover?.(null)
-            }}
-          >
-            <sphereGeometry args={[
-              selectedAssetId === p.id ? 0.32 : hoveredAssetId === p.id ? 0.29 : 0.22,
-              10,
-              10,
-            ]}
+        {mapPointsData.map((p) =>
+          globePointIsCtaPulse(p) ? (
+            <GlobeMapPointCta
+              key={p.id}
+              p={p}
+              selectedAssetId={selectedAssetId}
+              hoveredAssetId={hoveredAssetId}
+              onPointClick={onPointClick}
+              onPointHover={onPointHover}
             />
-            <meshStandardMaterial
-              color={selectedAssetId === p.id
-                ? '#22d3ee'
-                : hoveredAssetId === p.id
-                  ? '#38bdf8'
-                  : keyAssetIds.has(p.id)
-                    ? '#ef4444'
-                    : '#0ea5e9'}
-              emissive={selectedAssetId === p.id ? '#0891b2' : '#000000'}
-              emissiveIntensity={0.25}
-              metalness={0.2}
-              roughness={0.45}
+          ) : (
+            <GlobeMapPointStatic
+              key={p.id}
+              p={p}
+              selectedAssetId={selectedAssetId}
+              hoveredAssetId={hoveredAssetId}
+              keyAssetIds={keyAssetIds}
+              onPointClick={onPointClick}
+              onPointHover={onPointHover}
             />
-          </mesh>
-        ))}
+          ),
+        )}
         {ringsData.map((d) => (
           <PulseRing
             key={`${d.id}-${d.__ringIdx}`}
