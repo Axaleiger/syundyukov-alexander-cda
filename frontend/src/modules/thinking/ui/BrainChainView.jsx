@@ -245,7 +245,6 @@ function BrainChainView({
           aria-hidden={!graphBuildComplete}
         >
           <div className={styles.boardProgressInner}>
-            <div className={styles.boardProgressMeter} aria-hidden />
             <p className={styles.boardProgressText}>
               Проанализировано {scenarioBranchCount} сценариев. Оптимальный — Вариант {optimalVariant}
             </p>

@@ -1,17 +1,7 @@
 import React from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import styles from "./SidebarMain.module.css"
-
-function getDisabledTabsFromEnv() {
-	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
-	if (!raw) return new Set()
-	return new Set(
-		raw
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean),
-	)
-}
+import { getExpoDisableTabsFromEnv } from "../../lib/expoDisableTabsEnv"
 
 const TABS = [
 	{ id: "face", label: "Главная страница" },
@@ -26,7 +16,7 @@ export const SidebarMain = () => {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const current = location.pathname.split("/")[1] || "face"
-	const disabledTabs = getDisabledTabsFromEnv()
+	const disabledTabs = getExpoDisableTabsFromEnv()
 
 	return (
 		<nav className={styles["app-sidebar"]}>

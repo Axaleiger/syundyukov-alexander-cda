@@ -1,7 +1,14 @@
 /**
  * Демонстрационные данные для панели «Сравнение сценариев развития актива».
- * Не подставлять как боевые цифры — заменить загрузкой из API при появлении backend.
+ * Добыча и NPV привязаны к базам гиперкуба (HYPERCUBE_ASSET_BASES).
+ * Дельты после ИИ: цвет по ключу метрики (ScenarioMetricRow.deltaIsGoodForMetric).
+ *
+ * Агрессивный: добыча/NPV/IRR выше остальных сценариев; дельты — рост затрат (2 красных).
+ * Рискованный: одна красная дельта (NPV), остальные зелёные.
+ * Консенсус: все дельты зелёные, небольшие («потихоньку»); карточка isBest.
  */
+
+import { getHypercubeBaseForAsset } from '../../../modules/globe/model/hypercubeAssetBases.js'
 
 export const ASSET_SCENARIO_COMPARISON_SOURCE = 'demo'
 
@@ -23,10 +30,31 @@ function mulberry32(seed) {
   }
 }
 
-/** Случайное смещение в диапазоне, детерминированно от seed */
 function jitter(seed, k, min, max) {
   const rng = mulberry32((seed + k * 0x9e3779b1) >>> 0)
   return min + rng() * (max - min)
+}
+
+function round1(x) {
+  return Math.round(x * 10) / 10
+}
+
+function round2(x) {
+  return Math.round(x * 100) / 100
+}
+
+function clamp(x, lo, hi) {
+  return Math.min(hi, Math.max(lo, x))
+}
+
+function deltaEntry(metricKey, amount) {
+  const a = metricKey === 'productionMt' ? round2(amount) : round1(amount)
+  let favorable = true
+  if (Number.isFinite(a) && a !== 0) {
+    if (metricKey === 'capexB' || metricKey === 'opexB') favorable = a < 0
+    else favorable = a > 0
+  }
+  return { amount: a, favorable }
 }
 
 /**
@@ -44,14 +72,45 @@ function jitter(seed, k, min, max) {
  */
 export function getAssetScenarioComparisonDemo(assetId) {
   const s = seedFromId(assetId)
+  const base = getHypercubeBaseForAsset(assetId)
+  const P = base.extraction
+  const N = base.npv / 1000
+  const R = base.reserves
 
-  const productionMt = 2.35 + jitter(s, 1, 0, 1.85)
-  const capexB = 9.2 + jitter(s, 2, 0, 6.5)
-  const opexB = 3.4 + jitter(s, 3, 0, 2.8)
-  const npvB = 18 + jitter(s, 4, 0, 22)
-  const irrPct = 14 + jitter(s, 5, 0, 9)
+  const Ccap = round1(6 + R * 0.014)
+  const Cox = round1(2.8 + R * 0.005)
+  const irrBase = round1(
+    clamp(10.5 + Math.sqrt(Math.max(0, N)) * 0.48 + jitter(s, 50, -0.35, 0.35), 9, 26),
+  )
 
-  const off = (k, m, mx) => jitter(s, 10 + k, m, mx)
+  const j = (k, lo, hi) => jitter(s, k, lo, hi)
+
+  /** Агрессивный: максимум добычи и NPV, выше затраты */
+  const aggressiveMetrics = {
+    productionMt: round2(P * (1.08 + j(6, 0, 0.04))),
+    npvB: round1(N * (1.06 + j(7, 0, 0.04))),
+    capexB: round1(Ccap * (1.1 + j(8, 0, 0.05))),
+    opexB: round1(Cox * (1.07 + j(9, 0, 0.04))),
+    irrPct: round1(irrBase + j(10, 0.35, 0.75)),
+  }
+
+  /** Консенсус: сбалансированно, лучшие затраты; добыча/NPV ниже агрессивного */
+  const consensusMetrics = {
+    productionMt: round2(P * (1.03 + j(1, 0, 0.025))),
+    npvB: round1(N * (1.01 + j(2, 0, 0.035))),
+    capexB: round1(Ccap * (0.88 + j(3, 0, 0.035))),
+    opexB: round1(Cox * (0.87 + j(4, 0, 0.035))),
+    irrPct: round1(irrBase + j(5, 0.18, 0.38)),
+  }
+
+  /** Рискованный: слабее по основным показателям */
+  const riskyMetrics = {
+    productionMt: round2(P * (0.9 + j(11, 0, 0.04))),
+    npvB: round1(N * (0.85 + j(12, 0, 0.035))),
+    capexB: round1(Ccap * (1.03 + j(13, 0, 0.035))),
+    opexB: round1(Cox * (1.04 + j(14, 0, 0.03))),
+    irrPct: round1(irrBase + j(15, -0.9, -0.25)),
+  }
 
   return {
     source: ASSET_SCENARIO_COMPARISON_SOURCE,
@@ -61,19 +120,13 @@ export function getAssetScenarioComparisonDemo(assetId) {
         role: 'aggressive',
         title: 'Агрессивный сценарий',
         isBest: false,
-        metrics: {
-          productionMt: productionMt + off(1, 0.35, 0.85),
-          capexB: capexB + off(2, 1.2, 3.8),
-          opexB: opexB + off(3, 0.15, 0.55),
-          npvB: npvB + off(4, 2, 9),
-          irrPct: irrPct + off(5, 0.8, 3.2),
-        },
+        metrics: aggressiveMetrics,
         deltas: {
-          productionMt: { amount: off(11, 0.04, 0.18), favorable: true },
-          capexB: { amount: off(12, 0.35, 1.6), favorable: false },
-          opexB: { amount: off(13, -0.12, -0.02), favorable: true },
-          npvB: { amount: off(14, 0.4, 2.8), favorable: true },
-          irrPct: { amount: off(15, -1.1, -0.15), favorable: false },
+          productionMt: deltaEntry('productionMt', j(111, 0.07, 0.16)),
+          npvB: deltaEntry('npvB', j(114, 0.18, 0.38)),
+          irrPct: deltaEntry('irrPct', j(115, 0.22, 0.48)),
+          capexB: deltaEntry('capexB', j(112, 0.14, 0.32)),
+          opexB: deltaEntry('opexB', j(113, 0.07, 0.15)),
         },
       },
       {
@@ -81,19 +134,13 @@ export function getAssetScenarioComparisonDemo(assetId) {
         role: 'risky',
         title: 'Рискованный сценарий',
         isBest: false,
-        metrics: {
-          productionMt: productionMt + off(6, 0.05, 0.42),
-          capexB: capexB + off(7, 0.2, 1.4),
-          opexB: opexB + off(8, 0.05, 0.35),
-          npvB: npvB + off(9, -2, 4),
-          irrPct: irrPct + off(10, -0.5, 1.8),
-        },
+        metrics: riskyMetrics,
         deltas: {
-          productionMt: { amount: off(21, -0.06, 0.1), favorable: true },
-          capexB: { amount: off(22, -0.2, 0.45), favorable: true },
-          opexB: { amount: off(23, 0.08, 0.28), favorable: false },
-          npvB: { amount: off(24, -1.8, 0.9), favorable: false },
-          irrPct: { amount: off(25, -0.9, 0.4), favorable: false },
+          npvB: deltaEntry('npvB', j(124, -0.22, -0.08)),
+          productionMt: deltaEntry('productionMt', j(121, 0.04, 0.1)),
+          capexB: deltaEntry('capexB', j(122, -0.2, -0.08)),
+          opexB: deltaEntry('opexB', j(123, -0.14, -0.05)),
+          irrPct: deltaEntry('irrPct', j(125, 0.12, 0.28)),
         },
       },
       {
@@ -101,19 +148,13 @@ export function getAssetScenarioComparisonDemo(assetId) {
         role: 'consensus',
         title: 'Консенсусный сценарий',
         isBest: true,
-        metrics: {
-          productionMt,
-          capexB,
-          opexB,
-          npvB,
-          irrPct,
-        },
+        metrics: consensusMetrics,
         deltas: {
-          productionMt: { amount: off(31, 0.06, 0.14), favorable: true },
-          capexB: { amount: off(32, -0.55, -0.08), favorable: true },
-          opexB: { amount: off(33, -0.22, -0.04), favorable: true },
-          npvB: { amount: off(34, 1.0, 3.2), favorable: true },
-          irrPct: { amount: off(35, 0.2, 1.1), favorable: true },
+          productionMt: deltaEntry('productionMt', j(101, 0.02, 0.05)),
+          capexB: deltaEntry('capexB', j(102, -0.11, -0.05)),
+          opexB: deltaEntry('opexB', j(103, -0.08, -0.04)),
+          npvB: deltaEntry('npvB', j(104, 0.06, 0.14)),
+          irrPct: deltaEntry('irrPct', j(105, 0.08, 0.16)),
         },
       },
     ],

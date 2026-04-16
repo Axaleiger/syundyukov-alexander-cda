@@ -1,6 +1,6 @@
 /**
  * Исполнители сценариев ИИ-помощника.
- * Контекст: setActiveTab, setBpmCommand, setResultsDashboardFocus, addThinkingStep, isPaused, navigateToPlanningAfterAi.
+ * Контекст: setActiveTab, setBpmCommand, setResultsDashboardFocus, addThinkingStep, isPaused, navigateToPlanningAfterAi ({ preset, skipNavigation }).
  * Третий аргумент: topic (строка) или { preset, topic } для aiFaceToPlanning.
  */
 

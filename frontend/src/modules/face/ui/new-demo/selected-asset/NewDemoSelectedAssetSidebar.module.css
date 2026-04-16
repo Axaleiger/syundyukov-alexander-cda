@@ -96,17 +96,6 @@
 	color: #94a3b8;
 }
 
-.aiInfluenceNote {
-	margin: 0;
-	padding: 8px 10px;
-	font-size: 12px;
-	line-height: 1.35;
-	color: #a5f3fc;
-	background: rgba(14, 116, 144, 0.35);
-	border-radius: 8px;
-	border: 1px solid rgba(34, 211, 238, 0.35);
-}
-
 .tabsRow {
 	display: flex;
 	flex-wrap: wrap;
@@ -155,6 +144,26 @@
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 10px;
+	align-items: start;
+}
+
+.scenarioColumn {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+/* «Рекомендуемый» над карточкой; слот той же высоты в других колонках — заголовки сценариев на одной линии */
+.scenarioAboveCard {
+	min-height: 22px;
+	margin-bottom: 6px;
+	display: flex;
+	align-items: center;
+}
+
+.scenarioAboveSpacer {
+	display: block;
+	width: 100%;
 }
 
 .scenarioCard {
@@ -187,7 +196,7 @@
 	text-transform: uppercase;
 	letter-spacing: .04em;
 	color: #86efac;
-	margin-bottom: 6px;
+	margin-bottom: 0;
 }
 
 .scenarioName {

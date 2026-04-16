@@ -15,17 +15,7 @@ import { ExpoIdleResetGuard } from "../../shared/ui/expo/ExpoIdleResetGuard"
 import { useStand } from "../stands/standContext"
 import { standHref } from "../stands/standPathUtils"
 import { getAppRouteSegment, getFirstEnabledStandTab } from "../../shared/lib/appRouteSegment"
-
-function getDisabledTabsFromEnv() {
-	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
-	if (!raw) return new Set()
-	return new Set(
-		raw
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean),
-	)
-}
+import { getExpoDisableTabsFromEnv } from "../../shared/lib/expoDisableTabsEnv"
 
 export default function NewDemoLayout() {
 	const [thinkingConfirmCounter, setThinkingConfirmCounter] = useState(0)
@@ -128,7 +118,7 @@ export default function NewDemoLayout() {
 
 	const setActiveTab = useCallback(
 		(tab) => {
-			const disabled = getDisabledTabsFromEnv()
+			const disabled = getExpoDisableTabsFromEnv()
 			if (disabled.has(tab)) return
 			if (tab === "face") navigate(standHref(routePrefix, "face"))
 			else if (tab === "scenarios") navigate(standHref(routePrefix, "scenarios"))
@@ -141,11 +131,16 @@ export default function NewDemoLayout() {
 	)
 
 	const navigateToPlanningAfterAi = useCallback(
-		({ preset }) => {
+		({ preset, skipNavigation }) => {
 			if (!preset) return
-			const disabled = getDisabledTabsFromEnv()
+			const disabled = getExpoDisableTabsFromEnv()
 			setAiAssistantPreset(preset)
 			setBpmCommand({ scenarioId: "loadAiPresetBoard", params: { preset } })
+			if (skipNavigation) {
+				navigate(standHref(routePrefix, "face"), { replace: true })
+				setAiAssistantCloseSignal((n) => n + 1)
+				return
+			}
 			if (disabled.has("planning")) {
 				navigate(standHref(routePrefix, getFirstEnabledStandTab(disabled)), { replace: true })
 				setAiAssistantCloseSignal((n) => n + 1)
@@ -164,7 +159,7 @@ export default function NewDemoLayout() {
 	}, [handleThinkingConfirm])
 
 	useEffect(() => {
-		const disabled = getDisabledTabsFromEnv()
+		const disabled = getExpoDisableTabsFromEnv()
 		if (!disabled.size) return
 		const segment = getAppRouteSegment(location.pathname)
 		if (!disabled.has(segment)) return

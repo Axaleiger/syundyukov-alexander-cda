@@ -151,6 +151,20 @@ function createSmoothBezierPath(from, to, fb, tb, edge) {
   return `M ${s.x} ${s.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${t.x} ${t.y}`
 }
 
+/** Расстояние между двумя активными указателями и середина (в координатах контейнера). */
+function twoFingerMidAndDistFromPointerMap(map) {
+  const pts = [...map.values()]
+  if (pts.length < 2) return null
+  const [a, b] = pts
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  return {
+    dist: Math.hypot(dx, dy) || 1,
+    midX: (a.x + b.x) / 2,
+    midY: (a.y + b.y) / 2,
+  }
+}
+
 const NodeIcon = memo(function NodeIcon({ type }) {
   const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }
   if (type === 'start') {
@@ -415,6 +429,9 @@ function ScenarioGraph({
   const zoomRef = useRef(0.5)
   const panRef = useRef({ x: 0, y: 0 })
   const dragRef = useRef(null)
+  /** Активные указатели на графе (два пальца — pinch-zoom). */
+  const pointersRef = useRef(new Map())
+  const pinchLastDistRef = useRef(0)
   const prevVisibleRef = useRef(new Set(visibleNodeIds))
   const fitDebounceRef = useRef(null)
 
@@ -640,9 +657,25 @@ function ScenarioGraph({
           backgroundSize: '28px 28px',
         }}
         onPointerDown={(e) => {
-          if (e.button !== 0) return
           if (e.target.closest('[data-sg-control]')) return
-          e.currentTarget.setPointerCapture(e.pointerId)
+          const el = e.currentTarget
+          const rect = el.getBoundingClientRect()
+          const willBeSecondFinger = pointersRef.current.size === 1
+          if (!willBeSecondFinger && e.button !== 0) return
+          pointersRef.current.set(e.pointerId, {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            clientX: e.clientX,
+            clientY: e.clientY,
+          })
+          if (pointersRef.current.size >= 2) {
+            dragRef.current = null
+            const pair = twoFingerMidAndDistFromPointerMap(pointersRef.current)
+            if (pair) pinchLastDistRef.current = pair.dist
+            el.setPointerCapture(e.pointerId)
+            return
+          }
+          el.setPointerCapture(e.pointerId)
           dragRef.current = {
             sx: e.clientX,
             sy: e.clientY,
@@ -651,6 +684,34 @@ function ScenarioGraph({
           }
         }}
         onPointerMove={(e) => {
+          const el = e.currentTarget
+          const rect = el.getBoundingClientRect()
+          if (pointersRef.current.has(e.pointerId)) {
+            pointersRef.current.set(e.pointerId, {
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top,
+              clientX: e.clientX,
+              clientY: e.clientY,
+            })
+          }
+          if (pointersRef.current.size >= 2) {
+            const pair = twoFingerMidAndDistFromPointerMap(pointersRef.current)
+            if (!pair || pinchLastDistRef.current <= 0) return
+            const ratio = pair.dist / pinchLastDistRef.current
+            let nz = zoomRef.current * ratio
+            nz = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(nz.toFixed(5))))
+            const sx = (pair.midX / rect.width) * WIDTH
+            const sy = (pair.midY / rect.height) * HEIGHT
+            const z0 = zoomRef.current
+            const p0 = panRef.current
+            const wx = (sx - p0.x) / z0
+            const wy = (sy - p0.y) / z0
+            zoomRef.current = nz
+            panRef.current = { x: sx - wx * nz, y: sy - wy * nz }
+            pinchLastDistRef.current = pair.dist
+            applyViewTransform()
+            return
+          }
           if (!dragRef.current) return
           panRef.current = {
             x: e.clientX - dragRef.current.sx + dragRef.current.px,
@@ -659,13 +720,42 @@ function ScenarioGraph({
           applyViewTransform()
         }}
         onPointerUp={(e) => {
-          if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-            e.currentTarget.releasePointerCapture(e.pointerId)
+          const el = e.currentTarget
+          if (el.hasPointerCapture(e.pointerId)) {
+            el.releasePointerCapture(e.pointerId)
           }
-          dragRef.current = null
+          pointersRef.current.delete(e.pointerId)
+          if (pointersRef.current.size === 1) {
+            const pt = [...pointersRef.current.values()][0]
+            dragRef.current = {
+              sx: pt.clientX,
+              sy: pt.clientY,
+              px: panRef.current.x,
+              py: panRef.current.y,
+            }
+          } else if (pointersRef.current.size === 0) {
+            dragRef.current = null
+          }
+          if (pointersRef.current.size < 2) pinchLastDistRef.current = 0
         }}
-        onPointerCancel={() => {
-          dragRef.current = null
+        onPointerCancel={(e) => {
+          const el = e.currentTarget
+          if (el.hasPointerCapture(e.pointerId)) {
+            el.releasePointerCapture(e.pointerId)
+          }
+          pointersRef.current.delete(e.pointerId)
+          if (pointersRef.current.size === 1) {
+            const pt = [...pointersRef.current.values()][0]
+            dragRef.current = {
+              sx: pt.clientX,
+              sy: pt.clientY,
+              px: panRef.current.x,
+              py: panRef.current.y,
+            }
+          } else if (pointersRef.current.size === 0) {
+            dragRef.current = null
+          }
+          if (pointersRef.current.size < 2) pinchLastDistRef.current = 0
         }}
       >
         {isNewDemo && (
@@ -730,9 +820,6 @@ function ScenarioGraph({
                 .sg-node-glow-rect {
                   animation: sg-node-glow-fade 0.65s ease-out forwards;
                 }
-                .sg-map-silhouette {
-                  opacity: 0.22;
-                }
                 @keyframes sg-edge-draw {
                   to {
                     stroke-dashoffset: 0;
@@ -747,16 +834,6 @@ function ScenarioGraph({
             </style>
           </defs>
           <g ref={viewRef}>
-            {isNewDemo && (
-              <g className="pointer-events-none sg-map-silhouette">
-                <path
-                  d="M96 296 C180 210, 292 186, 398 204 C490 220, 588 214, 690 202 C784 190, 876 202, 984 242 C1118 294, 1204 352, 1352 338 C1440 332, 1538 284, 1624 238 L1624 474 L96 474 Z"
-                  fill="rgba(89, 174, 233, 0.12)"
-                  stroke="rgba(132, 211, 255, 0.35)"
-                  strokeWidth="2"
-                />
-              </g>
-            )}
             <g className="pointer-events-none">
               {edgeLayouts.map((item) => {
                 if (!item) return null

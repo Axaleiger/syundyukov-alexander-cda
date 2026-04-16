@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom"
-import { useCallback, useEffect, useRef, useState } from "react"
 import { useStand } from "../../stands/standContext"
 import { standHref } from "../../stands/standPathUtils"
+import { getExpoDisableTabsFromEnv } from "../../../shared/lib/expoDisableTabsEnv"
 import styles from "./NewDemoSidebar.module.css"
 import faceIcon from "../../../shared/assets/icons/face.svg"
 import scenariosIcon from "../../../shared/assets/icons/scenarios.svg"
@@ -10,19 +10,8 @@ import ontologyIcon from "../../../shared/assets/icons/ontology.svg"
 import resultsIcon from "../../../shared/assets/icons/results.svg"
 import adminIcon from "../../../shared/assets/icons/admin.svg"
 
-function getDisabledTabsFromEnv() {
-	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
-	if (!raw) return new Set()
-	return new Set(
-		raw
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean),
-	)
-}
-
 const NAV_ITEMS = [
-	{ id: "face", label: "Лицо", icon: faceIcon },
+	{ id: "face", label: "Главная", icon: faceIcon },
 	{ id: "scenarios", label: "Сценарии", icon: scenariosIcon },
 	{ id: "planning", label: "Планирование", icon: planningIcon },
 	{ id: "ontology", label: "Онтология", icon: ontologyIcon },
@@ -31,40 +20,13 @@ const NAV_ITEMS = [
 ]
 
 const DEMO_UNAVAILABLE = "Недоступно в рамках демо-стенда"
-const DISABLED_TOAST_MS = 5000
 
 export function NewDemoSidebar() {
 	const { routePrefix } = useStand()
-	const disabledTabs = getDisabledTabsFromEnv()
-	const [disabledToast, setDisabledToast] = useState(null)
-	const toastTimerRef = useRef(null)
-
-	const showDisabledToast = useCallback((label) => {
-		if (toastTimerRef.current != null) {
-			clearTimeout(toastTimerRef.current)
-			toastTimerRef.current = null
-		}
-		setDisabledToast({ title: label, hint: DEMO_UNAVAILABLE })
-		toastTimerRef.current = window.setTimeout(() => {
-			setDisabledToast(null)
-			toastTimerRef.current = null
-		}, DISABLED_TOAST_MS)
-	}, [])
-
-	useEffect(() => {
-		return () => {
-			if (toastTimerRef.current != null) clearTimeout(toastTimerRef.current)
-		}
-	}, [])
+	const disabledTabs = getExpoDisableTabsFromEnv()
 
 	return (
 		<aside className={styles.sidebar}>
-			{disabledToast ? (
-				<div className={styles.demoToast} role="status" aria-live="polite">
-					<span className={styles.demoToastTitle}>{disabledToast.title}</span>
-					<span className={styles.demoToastHint}>{disabledToast.hint}</span>
-				</div>
-			) : null}
 			<nav className={styles.nav} aria-label="Навигация new-demo">
 				{NAV_ITEMS.map((item) => {
 					const isDisabled = disabledTabs.has(item.id)
@@ -76,7 +38,6 @@ export function NewDemoSidebar() {
 								onClick={(e) => {
 									if (!isDisabled) return
 									e.preventDefault()
-									showDisabledToast(item.label)
 								}}
 								className={({ isActive }) =>
 									`${styles.navItem} ${isActive ? styles.navItemActive : ""} ${
