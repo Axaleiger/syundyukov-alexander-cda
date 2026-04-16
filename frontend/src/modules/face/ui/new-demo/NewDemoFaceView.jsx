@@ -11,11 +11,9 @@ import { NewDemoLifecycleCard } from "./lifecycle/NewDemoLifecycleCard"
 import { NewDemoLifecycleExpandedPanel } from "./lifecycle/NewDemoLifecycleExpandedPanel"
 import { NewDemoSelectedAssetSidebar } from "./selected-asset/NewDemoSelectedAssetSidebar"
 import { NEW_DEMO_HEALTH_RIGHT_OBJECTS } from "./health/newDemoHealthRightObjects"
-import { useAppStore } from "../../../../core/store/appStore"
 import styles from "./NewDemoFaceView.module.css"
 
 export function NewDemoFaceView() {
-	const agreedInfluenceLine = useAppStore((s) => s.agreedInfluenceLine)
 	const { routePrefix } = useStand()
 	const [activeTopPanel, setActiveTopPanel] = useState(null)
 	const [lifecycleViewMode, setLifecycleViewMode] = useState("sum")
@@ -193,7 +191,6 @@ export function NewDemoFaceView() {
 						assetStatusLabel={assetStatusLabel}
 						assetStatusIcon={assetStatusIcon}
 						scenarioComparisonRevision={scenarioComparisonRevision}
-						agreedInfluenceLine={agreedInfluenceLine}
 						onClose={handleClearSelectedAsset}
 						panelRef={assetSidebarPanelRef}
 					/>

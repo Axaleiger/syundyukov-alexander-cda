@@ -18,6 +18,8 @@ node_modules
 .env.local
 .env.production
 .env.*
+# docker-compose.server: Vite build args из CI (создаётся на сервере при деплое)
+.env.deploy.vite
 .env.development.local
 .env.test.local
 .env.production.local

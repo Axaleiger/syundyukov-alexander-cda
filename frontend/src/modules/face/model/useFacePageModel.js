@@ -46,9 +46,9 @@ export function useFacePageModel(pathPrefix = "", options = {}) {
 		setCdPageNode,
 		hypercubeCaseIntro,
 		resetDemoFaceScenarioWorkflow,
-		setAgreedInfluenceLine,
 		setScenarioComparisonRevision,
 		setAiScenarioMetricDeltaOverride,
+		setAgreedInfluenceLine,
 	} = useAppStore()
 
 	const aiReturn = searchParams.get("aiReturn")
@@ -57,8 +57,7 @@ export function useFacePageModel(pathPrefix = "", options = {}) {
 		if (aiReturn !== "1") return
 		const block = aiPresetParam ? PANELS_SCENARIO_CONTENT[aiPresetParam] : null
 		if (block) {
-			const line = `ИИ: ${block.cards[0]?.title ?? "Сценарий"}. Панель (panels.md): ${block.tableLines.join(" · ")}`
-			setAgreedInfluenceLine(line)
+			setAgreedInfluenceLine(null)
 			setAiScenarioMetricDeltaOverride(block.metricDeltas)
 			setScenarioComparisonRevision((n) => n + 1)
 		}

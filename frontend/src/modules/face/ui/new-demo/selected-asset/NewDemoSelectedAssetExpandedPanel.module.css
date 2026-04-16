@@ -168,6 +168,25 @@
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 10px;
+	align-items: start;
+}
+
+.scenarioColumn {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.scenarioAboveCard {
+	min-height: 22px;
+	margin-bottom: 6px;
+	display: flex;
+	align-items: center;
+}
+
+.scenarioAboveSpacer {
+	display: block;
+	width: 100%;
 }
 
 .scenarioCard {
@@ -200,7 +219,7 @@
 	text-transform: uppercase;
 	letter-spacing: .04em;
 	color: #86efac;
-	margin-bottom: 6px;
+	margin-bottom: 0;
 }
 
 .scenarioName {

@@ -5,17 +5,7 @@ import { useStand } from "../../stands/standContext"
 import { standHref } from "../../stands/standPathUtils"
 import { NavTabIcon } from "./NavTabIcon"
 import styles from "./DemoSidebar.module.css"
-
-function getDisabledTabsFromEnv() {
-	const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
-	if (!raw) return new Set()
-	return new Set(
-		raw
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean),
-	)
-}
+import { getExpoDisableTabsFromEnv } from "../../../shared/lib/expoDisableTabsEnv"
 
 const TABS = [
 	{ id: "face", label: "Главная страница", icon: "home" },
@@ -34,7 +24,7 @@ export function DemoSidebar() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const current = getAppRouteSegment(location.pathname)
-	const disabledTabs = getDisabledTabsFromEnv()
+	const disabledTabs = getExpoDisableTabsFromEnv()
 
 	return (
 		<nav

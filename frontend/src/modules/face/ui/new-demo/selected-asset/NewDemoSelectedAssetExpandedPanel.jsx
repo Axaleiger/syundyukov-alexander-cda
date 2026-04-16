@@ -75,30 +75,35 @@ export function NewDemoSelectedAssetExpandedPanel({
 						</p>
 						<div className={styles.scenariosGrid}>
 							{comparison.scenarios.map((scenario, scenarioIndex) => (
-								<article
-									key={scenario.id}
-									className={`${styles.scenarioCard} ${styles[`scenarioCardRole${scenario.role}`] || ""} ${scenario.isBest ? styles.scenarioCardBest : ""}`}
-								>
-									{scenario.isBest ? (
-										<span className={styles.scenarioBadge}>Рекомендуемый</span>
-									) : null}
-									<h4 className={styles.scenarioName}>{scenario.title}</h4>
-									<div className={styles.scenarioMetrics}>
-										{scenarioMetricDefs.map((metricDef, rowIndex) => (
-											<ScenarioMetricRow
-												key={metricDef.key}
-												metricDef={metricDef}
-												base={scenario.metrics[metricDef.key]}
-												delta={scenario.deltas[metricDef.key]}
-												showAiDeltas={showAiDeltas}
-												rowIndex={rowIndex}
-												scenarioStaggerMs={scenarioIndex * 115}
-												revision={scenarioComparisonRevision}
-												dockOnDark
-											/>
-										))}
+								<div key={scenario.id} className={styles.scenarioColumn}>
+									<div className={styles.scenarioAboveCard}>
+										{scenario.isBest ? (
+											<span className={styles.scenarioBadge}>Рекомендуемый</span>
+										) : (
+											<span className={styles.scenarioAboveSpacer} aria-hidden />
+										)}
 									</div>
-								</article>
+									<article
+										className={`${styles.scenarioCard} ${styles[`scenarioCardRole${scenario.role}`] || ""} ${scenario.isBest ? styles.scenarioCardBest : ""}`}
+									>
+										<h4 className={styles.scenarioName}>{scenario.title}</h4>
+										<div className={styles.scenarioMetrics}>
+											{scenarioMetricDefs.map((metricDef, rowIndex) => (
+												<ScenarioMetricRow
+													key={metricDef.key}
+													metricDef={metricDef}
+													base={scenario.metrics[metricDef.key]}
+													delta={scenario.deltas[metricDef.key]}
+													showAiDeltas={showAiDeltas}
+													rowIndex={rowIndex}
+													scenarioStaggerMs={scenarioIndex * 115}
+													revision={scenarioComparisonRevision}
+													dockOnDark
+												/>
+											))}
+										</div>
+									</article>
+								</div>
 							))}
 						</div>
 					</section>

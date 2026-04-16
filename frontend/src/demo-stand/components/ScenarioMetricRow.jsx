@@ -5,9 +5,20 @@ function formatVal(v, decimals) {
   return Number(v).toFixed(decimals)
 }
 
-function deltaIsGood(favorable, amount) {
-  if (amount === 0) return true
-  return favorable ? amount > 0 : amount < 0
+function deltaMagnitudeDecimals(metricKey, absAmt, rowDecimals) {
+  if (!Number.isFinite(absAmt) || absAmt === 0) return null
+  const maxD = metricKey === 'irrPct' ? 2 : 4
+  const start = metricKey === 'irrPct' ? 1 : Math.max(1, rowDecimals)
+  for (let d = start; d <= maxD; d += 1) {
+    if (Number.parseFloat(absAmt.toFixed(d)) !== 0) return d
+  }
+  return null
+}
+
+function deltaIsGoodForMetric(metricKey, amount) {
+  if (!Number.isFinite(amount) || amount === 0) return true
+  if (metricKey === 'capexB' || metricKey === 'opexB') return amount < 0
+  return amount > 0
 }
 
 export function ScenarioMetricRow({
@@ -72,11 +83,13 @@ export function ScenarioMetricRow({
   }, [showAiDeltas, delta, rowIndex, scenarioStaggerMs, revision])
 
   const showChip = showAiDeltas && delta && chipVisible
-  const good = delta ? deltaIsGood(delta.favorable, delta.amount) : true
+  const good = delta ? deltaIsGoodForMetric(key, delta.amount) : true
   const rawAmt = delta?.amount ?? 0
+  const absAmt = Math.abs(rawAmt)
+  const deltaMagDecimals = deltaMagnitudeDecimals(key, absAmt, decimals)
+  const showDeltaChip = showChip && deltaMagDecimals != null
   const arrow = rawAmt >= 0 ? '↑' : '↓'
   const signStr = rawAmt >= 0 ? '+' : '−'
-  const deltaDecimals = key === 'irrPct' ? 1 : decimals
   const deltaSuffix = key === 'irrPct' ? ' п.п.' : ` ${unit}`
 
   return (
@@ -87,12 +100,12 @@ export function ScenarioMetricRow({
           {formatVal(display, decimals)}
           <span className="rp-metric-unit"> {unit}</span>
         </span>
-        {showChip && (
+        {showDeltaChip && (
           <span
             className={`rp-metric-delta ${good ? 'rp-metric-delta--good' : 'rp-metric-delta--bad'} rp-metric-delta--visible`}
           >
             {signStr}
-            {formatVal(Math.abs(rawAmt), deltaDecimals)}
+            {formatVal(absAmt, deltaMagDecimals)}
             {deltaSuffix} {arrow}
           </span>
         )}

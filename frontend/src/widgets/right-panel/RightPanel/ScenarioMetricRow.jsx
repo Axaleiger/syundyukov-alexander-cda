@@ -6,9 +6,25 @@ function formatVal(v, decimals) {
   return Number(v).toFixed(decimals)
 }
 
-function deltaIsGood(favorable, amount) {
-  if (amount === 0) return true
-  return favorable ? amount > 0 : amount < 0
+/** Число знаков для |дельты|, чтобы не было «+0.0 млрд»; null — чип не показывать */
+function deltaMagnitudeDecimals(metricKey, absAmt, rowDecimals) {
+  if (!Number.isFinite(absAmt) || absAmt === 0) return null
+  const maxD = metricKey === 'irrPct' ? 2 : 4
+  const start = metricKey === 'irrPct' ? 1 : Math.max(1, rowDecimals)
+  for (let d = start; d <= maxD; d += 1) {
+    if (Number.parseFloat(absAmt.toFixed(d)) !== 0) return d
+  }
+  return null
+}
+
+/**
+ * Зелёный / «хорошо»: добыча, NPV, IRR — рост лучше; CAPEX, OPEX — снижение лучше.
+ * Поле favorable из данных не используем — только знак дельты и тип метрики.
+ */
+function deltaIsGoodForMetric(metricKey, amount) {
+  if (!Number.isFinite(amount) || amount === 0) return true
+  if (metricKey === 'capexB' || metricKey === 'opexB') return amount < 0
+  return amount > 0
 }
 
 export function ScenarioMetricRow({
@@ -75,11 +91,13 @@ export function ScenarioMetricRow({
   }, [showAiDeltas, delta, rowIndex, scenarioStaggerMs, revision])
 
   const showChip = showAiDeltas && delta && chipVisible
-  const good = delta ? deltaIsGood(delta.favorable, delta.amount) : true
+  const good = delta ? deltaIsGoodForMetric(key, delta.amount) : true
   const rawAmt = delta?.amount ?? 0
+  const absAmt = Math.abs(rawAmt)
+  const deltaMagDecimals = deltaMagnitudeDecimals(key, absAmt, decimals)
+  const showDeltaChip = showChip && deltaMagDecimals != null
   const arrow = rawAmt >= 0 ? '↑' : '↓'
   const signStr = rawAmt >= 0 ? '+' : '−'
-  const deltaDecimals = key === 'irrPct' ? 1 : decimals
   const deltaSuffix = key === 'irrPct' ? ' п.п.' : ` ${unit}`
 
   return (
@@ -92,12 +110,12 @@ export function ScenarioMetricRow({
           {formatVal(display, decimals)}
           <span className={styles['rp-metric-unit']}> {unit}</span>
         </span>
-        {showChip && (
+        {showDeltaChip && (
           <span
             className={`${styles['rp-metric-delta']} ${good ? styles['rp-metric-delta--good'] : styles['rp-metric-delta--bad']} ${styles['rp-metric-delta--visible']}`}
           >
             {signStr}
-            {formatVal(Math.abs(rawAmt), deltaDecimals)}
+            {formatVal(absAmt, deltaMagDecimals)}
             {deltaSuffix} {arrow}
           </span>
         )}

@@ -1,5 +1,6 @@
 # Продакшен-сервер: PostgreSQL + FastAPI + nginx (статика из frontend/). Один файл.
-# Запуск: docker compose -f docker-compose.server.yml --env-file .env up -d --build
+# Запуск: docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.vite up -d --build
+# Второй файл (из CI или вручную) задаёт VITE_* для сборки; перекрывает пустые VITE_* в .env.
 
 services:
   db:

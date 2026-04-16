@@ -44,4 +44,13 @@ jobs:
             export VITE_EXPO_DISABLE_TABS="${VITE_EXPO_DISABLE_TABS:-}"
             export VITE_EXPO_ARM_DELAY_MS="${VITE_EXPO_ARM_DELAY_MS:-}"
             export VITE_EXPO_IDLE_MS="${VITE_EXPO_IDLE_MS:-}"
-            docker compose -f docker-compose.server.yml --env-file .env up -d --build
+            # Секреты из CI в отдельном env: иначе пустые VITE_* из .env на сервере перебивают подстановку в build args.
+            {
+              echo "VITE_GROQ_API_KEY=${VITE_GROQ_API_KEY:-}"
+              echo "VITE_EXPO=${VITE_EXPO:-}"
+              echo "VITE_EXPO_DISABLE_TABS=${VITE_EXPO_DISABLE_TABS:-}"
+              echo "VITE_EXPO_ARM_DELAY_MS=${VITE_EXPO_ARM_DELAY_MS:-}"
+              echo "VITE_EXPO_IDLE_MS=${VITE_EXPO_IDLE_MS:-}"
+            } > .env.deploy.vite
+            chmod 600 .env.deploy.vite
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.vite up -d --build

@@ -22,6 +22,7 @@ import {
 	AI_PLANNING_BOARD_PRESETS,
 	AI_PLANNING_PRESET_SCENARIO_NAMES,
 } from "../../modules/planning/data/aiPlanningBoardPresets.js"
+import { getExpoDisableTabsFromEnv } from "../../shared/lib/expoDisableTabsEnv"
 
 const PLANNING_CASES_LIST_URL = `${API_V1_PREFIX}/planning/cases`
 
@@ -103,16 +104,7 @@ export function PlanningPage() {
 
 	const mapPointsData = useMapPointsData()
 
-	const disabledTabs = useMemo(() => {
-		const raw = (import.meta.env.VITE_EXPO_DISABLE_TABS || "").trim()
-		if (!raw) return new Set()
-		return new Set(
-			raw
-				.split(",")
-				.map((s) => s.trim())
-				.filter(Boolean),
-		)
-	}, [])
+	const disabledTabs = useMemo(() => getExpoDisableTabsFromEnv(), [])
 
 	const [boardMountKey, setBoardMountKey] = useState("default")
 	const [planningCaseLoading, setPlanningCaseLoading] = useState(false)
