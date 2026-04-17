@@ -1,0 +1,240 @@
+/**
+ * Карточки сводки под графом мышления — визуально в линии с new-demo /face
+ * (стекло, градиент, inset-свет, акценты как у lifecycle / hypercube).
+ */
+
+.section {
+	display: grid;
+	gap: 14px;
+	padding: 4px 2px 2px;
+}
+
+.insightRow {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.iconOrb {
+	flex-shrink: 0;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 15px;
+	font-weight: 700;
+	border: 1px solid rgba(125, 211, 252, 0.38);
+	background: linear-gradient(165deg, rgba(56, 189, 248, 0.35) 0%, rgba(15, 23, 42, 0.55) 55%, rgba(8, 47, 73, 0.72) 100%);
+	color: rgba(224, 242, 254, 0.98);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 16px rgba(2, 12, 24, 0.35);
+}
+
+.iconOrbMuted {
+	border-color: rgba(148, 163, 184, 0.32);
+	background: linear-gradient(165deg, rgba(51, 65, 85, 0.55) 0%, rgba(15, 23, 42, 0.62) 100%);
+	color: rgba(186, 230, 253, 0.92);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 12px rgba(2, 12, 24, 0.28);
+}
+
+.insightPanel {
+	composes: surfaceInner from "../../face/ui/new-demo/NewDemoDesignSystem.module.css";
+	flex: 1;
+	min-width: 0;
+	padding: 10px 14px 11px;
+	border-color: rgba(125, 211, 252, 0.28);
+	background: linear-gradient(180deg, rgba(15, 23, 42, 0.58) 0%, rgba(7, 23, 45, 0.72) 100%);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.insightTitle {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.45;
+	letter-spacing: 0.01em;
+	color: rgba(248, 250, 252, 0.96);
+}
+
+.recoGrid {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+	.recoGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.recoCard {
+	position: relative;
+	overflow: hidden;
+	border-radius: 10px;
+	padding: 16px 16px 16px 18px;
+	border: 1px solid rgba(148, 163, 184, 0.34);
+	background: linear-gradient(180deg, rgba(47, 180, 233, 0) 0%, rgba(93, 112, 125, 0.28) 100%);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.14),
+		inset 0 -20px 40px rgba(15, 23, 42, 0.22),
+		0 12px 28px rgba(2, 8, 23, 0.28);
+	transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.recoCard:hover {
+	border-color: rgba(56, 189, 248, 0.48);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.16),
+		inset 0 -20px 40px rgba(15, 23, 42, 0.22),
+		0 0 0 1px rgba(56, 189, 248, 0.22),
+		0 14px 32px rgba(2, 8, 23, 0.32);
+}
+
+.recoCardPrimary::before,
+.recoCardSecondary::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	border-radius: 10px 0 0 10px;
+	pointer-events: none;
+}
+
+.recoCardPrimary::before {
+	background: linear-gradient(180deg, rgba(56, 189, 248, 0.95) 0%, rgba(0, 112, 186, 0.88) 100%);
+	box-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
+}
+
+.recoCardSecondary::before {
+	background: linear-gradient(180deg, rgba(251, 146, 60, 0.98) 0%, rgba(230, 89, 7, 0.92) 100%);
+	box-shadow: 0 0 12px rgba(251, 146, 60, 0.35);
+}
+
+.recoCardHead {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin-bottom: 12px;
+	padding-left: 2px;
+}
+
+.recoCardTitle {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 1.35;
+	color: rgba(241, 245, 249, 0.98);
+	letter-spacing: 0.01em;
+}
+
+.bulletList {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.bulletRow {
+	display: grid;
+	grid-template-columns: 2.25rem minmax(0, 1fr);
+	align-items: start;
+	gap: 10px 12px;
+}
+
+.bulletIndex {
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.1;
+	text-align: right;
+	color: rgba(56, 189, 248, 0.92);
+	font-variant-numeric: tabular-nums;
+}
+
+.recoCardSecondary .bulletIndex {
+	color: rgba(251, 146, 60, 0.95);
+}
+
+.bulletText {
+	font-size: 13px;
+	line-height: 1.45;
+	color: rgba(226, 232, 240, 0.94);
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+.kpiFrame {
+	composes: surfaceInner from "../../face/ui/new-demo/NewDemoDesignSystem.module.css";
+	padding: 14px 14px 12px;
+	border-color: rgba(125, 211, 252, 0.26);
+	background: linear-gradient(180deg, rgba(15, 23, 42, 0.55) 0%, rgba(7, 23, 45, 0.78) 100%);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.1),
+		0 12px 28px rgba(2, 8, 23, 0.26);
+}
+
+.kpiSectionTitle {
+	margin: 0 0 2px;
+	font-size: 14px;
+	font-weight: 600;
+	color: rgba(248, 250, 252, 0.95);
+}
+
+.kpiList {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.kpiRow {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(5.5rem, auto) minmax(4.5rem, auto);
+	align-items: center;
+	gap: 10px 12px;
+	padding: 10px 12px;
+	border-radius: 10px;
+	border: 1px solid rgba(56, 189, 248, 0.18);
+	background: linear-gradient(180deg, rgba(30, 41, 59, 0.42) 0%, rgba(15, 23, 42, 0.5) 100%);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.kpiMetric {
+	min-width: 0;
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.35;
+	color: rgba(226, 232, 240, 0.94);
+	word-break: break-word;
+}
+
+.kpiValue {
+	text-align: right;
+	font-size: 15px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: rgba(241, 245, 249, 0.98);
+}
+
+.deltaGood {
+	text-align: right;
+	font-size: 15px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: rgba(52, 211, 153, 0.95);
+}
+
+.deltaBad {
+	text-align: right;
+	font-size: 15px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: rgba(251, 113, 133, 0.96);
+}

@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "description": "Теги гипотез: пересечение с тегами, активируемыми целями G, ограничениями C и типом K. cash_flow_focus — только про явный денежный поток/ликвидность (не путать с OPEX/CAPEX как классами затрат)."
+  },
+  "all_tags": [
+    "cash_flow_focus",
+    "value_metric",
+    "risk_cash",
+    "production",
+    "recovery",
+    "realization",
+    "opex",
+    "capex",
+    "taxes",
+    "fx",
+    "logistics",
+    "wc",
+    "finance_cost",
+    "regulatory",
+    "operational_risk",
+    "esg",
+    "planning_execution"
+  ],
+  "objective_tag_activation": {
+    "G01": ["cash_flow_focus", "value_metric", "production", "recovery", "realization", "opex", "capex", "taxes", "fx", "logistics", "wc", "finance_cost", "risk_cash", "regulatory", "operational_risk", "planning_execution"],
+    "G02": ["value_metric", "production", "recovery", "realization", "opex", "capex", "taxes", "fx", "logistics", "finance_cost", "planning_execution"],
+    "G03": ["production", "recovery", "realization", "logistics", "planning_execution"],
+    "G04": ["recovery", "production", "planning_execution"],
+    "G05": ["opex", "planning_execution"],
+    "G06": ["capex", "planning_execution"],
+    "G07": ["risk_cash", "operational_risk", "fx", "cash_flow_focus"],
+    "G09": ["wc", "cash_flow_focus", "planning_execution"],
+    "G10": ["value_metric", "opex", "capex", "production", "realization", "taxes", "planning_execution"],
+    "G11": ["value_metric", "capex", "finance_cost", "planning_execution"],
+    "G12": ["value_metric", "finance_cost", "taxes", "capex", "planning_execution"],
+    "G13": ["value_metric", "capex", "cash_flow_focus", "planning_execution"],
+    "G14": ["realization", "logistics", "production", "taxes", "fx", "planning_execution"],
+    "G15": ["value_metric", "finance_cost", "capex", "production", "planning_execution"],
+    "G16": ["recovery", "production", "planning_execution", "capex"],
+    "G17": ["regulatory", "logistics", "realization", "fx", "finance_cost", "operational_risk", "planning_execution"],
+    "G18": ["fx", "finance_cost", "taxes", "cash_flow_focus", "risk_cash", "planning_execution"],
+    "G19": ["realization", "fx", "taxes", "operational_risk", "risk_cash", "logistics", "planning_execution"],
+    "G20": ["fx", "regulatory", "logistics", "operational_risk", "taxes", "risk_cash", "realization", "planning_execution"],
+    "G21": ["taxes", "regulatory", "finance_cost", "risk_cash", "planning_execution"],
+    "G22": ["logistics", "operational_risk", "realization", "capex", "opex", "planning_execution"]
+  },
+  "constraint_tag_activation": {
+    "C01": ["production", "recovery", "capex"],
+    "C02": ["capex", "planning_execution"],
+    "C03": ["opex", "planning_execution"],
+    "C04": ["production", "recovery"],
+    "C05": ["planning_execution"],
+    "C06": ["regulatory"],
+    "C07": ["operational_risk", "production"],
+    "C08": ["esg", "regulatory"],
+    "C09": ["finance_cost", "wc"],
+    "C10": ["realization", "logistics"]
+  },
+  "kind_tag_activation": {
+    "K05": ["taxes", "fx", "realization", "risk_cash", "operational_risk"],
+    "K06": ["production", "recovery", "realization", "opex", "capex", "taxes", "fx", "logistics", "wc", "finance_cost", "regulatory", "operational_risk", "esg", "planning_execution"]
+  },
+  "category_default_tags": {
+    "CAT_PROD": ["production", "recovery"],
+    "CAT_PRICE": ["realization"],
+    "CAT_OPEX": ["opex"],
+    "CAT_CAPEX": ["capex"],
+    "CAT_TAX": ["taxes"],
+    "CAT_FX": ["fx"],
+    "CAT_TRANS": ["logistics"],
+    "CAT_WC": ["wc"],
+    "CAT_TECH": ["recovery"],
+    "CAT_REG": ["regulatory", "esg"],
+    "CAT_FM": ["operational_risk"],
+    "CAT_FIN": ["finance_cost"]
+  },
+  "hypothesis_tag_overrides": {
+    "H_PR1_1": ["cash_flow_focus", "risk_cash"],
+    "H_PR1_2": ["planning_execution", "capex", "value_metric"],
+    "H_PR1_3": ["opex", "realization"],
+    "H_CX2_3": ["capex", "risk_cash", "realization"],
+    "H_TX1_3": ["taxes", "planning_execution"],
+    "H_FX1_2": ["fx", "cash_flow_focus", "risk_cash"],
+    "H_FN1_1": ["finance_cost", "cash_flow_focus"],
+    "H_FN1_2": ["finance_cost", "risk_cash"],
+    "H_FN1_3": ["finance_cost", "cash_flow_focus"]
+  }
+}

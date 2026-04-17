@@ -1,32 +1,44 @@
 /**
- * Раскладка workflow: основной поток слева направо, веер с отклонением по Y, merge и коллизии.
- * Анизотропия: вытягивание по X, сжатие вертикального разброса (эллипс вместо «шара»).
+ * Раскладка графа «мышление»: детерминированная сетка (колонки, ровные шаги по Y).
+ * Для графа с узлом generation — прежняя схема веера + d3-симуляция.
  */
 
 import { forceSimulation, forceCollide, forceManyBody } from 'd3-force'
 
-/** Множители смещения веера: сильнее вправо, слабее по Y */
 const FAN_RADIUS = 138
 const FAN_KX = 1.72
 const FAN_KY = 0.48
 const FAN_SPREAD_FACTOR = 0.72
-
-/** Сценарии от generation: большой радиус по X, малый по Y, уже угол веера */
-const SCENARIO_RX = 700
-const SCENARIO_RY = 178
-const SCENARIO_SPREAD_SCALE = 0.55
 
 const MERGE_STEP_X = 198
 const CHAIN_STEP_X = 228
 
 const POST_Y_DAMP = 0.74
 
+/** Сетка без generation: шаги по вертикали и горизонтали между колонками (растянуто под читаемость) */
+const GRID_TOP = 96
+const GRID_CAUSE_DY = 124
+const GRID_GAP_ROW = 72
+const GRID_BLOCK_H = 3 * GRID_CAUSE_DY + GRID_GAP_ROW
+/** Одинаковая ширина «колонок» между центрами: user → goals → causes → hyp → зона сценариев */
+export const THINKING_GRID_COL_SPAN = 400
+const GRID_X_USER = 200
+const GRID_X_GOAL = GRID_X_USER + THINKING_GRID_COL_SPAN
+const GRID_X_CAUSE = GRID_X_GOAL + THINKING_GRID_COL_SPAN
+const GRID_X_HYP = GRID_X_CAUSE + THINKING_GRID_COL_SPAN
+const GRID_HYP_DY = 124
+/** Зона шаров сценариев справа от гипотез — та же ширина, что и между соседними колонками */
+const GRID_BALL_ZONE_W = THINKING_GRID_COL_SPAN
+const GRID_BALL_PAD_XL = 72
+const GRID_BALL_PAD_XR = 72
+
 function approxRadius(node) {
   const t = node.type
-  if (t === 'start') return 88
-  if (t === 'scenario') return 64
-  if (t === 'milestone') return 74
-  return 64
+  if (t === 'start') return 104
+  if (t === 'scenario') return 86
+  if (t === 'milestone') return 96
+  if (t === 'outcome') return 50
+  return 84
 }
 
 function buildMaps(nodes, edges) {
@@ -46,7 +58,6 @@ function buildMaps(nodes, edges) {
   return { byId, outs, preds }
 }
 
-/** Веер в сторону +X (угол 0 — вправо), эллиптический разброс */
 function placeFan(parent, childIds, byId, placed, spreadFactor = 1) {
   const ch = childIds.filter((id) => !placed.has(id))
   if (!ch.length || !parent) return
@@ -102,12 +113,210 @@ function nodesArray(byId) {
   return [...byId.values()]
 }
 
-export function applyWorkflowLayout(nodes, edges) {
-  const { byId, outs, preds } = buildMaps(nodes, edges)
-  const placed = new Set()
+/** У цели три исходящих ребра к глобальным узлам cause-* */
+function isThinkingGridGraph(outs, scenarios) {
+  if (!scenarios.length) return false
+  const ch = outs.get(scenarios[0]) || []
+  return (
+    ch.length >= 3 &&
+    ch.every((id) => /^cause-\d+$/.test(id))
+  )
+}
+
+/** Геометрический центр по Y для набора узлов (bounding box) */
+function columnCenterY(nodeList) {
+  if (!nodeList.length) return null
+  let lo = Infinity
+  let hi = -Infinity
+  for (const n of nodeList) {
+    const r = approxRadius(n)
+    lo = Math.min(lo, n.y - r)
+    hi = Math.max(hi, n.y + r)
+  }
+  return (lo + hi) / 2
+}
+
+/**
+ * Ровная сетка: причины и гипотезы в столбцы; цели — столбец слева от причин.
+ * Центры столбиков (первая нода, цели, причины, гипотезы) выравниваются по одной горизонтали (один Y).
+ */
+function layoutThinkingGrid(nodes, byId, scenarios) {
+  const nGoals = scenarios.length
+  let sumMidY = 0
+
+  let maxCauseNum = 0
+  for (const n of nodes) {
+    const mc = /^cause-(\d+)$/.exec(n.id)
+    if (mc) maxCauseNum = Math.max(maxCauseNum, parseInt(mc[1], 10))
+  }
+  const causeNodes = []
+  for (let num = 1; num <= maxCauseNum; num += 1) {
+    const cn = byId.get(`cause-${num}`)
+    if (cn) {
+      cn.x = GRID_X_CAUSE
+      cn.y = GRID_TOP + (num - 1) * GRID_CAUSE_DY
+      causeNodes.push(cn)
+    }
+  }
+
+  let maxHypNum = 0
+  for (const n of nodes) {
+    const mh = /^hyp-(\d+)$/.exec(n.id)
+    if (mh) maxHypNum = Math.max(maxHypNum, parseInt(mh[1], 10))
+  }
+  const hypNodes = []
+  for (let num = 1; num <= maxHypNum; num += 1) {
+    const hn = byId.get(`hyp-${num}`)
+    if (hn) {
+      hn.x = GRID_X_HYP
+      hn.y = GRID_TOP + (num - 1) * GRID_HYP_DY
+      hypNodes.push(hn)
+    }
+  }
+
+  const goalNodes = []
+  for (let i = 0; i < nGoals; i++) {
+    const sid = scenarios[i]
+
+    const anchor = GRID_TOP + i * GRID_BLOCK_H
+    const midY = anchor + GRID_CAUSE_DY
+
+    const sg = byId.get(sid)
+    if (sg) {
+      sg.x = GRID_X_GOAL
+      sg.y = midY
+      goalNodes.push(sg)
+    }
+
+    sumMidY += midY
+  }
 
   const uq = byId.get('userQuery')
+  if (uq) {
+    uq.x = GRID_X_USER
+    uq.y = nGoals > 0 ? sumMidY / nGoals : GRID_TOP + GRID_CAUSE_DY
+  }
+
+  const cUser = uq ? columnCenterY([uq]) : null
+  const cGoal = columnCenterY(goalNodes)
+  const cCause = columnCenterY(causeNodes)
+  const cHyp = columnCenterY(hypNodes)
+
+  const centers = [cUser, cGoal, cCause, cHyp].filter((y) => y != null && Number.isFinite(y))
+  if (centers.length === 0) return
+
+  const yAlign = centers.reduce((s, y) => s + y, 0) / centers.length
+
+  const shiftGroup = (list, centerBefore) => {
+    if (centerBefore == null) return
+    const d = yAlign - centerBefore
+    if (d === 0) return
+    for (const n of list) n.y += d
+  }
+
+  if (uq && cUser != null) uq.y += yAlign - cUser
+  shiftGroup(goalNodes, cGoal)
+  shiftGroup(causeNodes, cCause)
+  shiftGroup(hypNodes, cHyp)
+
+  layoutOutcomeBalls(nodes, hypNodes)
+}
+
+/** Равномерная сетка позиций шаров в полосе справа от гипотез (порядок по номеру сценария). */
+function layoutOutcomeBalls(nodes, hypNodes) {
+  const balls = nodes.filter((n) => n.type === 'outcome')
+  if (!balls.length || !hypNodes.length) return
+
+  balls.sort((a, b) => {
+    const ma = /^out-scenario-(\d+)$/.exec(a.id)
+    const mb = /^out-scenario-(\d+)$/.exec(b.id)
+    const ia = ma ? parseInt(ma[1], 10) : 0
+    const ib = mb ? parseInt(mb[1], 10) : 0
+    return ia - ib
+  })
+
+  let yLo = Infinity
+  let yHi = -Infinity
+  for (const h of hypNodes) {
+    yLo = Math.min(yLo, h.y)
+    yHi = Math.max(yHi, h.y)
+  }
+  const yPad = 72
+  yLo -= yPad
+  yHi += yPad
+
+  const xLo = GRID_X_HYP + GRID_BALL_PAD_XL
+  const xHi = GRID_X_HYP + GRID_BALL_ZONE_W - GRID_BALL_PAD_XR
+  if (xHi <= xLo + 40) return
+
+  const rw = xHi - xLo
+  const rh = yHi - yLo
+  const n = balls.length
+  const aspect = rw / Math.max(rh, 1e-6)
+  let cols = Math.max(1, Math.round(Math.sqrt(n * aspect)))
+  let rows = Math.ceil(n / cols)
+  while (cols < n && rows > 1 && rh / rows < rw / cols) {
+    cols += 1
+    rows = Math.ceil(n / cols)
+  }
+
+  const cellW = rw / cols
+  const cellH = rh / rows
+
+  balls.forEach((b, i) => {
+    const row = Math.floor(i / cols)
+    const col = i % cols
+    const cx = xLo + (col + 0.5) * cellW
+    const cy = yLo + (row + 0.5) * cellH
+    b.x = Math.round(cx)
+    b.y = Math.round(cy)
+  })
+}
+
+function normalizeGraphBounds(nodes) {
+  const pad = 96
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const n of nodes) {
+    const r = approxRadius(n)
+    minX = Math.min(minX, n.x - r)
+    minY = Math.min(minY, n.y - r)
+    maxX = Math.max(maxX, n.x + r)
+    maxY = Math.max(maxY, n.y + r)
+  }
+  const width = Math.ceil(maxX - minX + pad * 2)
+  const height = Math.ceil(maxY - minY + pad * 2)
+  const ox = pad - minX
+  const oy = pad - minY
+  for (const n of nodes) {
+    n.x = Math.round(n.x + ox)
+    n.y = Math.round(n.y + oy)
+  }
+  return { width, height }
+}
+
+export function applyWorkflowLayout(nodes, edges) {
+  const { byId, outs, preds } = buildMaps(nodes, edges)
+  const uq = byId.get('userQuery')
   const gen = byId.get('generation')
+
+  const scenarios = nodes
+    .map((n) => n.id)
+    .filter((id) => /^scenario-\d+$/.test(id))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+
+  const useGrid = !gen && uq && scenarios.length > 0 && isThinkingGridGraph(outs, scenarios)
+
+  if (useGrid) {
+    layoutThinkingGrid(nodes, byId, scenarios)
+    assignMergeInputPorts(edges, preds)
+    return normalizeGraphBounds(nodes)
+  }
+
+  const placed = new Set()
+
   if (uq) {
     uq.x = 120
     uq.y = 320
@@ -119,21 +328,22 @@ export function applyWorkflowLayout(nodes, edges) {
     placed.add('generation')
   }
 
-  const scenarios = nodes
-    .map((n) => n.id)
-    .filter((id) => /^scenario-\d+$/.test(id))
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+  const scenarioFanOrigin =
+    gen && scenarios.length
+      ? { x: gen.x, y: gen.y }
+      : uq && scenarios.length
+        ? { x: uq.x + 400, y: uq.y }
+        : null
 
-  if (gen && scenarios.length) {
+  if (scenarioFanOrigin && scenarios.length) {
     const n = scenarios.length
-    const spread = Math.min(Math.PI * 0.78, 0.16 * Math.PI * n) * SCENARIO_SPREAD_SCALE
-    const mid = 0
+    const colX = scenarioFanOrigin.x + 620
+    const spanY = (n > 1 ? n - 1 : 0) * 102
+    const baseY = scenarioFanOrigin.y - spanY / 2
     for (let i = 0; i < n; i++) {
-      const t = n === 1 ? 0.5 : i / (n - 1)
-      const ang = mid - spread / 2 + t * spread
       const sn = byId.get(scenarios[i])
-      sn.x = gen.x + SCENARIO_RX * Math.cos(ang)
-      sn.y = gen.y + SCENARIO_RY * Math.sin(ang)
+      sn.x = colX
+      sn.y = baseY + i * 102
       placed.add(scenarios[i])
     }
   }
@@ -194,7 +404,8 @@ export function applyWorkflowLayout(nodes, edges) {
     }
   }
 
-  const pinned = new Set(['userQuery', 'generation'])
+  const pinned = new Set(['userQuery'])
+  if (gen) pinned.add('generation')
   let sumY = 0
   let cntY = 0
   for (const n of nodes) {
@@ -209,29 +420,7 @@ export function applyWorkflowLayout(nodes, edges) {
   }
 
   assignMergeInputPorts(edges, preds)
-
-  const pad = 120
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-  for (const n of nodes) {
-    const r = approxRadius(n)
-    minX = Math.min(minX, n.x - r)
-    minY = Math.min(minY, n.y - r)
-    maxX = Math.max(maxX, n.x + r)
-    maxY = Math.max(maxY, n.y + r)
-  }
-  const width = Math.ceil(maxX - minX + pad * 2)
-  const height = Math.ceil(maxY - minY + pad * 2)
-  const ox = pad - minX
-  const oy = pad - minY
-  for (const n of nodes) {
-    n.x += ox
-    n.y += oy
-  }
-
-  return { width, height }
+  return normalizeGraphBounds(nodes)
 }
 
 function assignMergeInputPorts(edges, preds) {
@@ -242,12 +431,31 @@ function assignMergeInputPorts(edges, preds) {
     toPreds.get(e.to).push(e.from)
   }
   for (const [to, froms] of toPreds) {
-    if (froms.length !== 2) continue
-    const [a, b] = [...froms].sort((x, y) => x.localeCompare(y))
-    for (const e of edges) {
-      if (e.to !== to) continue
-      if (e.from === a) e.inPort = 0
-      else if (e.from === b) e.inPort = 1
+    if (froms.length === 2) {
+      const sorted = [...froms].sort(sortEdgeFromIds)
+      const [a, b] = sorted
+      for (const e of edges) {
+        if (e.to !== to) continue
+        if (e.from === a) e.inPort = 0
+        else if (e.from === b) e.inPort = 1
+      }
+    } else if (froms.length === 3) {
+      const sorted = [...froms].sort(sortEdgeFromIds)
+      for (const e of edges) {
+        if (e.to !== to) continue
+        const idx = sorted.indexOf(e.from)
+        if (idx >= 0) e.inPort = idx
+      }
     }
   }
+}
+
+function sortEdgeFromIds(a, b) {
+  const ca = /^cause-(\d+)$/.exec(a)
+  const cb = /^cause-(\d+)$/.exec(b)
+  if (ca && cb) return parseInt(ca[1], 10) - parseInt(cb[1], 10)
+  const ha = /^hyp-(\d+)$/.exec(a)
+  const hb = /^hyp-(\d+)$/.exec(b)
+  if (ha && hb) return parseInt(ha[1], 10) - parseInt(hb[1], 10)
+  return a.localeCompare(b)
 }
