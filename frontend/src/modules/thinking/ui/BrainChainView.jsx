@@ -17,7 +17,7 @@ import {
   getBrainOptimalVariantForPreset,
   getBrainScenarioBranchCount,
 } from '../lib/brainPanelKpi.js'
-import { buildPredsOuts, revealDelayMs } from '../lib/graphRevealSchedule'
+import { buildPredsOuts, getRevealableNodeIds, revealDelayMs } from '../lib/graphRevealSchedule'
 import { useAppStore } from '../../../core/store/appStore.js'
 import { PANELS_SCENARIO_CONTENT } from '../../ai/lib/panelsScenarioContent.js'
 import { AI_PLANNING_BOARD_PRESETS } from '../../planning/data/aiPlanningBoardPresets.js'
@@ -63,10 +63,19 @@ function BrainChainView({
     const merged = mergeKpiDeltasFromTableLines(panelsBlock.tableLines)
     return merged || kpiRows
   }, [panelsBlock])
-  const scenarioBranchCount = panelsBlock ? getBrainScenarioBranchCount() : SCENARIO_BRANCH_COUNT
+  const scenarioBranchCount = panelsBlock
+    ? getBrainScenarioBranchCount(aiFaceBrainPreset)
+    : SCENARIO_BRANCH_COUNT
   const optimalVariant = panelsBlock
     ? getBrainOptimalVariantForPreset(aiFaceBrainPreset)
     : OPTIMAL_SCENARIO_VARIANT
+  const analysisHeadline = useMemo(() => {
+    if (panelsBlock?.thinkingHeadline) return panelsBlock.thinkingHeadline
+    if (aiFaceBrainPreset === 'opex_reduction' && panelsBlock) {
+      return `Проанализировано ${scenarioBranchCount} сценариев. Оптимальный — Вариант ${optimalVariant}`
+    }
+    return `Проанализировано ${scenarioBranchCount} целей. Оптимальная — Цель ${optimalVariant}`
+  }, [panelsBlock, aiFaceBrainPreset, scenarioBranchCount, optimalVariant])
   const recCardPrimary = panelsBlock?.cards?.[0]
   const recCardSecondary = panelsBlock?.cards?.[1]
 
@@ -83,6 +92,10 @@ function BrainChainView({
     () => activeGraphBundle.edges,
     [activeGraphBundle],
   )
+  const graphRevealTargetIds = useMemo(() => {
+    const ids = graphNodesForReveal.map((n) => n.id)
+    return getRevealableNodeIds(ids, graphEdgesForReveal, 'userQuery')
+  }, [graphNodesForReveal, graphEdgesForReveal])
 
   const stepsUnique = useMemo(() => uniqueStepsByLabel(steps), [steps])
   const fullCount = stepsUnique.length
@@ -93,15 +106,23 @@ function BrainChainView({
   )
   const graphBuildComplete = useMemo(() => {
     if (chainAlreadyRevealed) return true
-    const n = graphNodesForReveal.length
-    return n > 0 && visibleNodeIds.size >= n
-  }, [chainAlreadyRevealed, visibleNodeIds, graphNodesForReveal])
+    const n = graphRevealTargetIds.size
+    if (n === 0) return false
+    for (const id of graphRevealTargetIds) {
+      if (!visibleNodeIds.has(id)) return false
+    }
+    return true
+  }, [chainAlreadyRevealed, visibleNodeIds, graphRevealTargetIds])
   const graphTargetPercent = useMemo(() => {
     if (chainAlreadyRevealed) return 100
-    const n = graphNodesForReveal.length
+    const n = graphRevealTargetIds.size
     if (n === 0) return 0
-    return (visibleNodeIds.size / n) * 100
-  }, [chainAlreadyRevealed, visibleNodeIds, graphNodesForReveal])
+    let shown = 0
+    for (const id of graphRevealTargetIds) {
+      if (visibleNodeIds.has(id)) shown += 1
+    }
+    return (shown / n) * 100
+  }, [chainAlreadyRevealed, visibleNodeIds, graphRevealTargetIds])
   const visibleSteps = useMemo(
     () => stepsUnique.slice(0, visibleCount),
     [stepsUnique, visibleCount]
@@ -111,6 +132,7 @@ function BrainChainView({
     appliedDecisionPathId &&
     selectedDecisionPathId !== appliedDecisionPathId &&
     onRecalculate
+
   const metricMeta = {
     NPV: { label: 'Чистая приведённая стоимость портфеля (NPV)', higherIsGood: true },
     IRR: { label: 'Внутренняя норма доходности проекта (IRR)', higherIsGood: true },
@@ -245,9 +267,7 @@ function BrainChainView({
           aria-hidden={!graphBuildComplete}
         >
           <div className={styles.boardProgressInner}>
-            <p className={styles.boardProgressText}>
-              Проанализировано {scenarioBranchCount} сценариев. Оптимальный — Вариант {optimalVariant}
-            </p>
+            <p className={styles.boardProgressText}>{analysisHeadline}</p>
           </div>
         </section>
 
@@ -255,7 +275,9 @@ function BrainChainView({
           className={`${styles.boardRecommendationsRow} ${styles.boardRevealSection} ${graphBuildComplete ? styles.boardRevealVisible : ''}`}
           aria-hidden={!graphBuildComplete}
         >
-          <article className={`${styles.boardCard} ${styles.boardRecommendationCard} ${styles.boardRecommendationCardPrimary}`}>
+          <article
+            className={`${styles.boardCard} ${styles.boardRecommendationCard} ${styles.boardRecommendationCardPrimary}`}
+          >
             <h4 className={styles.boardRecommendationTitle}>
               {recCardPrimary?.title ?? 'Ввод новых скважин/Зарезка боковых стволов скважин'}
             </h4>
@@ -269,7 +291,9 @@ function BrainChainView({
             </ol>
           </article>
 
-          <article className={`${styles.boardCard} ${styles.boardRecommendationCard} ${styles.boardRecommendationCardSecondary}`}>
+          <article
+            className={`${styles.boardCard} ${styles.boardRecommendationCard} ${styles.boardRecommendationCardSecondary}`}
+          >
             <h4 className={styles.boardRecommendationTitle}>
               {recCardSecondary?.title ?? 'Геолого-технические мероприятия'}
             </h4>
@@ -300,7 +324,9 @@ function BrainChainView({
                   <div key={row.metric} className={styles.boardKpiRow}>
                     <span className={styles.boardKpiMetric}>{meta.label}</span>
                     <span className={styles.boardKpiValue}>{row.value}</span>
-                    <span className={`${styles.boardKpiDelta} ${isGood ? styles.boardKpiDeltaGood : styles.boardKpiDeltaBad}`}>
+                    <span
+                      className={`${styles.boardKpiDelta} ${isGood ? styles.boardKpiDeltaGood : styles.boardKpiDeltaBad}`}
+                    >
                       {row.delta}
                     </span>
                   </div>
@@ -358,6 +384,7 @@ function BrainChainView({
           isNewDemo={false}
           scenarioBranchCount={scenarioBranchCount}
           optimalVariant={optimalVariant}
+          headlineLine={analysisHeadline}
           primaryCard={
             recCardPrimary
               ? { title: recCardPrimary.title, bullets: recCardPrimary.bullets }
@@ -377,7 +404,6 @@ function BrainChainView({
                 type="button"
                 className={`${chrome.drawerExit} ${chrome.drawerExitSuccess}`}
                 onClick={onConfirm}
-                disabled={!graphBuildComplete}
               >
                 Согласовать предлагаемый сценарий
               </button>

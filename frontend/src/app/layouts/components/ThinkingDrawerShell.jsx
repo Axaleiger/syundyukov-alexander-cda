@@ -29,14 +29,6 @@ export function ThinkingDrawerShell({
 	handleRecalculateDecision,
 	isNewDemo = false,
 }) {
-	const [newDemoGraphBuildComplete, setNewDemoGraphBuildComplete] = React.useState(false)
-
-	React.useEffect(() => {
-		if (!thinkingPanelOpen || !isNewDemo || thinkingConfirmPhase !== "brain") {
-			setNewDemoGraphBuildComplete(false)
-		}
-	}, [thinkingPanelOpen, isNewDemo, thinkingConfirmPhase])
-
 	if (!thinkingPanelOpen) return null
 
 	const showNewDemoRecalculate =
@@ -91,9 +83,6 @@ export function ThinkingDrawerShell({
 					onRecalculate={handleRecalculateDecision}
 					awaitingConfirm={thinkingAwaitingConfirm}
 					onConfirm={handleThinkingConfirm}
-					onGraphBuildCompleteChange={
-						isNewDemo ? setNewDemoGraphBuildComplete : undefined
-					}
 					isNewDemo={isNewDemo}
 				/>
 			) : (
@@ -186,7 +175,7 @@ export function ThinkingDrawerShell({
 				<div className={`${styles.body} ${isNewDemo ? styles.bodyNewDemo : ""}`}>
 					{renderBody()}
 				</div>
-				{isNewDemo && thinkingConfirmPhase === "brain" && newDemoGraphBuildComplete && (
+				{isNewDemo && thinkingConfirmPhase === "brain" && (
 					<footer className={styles.footerNewDemo}>
 						{thinkingAwaitingConfirm && (
 							<button

@@ -1,10 +1,12 @@
 import { applyWorkflowLayout } from './scenarioGraphLayout.js'
+import { buildFormalizatorScenarioPools } from './formalizatorScenarioPools.js'
+import hypothesisExactPhrase from '../data/formalizator/hypothesis_exact_phrase.json'
 
-/** Число сценариев-веток; совпадает с текстом в ScenarioAnalysisDashboard */
-export const SCENARIO_BRANCH_COUNT = 18
+/** Число веток «Цель 1…N» в графе мышления; совпадает с текстом в ScenarioAnalysisDashboard */
+export const SCENARIO_BRANCH_COUNT = 4
 
-/** Номер оптимального варианта в тексте дашборда и подсветке корня графа */
-export const OPTIMAL_SCENARIO_VARIANT = 7
+/** Номер оптимальной цели в тексте дашборда и подсветке корня графа (1…SCENARIO_BRANCH_COUNT) */
+export const OPTIMAL_SCENARIO_VARIANT = 2
 
 export const optimalScenarioRootId = `scenario-${OPTIMAL_SCENARIO_VARIANT}`
 
@@ -12,6 +14,12 @@ export const optimalScenarioRootId = `scenario-${OPTIMAL_SCENARIO_VARIANT}`
 export const GRAPH_RANDOM_SEED = 0x4cda_7e11
 
 const N = SCENARIO_BRANCH_COUNT
+/** Общее число узлов-причин (по три на каждую цель), нумерация 1…M сверху вниз */
+const GLOBAL_CAUSE_COUNT = N * 3
+/** Глобальные гипотезы (по две на цель), столбик после причин */
+const GLOBAL_HYP_COUNT = N * 2
+/** Шары сценариев в зоне справа от гипотез, подписи «Сценарий 1…» по порядку id */
+const GLOBAL_OUTCOME_BALL_COUNT = N * 4
 
 function mulberry32(seed) {
   return function next() {
@@ -28,8 +36,8 @@ function createRngForGraph(k, graphSalt = 0) {
 	return mulberry32(seed)
 }
 
-/** Роли: контекст → аналитика → ветки → веха → сводка → итог */
-const POOL_CONTEXT = [
+/** Роли: контекст → аналитика → ветки → веха → сводка → итог (fallback, если formalizator-пулы пусты) */
+const FALLBACK_POOL_CONTEXT = [
   'Геооснова: пласт, проницаемость, насыщенность',
   'Перепад давления и гидравлика скважины',
   'CAPEX на заканчивание и конструкция',
@@ -50,7 +58,7 @@ const POOL_CONTEXT = [
   'Планирование ремонтов и очередь КРС',
 ]
 
-const POOL_ANALYSIS_A = [
+const FALLBACK_POOL_ANALYSIS_A = [
   'Входные данные: глубина и давление в пласте',
   'Лимит CAPEX по кусту',
   'Тип коллектора и пористость',
@@ -71,7 +79,7 @@ const POOL_ANALYSIS_A = [
   'Приоритет скважин под КРС',
 ]
 
-const POOL_ANALYSIS_B = [
+const FALLBACK_POOL_ANALYSIS_B = [
   'Расчёт профиля добычи (база / пик)',
   'Прогноз OPEX при росте добычи',
   'Проницаемость и фильтрационные потери',
@@ -92,209 +100,104 @@ const POOL_ANALYSIS_B = [
   'Срок окупаемости ремонта',
 ]
 
-const POOL_MILESTONE = [
-  'Анализ результата этапа',
-  'Оценка рисков и допущений',
-  'Сводка экономики (NPV, IRR)',
-  'Проверка согласованности данных',
-  'Контрольная точка CAPEX/OPEX',
-  'Согласование с геомоделью',
-]
-
-const POOL_SYNTH = [
-  'Сводка ветки: контур OPEX',
-  'Сводка ветки: баланс добычи и мощности',
-  'Сводка ветки: риски и кандидаты ГТМ',
-  'Сводка ветки: CAPEX и заканчивание',
-  'Сводка ветки: логистика и маржа',
-  'Сводка ветки: ВНС и гидравлика',
-  'Сводка ветки: прогноз и цена нефти',
-  'Сводка ветки: ремонты и простои',
-  'Сводка ветки: согласование блоков модели',
-]
-
-const POOL_FINAL = [
-  'Итог сценария: NPV и окупаемость',
-  'Итог сценария: прирост добычи',
-  'Итог сценария: портфель ГТМ',
-  'Итог сценария: лимиты и узкие места',
-  'Итог сценария: риск-скоринг',
-  'Итог сценария: согласованный CAPEX',
-  'Итог сценария: операционная программа',
-  'Итог сценария: целевые KPI',
-  'Итог сценария: решение по ветке',
-]
+/** Пулы на каждый вызов buildScenarioGraphCore — JSON уже в бандле, без «застывших» ссылок при HMR. */
+function resolveScenarioGraphPools() {
+  const fp = buildFormalizatorScenarioPools()
+  return {
+    context: fp.context?.length ? fp.context : FALLBACK_POOL_CONTEXT,
+    analysisA: fp.analysisA?.length ? fp.analysisA : FALLBACK_POOL_ANALYSIS_A,
+    analysisB: fp.analysisB?.length ? fp.analysisB : FALLBACK_POOL_ANALYSIS_B,
+  }
+}
 
 function pick(pool, k, salt) {
   const i = Math.imul(k, 131) ^ salt
   return pool[((i % pool.length) + pool.length) % pool.length]
 }
 
+function gatherGlobalCauseBodies(pools, count, seed) {
+  const combined = []
+  const seen = new Set()
+  for (const arr of [pools.analysisA, pools.analysisB, pools.context]) {
+    for (const raw of arr) {
+      const t = String(raw || '').trim()
+      if (!t || seen.has(t)) continue
+      seen.add(t)
+      combined.push(t)
+    }
+  }
+  const out = []
+  let rot = seed >>> 0
+  if (combined.length === 0) {
+    for (let j = 0; j < count; j++) {
+      out.push(pick(FALLBACK_POOL_ANALYSIS_A, 1, rot + j * 7))
+    }
+    return out
+  }
+  for (let j = 0; j < count; j++) {
+    out.push(combined[rot % combined.length])
+    rot = (rot + 9973) >>> 0
+  }
+  return out
+}
+
+/** Три различных индекса 0…m-1 в случайном порядке (детерминированно от rng) */
+function pickThreeRandomIndices(rng, m) {
+  const out = []
+  while (out.length < 3) {
+    const x = Math.floor(rng() * m)
+    if (!out.includes(x)) out.push(x)
+  }
+  return out
+}
+
+function pickTwoRandomIndices(rng, m) {
+  const out = []
+  while (out.length < 2) {
+    const x = Math.floor(rng() * m)
+    if (!out.includes(x)) out.push(x)
+  }
+  return out
+}
+
+function gatherGlobalHypothesisBodies(count, seed) {
+  const vals = Object.values(hypothesisExactPhrase).filter((v) => typeof v === 'string' && v.trim())
+  const out = []
+  let rot = seed >>> 0
+  if (vals.length === 0) {
+    for (let j = 0; j < count; j++) {
+      out.push(pick(FALLBACK_POOL_ANALYSIS_A, 1, rot + j * 11))
+    }
+    return out
+  }
+  for (let j = 0; j < count; j++) {
+    out.push(vals[rot % vals.length].trim())
+    rot = (rot + 7919) >>> 0
+  }
+  return out
+}
+
 /**
- * Собирает узлы и рёбра колонки k (id вида scenario-k, s{k}-*).
- * Координаты x,y заполняет applyWorkflowLayout.
+ * Рёбра цели k: три случайные причины → две случайные гипотезы. Узлы cause-* / hyp-* — глобальные.
  */
-function buildBranch(k, rng) {
+function buildGoalSubgraph(k, rng, pickedZeroBased) {
   const sid = `scenario-${k}`
-  const themeSalt = (Math.floor(rng() * 4096) ^ (k << 5)) >>> 0
-
-  const nodes = []
   const edges = []
-  let maxLevel = 0
 
-  const pc = (slot) => pick(POOL_CONTEXT, k, themeSalt + slot * 3)
-  const pa = (slot) => pick(POOL_ANALYSIS_A, k, themeSalt + 17 + slot * 5)
-  const pb = (slot) => pick(POOL_ANALYSIS_B, k, themeSalt + 29 + slot * 7)
-  const pm = () => pick(POOL_MILESTONE, k, themeSalt + 101)
-  const ps = () => pick(POOL_SYNTH, k, themeSalt + 203)
-  const pf = () => pick(POOL_FINAL, k, themeSalt + 307)
+  const causeIds = pickedZeroBased.map((i) => `cause-${i + 1}`)
+  const pickedHyps = pickTwoRandomIndices(rng, GLOBAL_HYP_COUNT)
+  const hypIds = pickedHyps.map((i) => `hyp-${i + 1}`)
 
-  const addStep = (id, level, label) => {
-    maxLevel = Math.max(maxLevel, level)
-    nodes.push({ id, label, type: 'step', x: 0, y: 0, level })
+  for (const cid of causeIds) {
+    edges.push({ from: sid, to: cid })
   }
-  const addMs = (id, level, label) => {
-    maxLevel = Math.max(maxLevel, level)
-    nodes.push({ id, label, type: 'milestone', x: 0, y: 0, level })
-  }
-
-  const r = rng()
-  let template
-  if (r < 0.18) template = 'short'
-  else if (r < 0.4) template = 'medium'
-  else if (r < 0.58) template = 'long'
-  else if (r < 0.78) template = 'diamond_early'
-  else template = 'diamond_late'
-
-  const wantSynth = rng() > 0.42
-  const swapFork = rng() >= 0.5
-  const labelLeft = () => (swapFork ? pb(1) : pa(1))
-  const labelRight = () => (swapFork ? pa(2) : pb(2))
-
-  if (template === 'short') {
-    const u0 = `s${k}-u0`
-    const ms = `s${k}-ms`
-    const fn = `s${k}-fn`
-    addStep(u0, 1, pc(0))
-    addMs(ms, 2, pm())
-    addMs(fn, 3, pf())
-    edges.push({ from: sid, to: u0 }, { from: u0, to: ms }, { from: ms, to: fn })
-  } else if (template === 'medium') {
-    const u0 = `s${k}-u0`
-    const u1 = `s${k}-u1`
-    const ms = `s${k}-ms`
-    const fn = `s${k}-fn`
-    addStep(u0, 1, pc(0))
-    addStep(u1, 2, pa(0))
-    addMs(ms, 3, pm())
-    if (wantSynth) {
-      const sy = `s${k}-sy`
-      addStep(sy, 4, ps())
-      addMs(fn, 5, pf())
-      edges.push(
-        { from: sid, to: u0 },
-        { from: u0, to: u1 },
-        { from: u1, to: ms },
-        { from: ms, to: sy },
-        { from: sy, to: fn }
-      )
-    } else {
-      addMs(fn, 4, pf())
-      edges.push({ from: sid, to: u0 }, { from: u0, to: u1 }, { from: u1, to: ms }, { from: ms, to: fn })
-    }
-  } else if (template === 'long') {
-    const u0 = `s${k}-u0`
-    const u1 = `s${k}-u1`
-    const u2 = `s${k}-u2`
-    const ms = `s${k}-ms`
-    const sy = `s${k}-sy`
-    const fn = `s${k}-fn`
-    addStep(u0, 1, pc(0))
-    addStep(u1, 2, pa(0))
-    addStep(u2, 3, pb(0))
-    addMs(ms, 4, pm())
-    if (wantSynth) {
-      addStep(sy, 5, ps())
-      addMs(fn, 6, pf())
-      edges.push(
-        { from: sid, to: u0 },
-        { from: u0, to: u1 },
-        { from: u1, to: u2 },
-        { from: u2, to: ms },
-        { from: ms, to: sy },
-        { from: sy, to: fn }
-      )
-    } else {
-      addMs(fn, 5, pf())
-      edges.push(
-        { from: sid, to: u0 },
-        { from: u0, to: u1 },
-        { from: u1, to: u2 },
-        { from: u2, to: ms },
-        { from: ms, to: fn }
-      )
-    }
-  } else if (template === 'diamond_early') {
-    const u0 = `s${k}-u0`
-    const fa = `s${k}-fa`
-    const fb = `s${k}-fb`
-    const ms = `s${k}-ms`
-    addStep(u0, 1, pc(0))
-    addStep(fa, 2, labelLeft())
-    addStep(fb, 2, labelRight())
-    addMs(ms, 3, pm())
-    edges.push(
-      { from: sid, to: u0 },
-      { from: u0, to: fa },
-      { from: u0, to: fb },
-      { from: fa, to: ms },
-      { from: fb, to: ms }
-    )
-    if (wantSynth) {
-      const sy = `s${k}-sy`
-      const fn = `s${k}-fn`
-      addStep(sy, 4, ps())
-      addMs(fn, 5, pf())
-      edges.push({ from: ms, to: sy }, { from: sy, to: fn })
-    } else {
-      const fn = `s${k}-fn`
-      addMs(fn, 4, pf())
-      edges.push({ from: ms, to: fn })
-    }
-  } else {
-    /* diamond_late */
-    const u0 = `s${k}-u0`
-    const u1 = `s${k}-u1`
-    const fa = `s${k}-fa`
-    const fb = `s${k}-fb`
-    const ms = `s${k}-ms`
-    addStep(u0, 1, pc(0))
-    addStep(u1, 2, pa(0))
-    addStep(fa, 3, labelLeft())
-    addStep(fb, 3, labelRight())
-    addMs(ms, 4, pm())
-    edges.push(
-      { from: sid, to: u0 },
-      { from: u0, to: u1 },
-      { from: u1, to: fa },
-      { from: u1, to: fb },
-      { from: fa, to: ms },
-      { from: fb, to: ms }
-    )
-    if (wantSynth) {
-      const sy = `s${k}-sy`
-      const fn = `s${k}-fn`
-      addStep(sy, 5, ps())
-      addMs(fn, 6, pf())
-      edges.push({ from: ms, to: sy }, { from: sy, to: fn })
-    } else {
-      const fn = `s${k}-fn`
-      addMs(fn, 5, pf())
-      edges.push({ from: ms, to: fn })
+  for (const cid of causeIds) {
+    for (const hid of hypIds) {
+      edges.push({ from: cid, to: hid })
     }
   }
 
-  return { nodes, edges, maxLevel }
+  return { nodes: [], edges }
 }
 
 function computeRevealWaves(allNodes, allEdges) {
@@ -324,48 +227,91 @@ function computeRevealWaves(allNodes, allEdges) {
   return wave
 }
 
+const ROOT_QUERY_LABEL = 'Обработка пользовательского запроса'
+
 /**
- * @param {{ graphSalt?: number, queryLabel: string, genLabel: string, optimalVariant: number }} opts
+ * @param {{ graphSalt?: number, optimalVariant: number }} opts
  */
 function buildScenarioGraphCore(opts) {
-	const { graphSalt = 0, queryLabel, genLabel, optimalVariant } = opts
+	const { graphSalt = 0, optimalVariant } = opts
+	const pools = resolveScenarioGraphPools()
 	const nodes = []
 	const edges = []
 
 	nodes.push({
 		id: "userQuery",
-		label: queryLabel,
+		label: ROOT_QUERY_LABEL,
+		detailText: ROOT_QUERY_LABEL,
 		type: "start",
 		x: 0,
 		y: 0,
 	})
 
-	nodes.push({
-		id: "generation",
-		label: genLabel,
-		type: "start",
-		x: 0,
-		y: 0,
-	})
-	edges.push({ from: "userQuery", to: "generation" })
+	const globalBodies = gatherGlobalCauseBodies(
+		pools,
+		GLOBAL_CAUSE_COUNT,
+		(graphSalt ^ 0xa11c0ca) >>> 0,
+	)
+	for (let i = 0; i < GLOBAL_CAUSE_COUNT; i++) {
+		const num = i + 1
+		nodes.push({
+			id: `cause-${num}`,
+			label: `Причина ${num}`,
+			detailText: globalBodies[i],
+			type: "step",
+			x: 0,
+			y: 0,
+			level: 0,
+		})
+	}
+
+	const hypBodies = gatherGlobalHypothesisBodies(
+		GLOBAL_HYP_COUNT,
+		(graphSalt ^ 0x5b710ea) >>> 0,
+	)
+	for (let i = 0; i < GLOBAL_HYP_COUNT; i++) {
+		const num = i + 1
+		nodes.push({
+			id: `hyp-${num}`,
+			label: `Гипотеза ${num}`,
+			detailText: hypBodies[i],
+			type: "step",
+			x: 0,
+			y: 0,
+			level: 0,
+		})
+	}
+
+	for (let i = 1; i <= GLOBAL_OUTCOME_BALL_COUNT; i++) {
+		const rngBall = createRngForGraph(200 + i, graphSalt)
+		const hypPick = pickTwoRandomIndices(rngBall, GLOBAL_HYP_COUNT)
+		nodes.push({
+			id: `out-scenario-${i}`,
+			label: `Сценарий ${i}`,
+			detailText: `Сценарий ${i}`,
+			type: "outcome",
+			x: 0,
+			y: 0,
+		})
+		for (const hi of hypPick) {
+			edges.push({ from: `hyp-${hi + 1}`, to: `out-scenario-${i}` })
+		}
+	}
 
 	for (let k = 1; k <= N; k++) {
 		const rng = createRngForGraph(k, graphSalt)
 		const sid = `scenario-${k}`
 		nodes.push({
 			id: sid,
-			label: `Сценарий ${k}`,
+			label: `Цель ${k}`,
 			type: "scenario",
 			x: 0,
 			y: 0,
 		})
-		edges.push({ from: "generation", to: sid })
+		edges.push({ from: "userQuery", to: sid })
 
-		const branch = buildBranch(k, rng)
-		for (const n of branch.nodes) {
-			const { level: _lv, ...rest } = n
-			nodes.push(rest)
-		}
+		const picked = pickThreeRandomIndices(rng, GLOBAL_CAUSE_COUNT)
+		const branch = buildGoalSubgraph(k, rng, picked)
 		for (const e of branch.edges) edges.push(e)
 	}
 
@@ -386,9 +332,8 @@ function buildScenarioGraphCore(opts) {
 
 function computeOptimalScenarioClosure(edges, rootId) {
   const m = /^scenario-(\d+)$/.exec(rootId)
-  const k = m ? m[1] : "7"
-  const prefix = `s${k}-`
-  const inBranch = (id) => id === rootId || id.startsWith(prefix)
+  const optK = m ? m[1] : String(OPTIMAL_SCENARIO_VARIANT)
+  const branchPrefix = `s${optK}-`
   const outs = new Map()
   for (const e of edges) {
     if (!outs.has(e.from)) outs.set(e.from, [])
@@ -399,14 +344,14 @@ function computeOptimalScenarioClosure(edges, rootId) {
   while (q.length) {
     const u = q.shift()
     for (const v of outs.get(u) || []) {
-      if (inBranch(v) && !nodeIds.has(v)) {
-        nodeIds.add(v)
-        q.push(v)
-      }
+      if (nodeIds.has(v)) continue
+      if (/^scenario-\d+$/.test(v) && v !== rootId) continue
+      if (/^s\d+-/.test(v) && !v.startsWith(branchPrefix)) continue
+      nodeIds.add(v)
+      q.push(v)
     }
   }
   nodeIds.add("userQuery")
-  nodeIds.add("generation")
   const edgeKeys = new Set()
   for (const e of edges) {
     if (nodeIds.has(e.from) && nodeIds.has(e.to)) edgeKeys.add(`${e.from}|${e.to}`)
@@ -416,8 +361,6 @@ function computeOptimalScenarioClosure(edges, rootId) {
 
 const built = buildScenarioGraphCore({
 	graphSalt: 0,
-	queryLabel: "Анализ пользовательского запроса",
-	genLabel: "Генерация и ранжирование сценариев",
 	optimalVariant: OPTIMAL_SCENARIO_VARIANT,
 })
 
@@ -439,29 +382,29 @@ export const defaultScenarioGraphBundle = toScenarioGraphBundle(built, "default"
 /** Пресеты ИИ (лицо → планирование): отдельная топология/подписи/акцентная ветка. */
 const AI_SCENARIO_GRAPH_PRESETS = {
 	base_drilling: {
-		queryLabel: "Запрос: добыча и программа бурения",
-		genLabel: "Генерация и ранжирование 18 сценариев",
-		optimalVariant: 7,
+		optimalVariant: 2,
 		graphSalt: 0x5a11_0001,
 		visualTone: "drilling",
 	},
 	fcf_no_drill: {
-		queryLabel: "Запрос: FCF без новых скважин",
-		genLabel: "Ранжирование сценариев CAPEX / FCF",
 		optimalVariant: 3,
 		graphSalt: 0x7c22_0002,
 		visualTone: "fcf",
 	},
 	opex_reduction: {
-		queryLabel: "Запрос: удельный OPEX и энергия",
-		genLabel: "Сценарии сжатия OPEX при добыче",
-		optimalVariant: 5,
+		optimalVariant: 2,
 		graphSalt: 0x3e55_0003,
 		visualTone: "opex",
 	},
 }
 
 const presetGraphBundleCache = new Map()
+
+if (import.meta.hot) {
+	import.meta.hot.accept('./formalizatorScenarioPools.js', () => {
+		presetGraphBundleCache.clear()
+	})
+}
 
 /**
  * Граф для панели «Мышление» new-demo по пресету доски ИИ.
@@ -473,8 +416,6 @@ export function getScenarioGraphBundleForAiPreset(preset) {
 		const p = AI_SCENARIO_GRAPH_PRESETS[preset]
 		const raw = buildScenarioGraphCore({
 			graphSalt: p.graphSalt,
-			queryLabel: p.queryLabel,
-			genLabel: p.genLabel,
 			optimalVariant: p.optimalVariant,
 		})
 		presetGraphBundleCache.set(preset, toScenarioGraphBundle(raw, p.visualTone))

@@ -55,3 +55,29 @@ export function buildPredsOuts(nodeIds, edges) {
   }
   return { preds, outs }
 }
+
+/**
+ * Узлы, которые реально могут появиться при раскрытии от корня: замыкание по правилу
+ * «все предшественники уже в множестве» (пустые preds у узла ≠ корня — узел недостижим).
+ * Чистый обход вперёд по рёбрам завышал бы множество (гипотеза с предком-причиной без сценария).
+ */
+export function getRevealableNodeIds(nodeIds, edges, rootId = 'userQuery') {
+  const { preds } = buildPredsOuts(nodeIds, edges)
+  const all = new Set(nodeIds)
+  const R = new Set()
+  if (all.has(rootId)) R.add(rootId)
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const n of all) {
+      if (R.has(n)) continue
+      const ps = preds.get(n) || []
+      if (n !== rootId && ps.length === 0) continue
+      if (ps.every((p) => R.has(p))) {
+        R.add(n)
+        changed = true
+      }
+    }
+  }
+  return R
+}
