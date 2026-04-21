@@ -3,6 +3,7 @@
  * пресет доски сохраняется в сторе (без автоперехода на вкладку «Планирование»).
  */
 import { useAppStore } from "../../../core/store/appStore.js"
+import { useThinkingStore } from "../../thinking/model/thinkingStore.js"
 import { AI_PRESET_THINKING_SUMMARIES } from "../../planning/data/aiPlanningBoardPresets.js"
 import { getThinkingStepsFromPanels } from "./panelsScenarioContent.js"
 
@@ -84,10 +85,17 @@ export async function runAiFacePlanningFlow(ctx, preset, topic) {
 		isPaused,
 		waitForUserConfirm,
 		navigateToPlanningAfterAi,
+		semanticGraphBundle,
 	} = ctx
 	const topicLabel = topic || "планирование"
 
 	if (isPaused?.()) return
+	if (semanticGraphBundle) {
+		useThinkingStore.getState().setThinkingGraphBundleOverride(semanticGraphBundle)
+	} else {
+		useThinkingStore.getState().setThinkingGraphBundleOverride(null)
+	}
+
 	if (typeof setThinkingPhase === "function") setThinkingPhase("brain")
 	if (typeof setThinkingGraphNodes === "function") {
 		setThinkingGraphNodes(

@@ -23,7 +23,8 @@ export async function createPlanningCase(ctx, topic) {
 export async function aiFaceToPlanning(ctx, payload) {
   const preset = payload?.preset ?? 'fcf_no_drill'
   const topic = payload?.topic
-  await runAiFacePlanningFlow(ctx, preset, topic)
+  const semanticGraphBundle = payload?.semanticGraphBundle
+  await runAiFacePlanningFlow({ ...ctx, semanticGraphBundle }, preset, topic)
 }
 
 /**

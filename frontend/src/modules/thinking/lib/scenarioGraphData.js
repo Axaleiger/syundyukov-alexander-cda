@@ -1,6 +1,6 @@
 import { applyWorkflowLayout } from './scenarioGraphLayout.js'
 import { buildFormalizatorScenarioPools } from './formalizatorScenarioPools.js'
-import hypothesisExactPhrase from '../data/formalizator/hypothesis_exact_phrase.json'
+import hypothesisExactPhrase from '../data/prompt-pipeline/hypothesis_exact_phrase.json'
 
 /** Число веток «Цель 1…N» в графе мышления; совпадает с текстом в ScenarioAnalysisDashboard */
 export const SCENARIO_BRANCH_COUNT = 4
@@ -330,7 +330,8 @@ function buildScenarioGraphCore(opts) {
 	return { nodes, edges, graphWidth, graphHeight, maxRevealWave, optimal }
 }
 
-function computeOptimalScenarioClosure(edges, rootId) {
+/** Пересчёт оптимальной ветки после правки рёбер (например семантический бандл). */
+export function computeOptimalScenarioClosure(edges, rootId) {
   const m = /^scenario-(\d+)$/.exec(rootId)
   const optK = m ? m[1] : String(OPTIMAL_SCENARIO_VARIANT)
   const branchPrefix = `s${optK}-`
@@ -396,6 +397,12 @@ const AI_SCENARIO_GRAPH_PRESETS = {
 		graphSalt: 0x3e55_0003,
 		visualTone: "opex",
 	},
+}
+
+/** Номер «оптимальной цели» на графе для пресета лица (подсветка пути). */
+export function getOptimalVariantForAiPreset(preset) {
+	const p = preset && AI_SCENARIO_GRAPH_PRESETS[preset]
+	return p ? p.optimalVariant : OPTIMAL_SCENARIO_VARIANT
 }
 
 const presetGraphBundleCache = new Map()

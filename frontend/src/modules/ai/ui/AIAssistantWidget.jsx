@@ -1,9 +1,29 @@
-import React, { useState, useRef, useCallback, useEffect } from "react"
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import classicStyles from "./AIAssistantWidget.module.css"
 import newDemoStyles from "../../face/ui/new-demo/assistant/NewDemoAIAssistantWidget.module.css"
 import { isSupported, startListening, stopListening, getTranscript } from "../lib/voiceHandler"
-import { classifyIntent } from "../lib/intentClassifier"
+import { classifyIntent, SCENARIO_IDS } from "../lib/intentClassifier"
 import { runScenario } from "../lib/scenarioExecutors"
+import { runPromptPipeline, applyWizardSetsToPipeline } from "../../promptPipeline/runPromptPipeline.js"
+import { buildSemanticScenarioGraphBundle } from "../../thinking/lib/semanticScenarioGraphBundle.js"
+import {
+	describeTemplateSets,
+	buildPipelineFromScenarioTemplate,
+} from "../../promptPipeline/buildPipelineFromScenarioTemplate.js"
+import { boardPresetFromScenarioTemplateId } from "../../promptPipeline/boardPresetFromScenarioTemplate.js"
+import { assetModelingKnowledge } from "../../promptPipeline/knowledge.js"
+import {
+	EMPTY_WIZARD_SETS,
+	mergeTemplateSetsWithWizard,
+	normalizeWizardSets,
+	WIZARD_STEP_MAX,
+} from "../../promptPipeline/wizardSets.js"
+import scenarioPresetsData from "../../thinking/data/prompt-pipeline/scenario_presets.json"
+import NewDemoAiPromptConstructor from "../../face/ui/new-demo/assistant/NewDemoAiPromptConstructor.jsx"
+import {
+	mapThreeScenarioTemplatesForNewDemo,
+	NEW_DEMO_THREE_SCENARIO_TEMPLATE_LABELS,
+} from "../../face/ui/new-demo/assistant/newDemoThreeScenarioTemplateLabels.js"
 import {
 	DEMO_AI_ASSISTANT_RESET_ACTION_LABEL,
 	DEMO_AI_ASSISTANT_SUGGESTIONS,
@@ -11,6 +31,92 @@ import {
 import { useMapPointsData } from "../../globe/model/useMapPointsData"
 import { useStand } from "../../../app/stands/standContext"
 import { restartDemoSessionFromPreset } from "../../../shared/lib/restartDemoSessionFromPreset"
+import { useThinkingStore } from "../../thinking/model/thinkingStore.js"
+
+/** Эталонные подсказки / пресет доски без выбранного шаблона → тот же id, что в prompt-builder / scenario_presets.json */
+const BOARD_PRESET_TO_SCENARIO_TEMPLATE_ID = Object.freeze({
+	base_drilling: "base_oil",
+	fcf_no_drill: "fcf_no_drill_capex",
+	opex_reduction: "opex_program",
+})
+
+function normRuPromptLine(s) {
+	return String(s || "")
+		.toLowerCase()
+		.replace(/ё/g, "е")
+		.replace(/\u00a0/g, " ")
+		.replace(/\s+/g, " ")
+		.replace(/[.!?…]+$/u, "")
+		.trim()
+}
+
+/** Текст запроса совпадает с одной из трёх длинных подписей карточек (как на new-demo face), без выбора шаблона в UI. */
+function scenarioTemplateFromCanonicalNewDemoPrompt(text, scenarioPresetsList) {
+	const nt = normRuPromptLine(text)
+	if (!nt) return null
+	for (const [presetId, label] of Object.entries(NEW_DEMO_THREE_SCENARIO_TEMPLATE_LABELS)) {
+		if (normRuPromptLine(label) === nt) {
+			return scenarioPresetsList.find((p) => p.id === presetId) ?? null
+		}
+	}
+	return null
+}
+
+/**
+ * Неточное совпадение (латиница/опечатки/лишняя пунктуация): те же три сценария, что на карточках new-demo.
+ */
+function scenarioTemplateFromHeuristicNewDemoPrompt(text, scenarioPresetsList) {
+	const n = normRuPromptLine(text)
+	if (!n || n.length < 36) return null
+	const byId = (id) => scenarioPresetsList.find((p) => p.id === id) ?? null
+	if ((n.includes("npv") || n.includes("нпв")) && (n.includes("лимит") || n.includes("капитал"))) {
+		return byId("npv_push")
+	}
+	if (
+		n.includes("свободного денежного потока") ||
+		(n.includes("без нового бурения") && (n.includes("capex") || n.includes("капекс")))
+	) {
+		return byId("fcf_no_drill_capex")
+	}
+	if (n.includes("устойчивому профилю") || (n.includes("базовой добыч") && n.includes("устойчив"))) {
+		return byId("base_oil")
+	}
+	return null
+}
+
+/**
+ * Шаблон конструктора для пайплайна: явный выбор пользователя; эталонная строка карточки; канонический шаблон по пресету лица.
+ * @param {object | null} pipe — результат первого шага runPromptPipeline (для подстановки по suggestedPreset)
+ */
+function resolveNewDemoScenarioTemplateForPipeline(
+	selectedTemplateId,
+	scenarioPresetsList,
+	presetFromIntent,
+	pipe,
+	userText,
+) {
+	let tpl =
+		selectedTemplateId != null && selectedTemplateId !== ""
+			? (scenarioPresetsList.find((p) => p.id === selectedTemplateId) ?? null)
+			: null
+	if (!tpl) {
+		tpl = scenarioTemplateFromCanonicalNewDemoPrompt(userText, scenarioPresetsList)
+	}
+	if (!tpl) {
+		tpl = scenarioTemplateFromHeuristicNewDemoPrompt(userText, scenarioPresetsList)
+	}
+	if (!tpl) {
+		const presetKey =
+			presetFromIntent ||
+			(pipe && typeof pipe.suggestedPreset === "string" ? pipe.suggestedPreset : null)
+		const sid =
+			presetKey && BOARD_PRESET_TO_SCENARIO_TEMPLATE_ID[presetKey]
+				? BOARD_PRESET_TO_SCENARIO_TEMPLATE_ID[presetKey]
+				: null
+		tpl = sid ? (scenarioPresetsList.find((p) => p.id === sid) ?? null) : null
+	}
+	return tpl
+}
 
 const MicIcon = ({ className }) => (
 	<svg
@@ -92,6 +198,12 @@ function AIAssistantWidget({
 	const [requestEpoch, setRequestEpoch] = useState(0)
 	const [confirmedRequestEpoch, setConfirmedRequestEpoch] = useState(-1)
 	const [isResultReopenable, setIsResultReopenable] = useState(false)
+	const [selectedTemplateId, setSelectedTemplateId] = useState(null)
+	const [livePipeline, setLivePipeline] = useState(null)
+	const debounceRef = useRef(null)
+	const [wizardStep, setWizardStep] = useState(1)
+	const [wizardSets, setWizardSets] = useState(() => normalizeWizardSets(EMPTY_WIZARD_SETS))
+	const lastSeededNormRef = useRef("")
 
 	const addThinkingStepLocal = useCallback(
 		(label) => {
@@ -221,8 +333,100 @@ function AIAssistantWidget({
 		}
 	}, [isListening])
 
+	const scenarioPresetsList = useMemo(
+		() => scenarioPresetsData?.presets ?? [],
+		[scenarioPresetsData],
+	)
+
+	const scenarioTemplatesForForm = useMemo(
+		() => mapThreeScenarioTemplatesForNewDemo(scenarioPresetsList),
+		[scenarioPresetsList],
+	)
+
+	const dimensionCatalog = useMemo(() => {
+		const d = assetModelingKnowledge.dimensions || {}
+		const row = (arr) =>
+			Array.isArray(arr)
+				? arr.map((x) => ({ id: x.id, name: String(x.name || x.id) }))
+				: []
+		return {
+			bases: row(d.bases),
+			horizons: row(d.horizons),
+			horizonPhases: row(d.horizon_phases),
+			objectives: row(d.objectives),
+			constraints: row(d.constraints),
+			levers: row(d.levers),
+		}
+	}, [])
+
+	const constructorDisplay = useMemo(() => {
+		if (appearance !== "newDemo") return null
+		const d = describeTemplateSets(wizardSets)
+		return {
+			...d,
+			matchedIntents: selectedTemplateId ? [] : livePipeline?.matchedIntents ?? [],
+		}
+	}, [appearance, wizardSets, livePipeline, selectedTemplateId])
+
+	useEffect(() => {
+		if (appearance !== "newDemo") return
+		if (!selectedTemplateId) return
+		const t = scenarioPresetsList.find((p) => p.id === selectedTemplateId)
+		if (t?.sets) {
+			setWizardSets(normalizeWizardSets(t.sets))
+			setWizardStep(1)
+			lastSeededNormRef.current = ""
+		}
+	}, [appearance, selectedTemplateId, scenarioPresetsList])
+
+	useEffect(() => {
+		if (appearance !== "newDemo") return
+		if (selectedTemplateId) return
+		if (!livePipeline?.semanticWizardSets) {
+			if (!livePipeline) lastSeededNormRef.current = ""
+			return
+		}
+		const n = livePipeline.normText ?? ""
+		if (n !== lastSeededNormRef.current) {
+			lastSeededNormRef.current = n
+			setWizardSets(normalizeWizardSets(livePipeline.semanticWizardSets))
+			setWizardStep(1)
+		}
+	}, [appearance, selectedTemplateId, livePipeline])
+
+	const toggleWizardDimension = useCallback((dimKey, id) => {
+		setWizardSets((prev) => {
+			const max = WIZARD_STEP_MAX[dimKey] ?? 4
+			const cur = new Set(prev[dimKey] || [])
+			if (cur.has(id)) cur.delete(id)
+			else {
+				if (cur.size >= max) return prev
+				cur.add(id)
+			}
+			return { ...prev, [dimKey]: [...cur] }
+		})
+	}, [])
+
+	useEffect(() => {
+		if (appearance !== "newDemo" || !open || !selectedAssetId) return
+		const raw = (transcript || question || "").trim()
+		if (debounceRef.current) clearTimeout(debounceRef.current)
+		if (!raw) {
+			setLivePipeline(null)
+			return
+		}
+		debounceRef.current = setTimeout(() => {
+			debounceRef.current = null
+			setLivePipeline(runPromptPipeline(raw))
+		}, 520)
+		return () => {
+			if (debounceRef.current) clearTimeout(debounceRef.current)
+		}
+	}, [appearance, open, selectedAssetId, question, transcript])
+
 	const runExecutor = useCallback(
-		async (scenarioId, topicOrMetric, preset) => {
+		async (scenarioId, topicOrMetric, preset, execOptions = {}) => {
+			setSelectedTemplateId(null)
 			if (!selectedAssetId) {
 				setOpen(true)
 				setChatHistory((h) => [
@@ -235,6 +439,7 @@ function AIAssistantWidget({
 				return
 			}
 			resetThinkingChain?.()
+			useThinkingStore.getState().setThinkingGraphBundleOverride(null)
 			setThinkingSteps?.([])
 			setThinkingGraphNodes?.([])
 			setLocalThinkingSteps([])
@@ -265,6 +470,9 @@ function AIAssistantWidget({
 								preset,
 								topic:
 									typeof topicOrMetric === "string" ? topicOrMetric : undefined,
+								...(execOptions.semanticGraphBundle
+									? { semanticGraphBundle: execOptions.semanticGraphBundle }
+									: {}),
 							}
 						: topicOrMetric
 				await runScenario(scenarioId, ctx, payload)
@@ -295,7 +503,18 @@ function AIAssistantWidget({
 	)
 
 	const handleSend = useCallback(() => {
-		const text = (transcript || question || "").trim()
+		let text = (transcript || question || "").trim()
+		if (
+			!text &&
+			appearance === "newDemo" &&
+			selectedTemplateId &&
+			scenarioPresetsList.length
+		) {
+			const t =
+				scenarioTemplatesForForm.find((p) => p.id === selectedTemplateId) ||
+				scenarioPresetsList.find((p) => p.id === selectedTemplateId)
+			if (t?.label) text = t.label
+		}
 		setTranscript("")
 		setQuestion("")
 		if (!text) return
@@ -326,17 +545,111 @@ function AIAssistantWidget({
 		}
 
 		const result = classifyIntent(text)
-		const { scenarioId, confidence, topic, metric, preset } = result
+		let { scenarioId, confidence, topic, metric, preset } = result
+		/**
+		 * Текст карточек «Сформируй сквозной сценарий…» содержит триггер `сквозной сценарий` из CASE_TRIGGERS
+		 * → classifyIntent даёт createPlanningCase; для NPV дополнительно срабатывает focusMetric по «npv».
+		 * При явно выбранном шаблоне сценария нужен aiFaceToPlanning + семантический бандл, а не другие сценарии.
+		 */
+		if (
+			appearance === "newDemo" &&
+			selectedTemplateId &&
+			scenarioPresetsList.some((p) => p.id === selectedTemplateId)
+		) {
+			if (
+				scenarioId === SCENARIO_IDS.createPlanningCase ||
+				scenarioId === SCENARIO_IDS.focusMetric
+			) {
+				scenarioId = SCENARIO_IDS.aiFaceToPlanning
+				confidence = Math.max(confidence, 0.96)
+			}
+		}
 		const topicOrMetric = topic ?? metric
 
 		if (scenarioId === "createPlanningCase" && topicOrMetric) {
 			lastTopicRef.current = topicOrMetric
 		}
 
+		/** Демо-кнопки и жёсткие триггеры дают aiFaceToPlanning с confidence ≥ 0.95 раньше ветки newDemo — без бандла граф остаётся «пустым» по detailText у scenario-k. */
+		if (appearance === "newDemo" && scenarioId === "aiFaceToPlanning" && confidence >= 0.95) {
+			const mergedSets = normalizeWizardSets(wizardSets)
+			let pipe = runPromptPipeline(text)
+			const tplPipe = resolveNewDemoScenarioTemplateForPipeline(
+				selectedTemplateId,
+				scenarioPresetsList,
+				preset,
+				pipe,
+				text,
+			)
+			if (tplPipe) {
+				pipe = buildPipelineFromScenarioTemplate(
+					{ ...tplPipe, sets: mergeTemplateSetsWithWizard(tplPipe.sets, mergedSets) },
+					text,
+				)
+			} else {
+				pipe = applyWizardSetsToPipeline(pipe, mergedSets)
+			}
+			const presetBoard = tplPipe
+				? boardPresetFromScenarioTemplateId(tplPipe.id)
+				: preset || pipe.suggestedPreset || "base_drilling"
+			const bundle = buildSemanticScenarioGraphBundle(presetBoard, pipe)
+			lastTopicRef.current = text
+			setChatHistory((h) => [...h, { role: "assistant", text: "Выполняю…" }])
+			void runExecutor(
+				"aiFaceToPlanning",
+				text.length > 220 ? text.slice(0, 220) : text,
+				presetBoard,
+				{ semanticGraphBundle: bundle },
+			)
+			return
+		}
+
 		if (confidence >= 0.95 && scenarioId) {
 			setChatHistory((h) => [...h, { role: "assistant", text: "Выполняю…" }])
 			runExecutor(scenarioId, topicOrMetric, preset)
 			return
+		}
+
+		if (appearance === "newDemo") {
+			const mergedSets = normalizeWizardSets(wizardSets)
+			const hasWizardObjectives = mergedSets.objectives.length > 0
+			let pipe = runPromptPipeline(text)
+			const tplPipe = resolveNewDemoScenarioTemplateForPipeline(
+				selectedTemplateId,
+				scenarioPresetsList,
+				preset,
+				pipe,
+				text,
+			)
+			if (tplPipe) {
+				pipe = buildPipelineFromScenarioTemplate(
+					{ ...tplPipe, sets: mergeTemplateSetsWithWizard(tplPipe.sets, mergedSets) },
+					text,
+				)
+			} else {
+				pipe = applyWizardSetsToPipeline(pipe, mergedSets)
+			}
+			const presetBoard = tplPipe
+				? boardPresetFromScenarioTemplateId(tplPipe.id)
+				: pipe.suggestedPreset || "base_drilling"
+			if (tplPipe || hasWizardObjectives || (pipe.domainOk && pipe.goals?.length)) {
+				lastTopicRef.current = text
+				const bundle = buildSemanticScenarioGraphBundle(presetBoard, pipe)
+				setChatHistory((h) => [
+					...h,
+					{ role: "assistant", text: "Разбираю запрос и строю цепочку мышления…" },
+				])
+				void runExecutor(
+					"aiFaceToPlanning",
+					text.length > 220 ? text.slice(0, 220) : text,
+					presetBoard,
+					{ semanticGraphBundle: bundle },
+				)
+				setWizardSets(normalizeWizardSets(EMPTY_WIZARD_SETS))
+				setWizardStep(1)
+				lastSeededNormRef.current = ""
+				return
+			}
 		}
 
 		if (appearance === "classic" && confidence < 0.7) {
@@ -351,14 +664,34 @@ function AIAssistantWidget({
 			"Уточните: создание кейса, добавить стадию/карточку/блок, фокус на метрику, полный проект, риски или cashflow.",
 		)
 		setOpen(true)
-	}, [question, transcript, runExecutor, selectedAssetId, setClarification, appearance])
+	}, [
+		question,
+		transcript,
+		runExecutor,
+		selectedAssetId,
+		setClarification,
+		appearance,
+		selectedTemplateId,
+		scenarioPresetsList,
+		scenarioTemplatesForForm,
+		wizardSets,
+	])
 
 	const handleSuggestionPick = useCallback((value) => {
 		setTranscript("")
 		setQuestion(value)
+		setSelectedTemplateId(null)
+		setWizardSets(normalizeWizardSets(EMPTY_WIZARD_SETS))
+		setWizardStep(1)
+		lastSeededNormRef.current = ""
 	}, [])
 
 	const handleResetScenario = useCallback(() => {
+		setSelectedTemplateId(null)
+		setLivePipeline(null)
+		setWizardSets(normalizeWizardSets(EMPTY_WIZARD_SETS))
+		setWizardStep(1)
+		lastSeededNormRef.current = ""
 		void restartDemoSessionFromPreset(routePrefix).catch((e) => {
 			console.warn("[ai-assistant] restartDemoSessionFromPreset", e)
 		})
@@ -469,29 +802,57 @@ function AIAssistantWidget({
 								: chatHistory.length
 									? "Продолжайте диалог."
 									: appearance === "newDemo"
-										? "Здравствуйте, задайте свой промпт или воспользуйтесь ранее подготовленными"
+										? "Здравствуйте: выберите шаблон сценария или опишите задачу в окне запроса."
 										: "Здравствуйте, задайте свой промпт."}
 						</p>
 
-						<div className={styles.suggestionList} aria-label="Готовые промпты">
-							{DEMO_AI_ASSISTANT_SUGGESTIONS.map((option) => (
+						{appearance === "newDemo" ? (
+							<>
+								<NewDemoAiPromptConstructor
+									presets={scenarioTemplatesForForm}
+									selectedTemplateId={selectedTemplateId}
+									onSelectTemplate={(t) => {
+										setSelectedTemplateId(t.id)
+										setQuestion(t.label)
+										setTranscript("")
+									}}
+									constructorDisplay={constructorDisplay}
+									wizardStep={wizardStep}
+									onWizardStep={setWizardStep}
+									dimensionCatalog={dimensionCatalog}
+									wizardSets={wizardSets}
+									onToggleDimension={toggleWizardDimension}
+									maxPerDimension={WIZARD_STEP_MAX}
+								/>
 								<button
-									key={option}
 									type="button"
-									className={styles.suggestionButton}
-									onClick={() => handleSuggestionPick(option)}
+									className={`${styles.suggestionButton} ${styles.suggestionButtonReset}`}
+									onClick={handleResetScenario}
 								>
-									{option}
+									{DEMO_AI_ASSISTANT_RESET_ACTION_LABEL}
 								</button>
-							))}
-							<button
-								type="button"
-								className={`${styles.suggestionButton} ${styles.suggestionButtonReset}`}
-								onClick={handleResetScenario}
-							>
-								{DEMO_AI_ASSISTANT_RESET_ACTION_LABEL}
-							</button>
-						</div>
+							</>
+						) : (
+							<div className={styles.suggestionList} aria-label="Готовые промпты">
+								{DEMO_AI_ASSISTANT_SUGGESTIONS.map((option) => (
+									<button
+										key={option}
+										type="button"
+										className={styles.suggestionButton}
+										onClick={() => handleSuggestionPick(option)}
+									>
+										{option}
+									</button>
+								))}
+								<button
+									type="button"
+									className={`${styles.suggestionButton} ${styles.suggestionButtonReset}`}
+									onClick={handleResetScenario}
+								>
+									{DEMO_AI_ASSISTANT_RESET_ACTION_LABEL}
+								</button>
+							</div>
+						)}
 
 						{displayClarification ? (
 							<p
@@ -506,9 +867,19 @@ function AIAssistantWidget({
 						) : null}
 						{voiceError ? <p className={styles.voiceError}>{voiceError}</p> : null}
 
+						{appearance === "newDemo" ? (
+							<>
+								<div className={styles.promptWindowLabel}>Окно запроса</div>
+								<p className={styles.constructorHint}>
+									Первая строка задаёт смысл запроса. Ниже можно уточнить детали и согласовать с
+									выбранным шаблоном.
+								</p>
+							</>
+						) : null}
+
 						<div className={styles.inputRow}>
 							<textarea
-								className={styles.input}
+								className={`${styles.input} ${appearance === "newDemo" ? styles.inputCompact : ""}`}
 								placeholder={isListening ? "Слушаю…" : "Введите промпт"}
 								value={inputValue}
 								onChange={(e) => setQuestion(e.target.value)}

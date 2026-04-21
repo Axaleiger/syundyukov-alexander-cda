@@ -1,0 +1,115 @@
+{
+  "presets": [
+    {
+      "id": "fcf_no_drill_capex",
+      "label": "★ FCF: +10% к базе, без бурения, ребаланс CAPEX",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T02"],
+        "objectives": ["G01", "G03"],
+        "constraints": ["C01"],
+        "levers": ["L01", "L02", "L03", "L04", "L08", "L20"]
+      }
+    },
+    {
+      "id": "base_oil",
+      "label": "Базовая добыча: кейс устойчивого профиля",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T02"],
+        "objectives": ["G03"],
+        "constraints": [],
+        "levers": ["L01", "L02", "L03", "L04", "L19", "L20"]
+      }
+    },
+    {
+      "id": "npv_push",
+      "label": "NPV: максимизация при заданных лимитах",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T03"],
+        "objectives": ["G03", "G02"],
+        "constraints": ["C02", "C03"],
+        "levers": ["L08", "L01", "L02", "L04", "L13", "L20"]
+      }
+    },
+    {
+      "id": "opex_program",
+      "label": "OPEX: удельные затраты и энергия",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T02"],
+        "objectives": ["G05"],
+        "constraints": ["C04"],
+        "levers": ["L07", "L20", "L19", "L06", "L03"]
+      }
+    },
+    {
+      "id": "capex_phasing",
+      "label": "CAPEX: фазирование без провала добычи",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T04"],
+        "horizon_phases": ["HP2", "HP3", "HP4"],
+        "objectives": ["G06", "G03"],
+        "constraints": ["C02", "C04"],
+        "levers": ["L08", "L05", "L01", "L04"]
+      }
+    },
+    {
+      "id": "stress_macro",
+      "label": "Стресс: цена, курс, налоги",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T02"],
+        "objectives": ["G01", "G07"],
+        "constraints": [],
+        "levers": ["L11", "L13", "L15", "L08", "L20"]
+      }
+    },
+    {
+      "id": "wc_release",
+      "label": "Оборачиваемость: высвобождение WC",
+      "sets": {
+        "bases": ["B02"],
+        "horizons": ["T01"],
+        "objectives": ["G09"],
+        "constraints": ["C10"],
+        "levers": ["L14", "L12", "L17", "L19"]
+      }
+    },
+    {
+      "id": "esg_water",
+      "label": "Вода, выбросы, лицензионные KPI (через ограничения)",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T02"],
+        "objectives": ["G01"],
+        "constraints": ["C06", "C08"],
+        "levers": ["L18", "L04", "L06", "L08"]
+      }
+    },
+    {
+      "id": "recovery_kin",
+      "label": "Запасы и КИН: технологический фокус",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T03"],
+        "objectives": ["G04"],
+        "constraints": [],
+        "levers": ["L04", "L01", "L02", "L03"]
+      }
+    },
+    {
+      "id": "compare_abc",
+      "label": "Сравнение A/B/C: три портфеля мероприятий",
+      "sets": {
+        "bases": ["B01"],
+        "horizons": ["T02"],
+        "objectives": ["G01", "G02"],
+        "constraints": ["C02"],
+        "levers": ["L08", "L01", "L02", "L04", "L07", "L20"]
+      }
+    }
+  ]
+}

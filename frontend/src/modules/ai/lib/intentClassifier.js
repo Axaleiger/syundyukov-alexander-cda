@@ -1,6 +1,6 @@
 /**
  * Классификатор намерений: русский текст → сценарий + уверенность + извлечённая тема/метрика.
- * Без внешнего API. «Сформируй кейс по X» → createPlanningCase с topic; «упор на NPV» и т.п. → focusMetric.
+ * Без внешнего API. «Сформируй кейс по X» → createPlanningCase с topic; первая new-demo-кнопка «базовая добыча» → aiFaceToPlanning (base_drilling) для графа с семантикой; «упор на NPV» и т.п. → focusMetric.
  */
 
 import { DEMO_AI_ASSISTANT_SUGGESTIONS } from './demoAiAssistantSuggestions.js'
@@ -81,10 +81,12 @@ function extractTopic(text) {
  * Сначала точное совпадение с кнопкой, затем мягкие правила (голос, опечатки).
  */
 function detectDemoAiThreeButtons(norm, text) {
+  /** Первая кнопка new-demo = лицо + граф мышления с семантикой пайплайна (как кнопки 2–3), не createPlanningCase без бандла. */
   if (norm === NORM_DEMO_AI_LINES[0]) {
     return {
-      scenarioId: SCENARIO_IDS.createPlanningCase,
+      scenarioId: SCENARIO_IDS.aiFaceToPlanning,
       confidence: 0.99,
+      preset: 'base_drilling',
       topic: extractTopic(text) || 'управление базовой добычей',
     }
   }
@@ -129,8 +131,9 @@ function detectDemoAiThreeButtons(norm, text) {
   }
   if (norm.includes('сквозной') && norm.includes('базовой добыч')) {
     return {
-      scenarioId: SCENARIO_IDS.createPlanningCase,
+      scenarioId: SCENARIO_IDS.aiFaceToPlanning,
       confidence: 0.98,
+      preset: 'base_drilling',
       topic: extractTopic(text) || 'управление базовой добычей',
     }
   }
