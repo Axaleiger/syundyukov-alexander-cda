@@ -32,7 +32,15 @@ export const useThinkingStore = create((set) => ({
 				typeof v === "function" ? v(state.thinkingGraphNodes) : v,
 		})),
 
-	resetThinkingChain: () => set({ thinkingGraphNodes: [] }),
+	/**
+	 * Переопределение бандла SVG-графа (семантика запроса). null — стандартный граф по пресету.
+	 * @type {null | object}
+	 */
+	thinkingGraphBundleOverride: null,
+	setThinkingGraphBundleOverride: (v) => set({ thinkingGraphBundleOverride: v }),
+
+	resetThinkingChain: () =>
+		set({ thinkingGraphNodes: [], thinkingGraphBundleOverride: null }),
 
 	brainPanelOpenKey: 0,
 	setBrainPanelOpenKey: (v) =>
@@ -56,6 +64,7 @@ export const useThinkingStore = create((set) => ({
 			thinkingConfirmPhase: null,
 			thinkingAwaitingConfirm: false,
 			thinkingGraphNodes: [],
+			thinkingGraphBundleOverride: null,
 			brainPanelOpenKey: 0,
 			selectedDecisionPathId: null,
 			appliedDecisionPathId: null,

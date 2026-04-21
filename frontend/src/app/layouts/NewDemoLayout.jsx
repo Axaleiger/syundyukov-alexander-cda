@@ -114,6 +114,8 @@ export default function NewDemoLayout() {
 	useEffect(() => {
 		if (thinkingPanelOpen) return
 		setAiFaceBrainPreset(null)
+		// Не сбрасываем thinkingGraphBundleOverride: при повторном открытии панели иначе граф теряет
+		// семантические detailText по «Цель N» (остаётся только пресет без полей detailText).
 	}, [thinkingPanelOpen, setAiFaceBrainPreset])
 
 	const setActiveTab = useCallback(

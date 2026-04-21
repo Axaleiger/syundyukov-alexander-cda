@@ -1,0 +1,164 @@
+{
+  "description": "Manual regression checklist for semantic conversion quality.",
+  "cases": [
+    {
+      "input": "Сформируй мне пожалуйста кейс по снижению расходов",
+      "expect": {
+        "goals_include_any": ["G05"],
+        "goals_exclude": ["G03", "G04"]
+      }
+    },
+    {
+      "input": "Я хочу кейс по максимизации добычи нефти ребалансировки opex и минимизации capex",
+      "expect": {
+        "goals_include_any": ["G03", "G05", "G06"],
+        "goals_exclude": ["G04"]
+      }
+    },
+    {
+      "input": "А сформируй мне пожалуйста кейс по увеличению добычи нефти и снижения расходов",
+      "expect": {
+        "goals_include_any": ["G03", "G05"],
+        "goals_exclude": ["G04"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий который будет увеличивать добычу и экономить ресурсы",
+      "expect": {
+        "goals_include_any": ["G03", "G05"],
+        "goals_include_one_of": ["G06", "G09"],
+        "goals_exclude": ["G04"],
+        "constraints_exclude": ["C04", "C07"],
+        "levers_exclude": ["L11"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий для роста FCF без увеличения долга",
+      "expect": {
+        "goals_include_any": ["G01"],
+        "constraints_include_any": ["C09"]
+      }
+    },
+    {
+      "input": "Сценарий устойчивости к санкциям и волатильности курса",
+      "expect": {
+        "goals_include_any": ["G17", "G18", "G20"],
+        "levers_include_optional": ["L11"]
+      }
+    },
+    {
+      "input": "Сценарий роста добычи через ГТМ и режимы скважин на квартал",
+      "expect": {
+        "goals_include_any": ["G03"],
+        "levers_include_any": ["L01", "L02"],
+        "horizon_prefer": "T05"
+      }
+    },
+    {
+      "input": "Сформируй сценарий который будет увеличивать fcf",
+      "expect": {
+        "goals_include_any": ["G01"],
+        "goals_exclude": ["G03", "G04"],
+        "constraints_exclude": ["C04", "C07", "C09", "C02"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий который будет минимизировать затраты и увеличивать добычу нефти",
+      "expect": {
+        "goals_include_any": ["G03", "G05"],
+        "goals_exclude": ["G04"],
+        "constraints_exclude": ["C04", "C07"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий увеличения темпа отбора и извлекаемых запасов",
+      "expect": {
+        "goals_include_any": ["G04"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий увеличения добычи и экономии ресурсов",
+      "expect": {
+        "goals_include_any": ["G03", "G05"],
+        "goals_include_one_of": ["G06", "G09"],
+        "levers_exclude": ["L11"]
+      }
+    },
+    {
+      "input": "Сценарий устойчивости к цене нефти и валютному курсу",
+      "expect": {
+        "goals_include_any": ["G18", "G19"],
+        "levers_include_optional": ["L11"]
+      }
+    },
+    {
+      "input": "Сценарий по FCF без увеличения долга и с лимитом capex",
+      "expect": {
+        "goals_include_any": ["G01"],
+        "constraints_include_any": ["C09", "C02"]
+      }
+    },
+    {
+      "input": "Сценарий для Газпромнефть-Хантос с ростом fcf",
+      "expect": {
+        "entity_contains": "ХАНТОС",
+        "goals_include_any": ["G01"]
+      }
+    },
+    {
+      "input": "Сценарий для ноябрьскнефтегаз по росту добычи",
+      "expect": {
+        "entity_contains": "ННГ",
+        "goals_include_any": ["G03"]
+      }
+    },
+    {
+      "input": "Сформируй ограниченный сценарий: без нового бурения",
+      "expect": {
+        "constraints_include_any": ["C01"],
+        "levers_exclude": ["L10"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий повышения добычи и без бурения новых скважин",
+      "expect": {
+        "goals_include_any": ["G03"],
+        "constraints_include_any": ["C01"],
+        "levers_exclude": ["L10"]
+      }
+    },
+    {
+      "input": "Сформируй кейс по увеличению добычи минимизации затрат ребалансировки капикс",
+      "expect": {
+        "goals_include_any": ["G03", "G05", "G06"]
+      }
+    },
+    {
+      "input": "Сформируй сценарий через рычаги логистики и транспорта",
+      "expect": {
+        "levers_include_any": ["L17"]
+      }
+    },
+    {
+      "input": "Сценарий по налоговой устойчивости и регуляторике",
+      "expect": {
+        "goals_include_any": ["G21"],
+        "levers_include_optional": ["L13"]
+      }
+    },
+    {
+      "input": "Сценарий на 8-12 недель с минимизацией opex",
+      "expect": {
+        "horizon_prefer": "T05",
+        "goals_include_any": ["G05"]
+      }
+    },
+    {
+      "input": "Сценарий роста fcf без ограничений",
+      "expect": {
+        "goals_include_any": ["G01"],
+        "constraints_exclude": ["C07", "C04", "C09"]
+      }
+    }
+  ]
+}

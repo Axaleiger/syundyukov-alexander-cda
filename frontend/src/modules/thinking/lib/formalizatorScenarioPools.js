@@ -1,5 +1,5 @@
-import promptDeepCauses from '../data/formalizator/prompt_deep_causes.json'
-import hypothesisExactPhrase from '../data/formalizator/hypothesis_exact_phrase.json'
+import promptDeepCauses from '../data/prompt-pipeline/prompt_deep_causes.json'
+import hypothesisExactPhrase from '../data/prompt-pipeline/hypothesis_exact_phrase.json'
 
 const MAX_LABEL_LEN = 220
 

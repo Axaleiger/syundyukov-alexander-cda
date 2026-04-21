@@ -7,17 +7,25 @@ import {
   scenarioGraphEdges,
   scenarioGraphNodes,
 } from '../lib/scenarioGraphData'
+import { getNewDemoThinkingBandLayout } from '../lib/scenarioGraphLayout'
 
 const LINE_HEIGHT = 15
-const ZOOM_MIN = 0.12
+const ZOOM_MIN = 0.08
 const ZOOM_MAX = 2.8
 const FIT_PAD = 56
 const FIT_ANIM_MS = 520
 const FIT_DEBOUNCE_MS = 220
+/**
+ * После появления узла в графе: сначала отстройка линии/соседа, затем красный акцент (связь + зачёркивание).
+ * Должно быть ≥ длительности `.sg-edge-draw-in` в стилях ниже.
+ */
+const REVEAL_ACCENT_DELAY_MS = 2000
+/** Интервал между этапами гирлянды лучшего и «красного сценария» пути (new-demo), мс */
+const BRANCH_GARLAND_STEP_MS = 200
 
-/** Визуальный акцент лучшего сценария: ~×3 толще/ярче базовых значений */
-const OPT_EDGE_GLOW_W = 18
-const OPT_EDGE_FORE_W = 7.2
+/** Визуальный акцент лучшего сценария: тонкая яркая линия + мягкий ореол */
+const OPT_EDGE_GLOW_W = 8.5
+const OPT_EDGE_FORE_W = 3.2
 const OPT_NODE_STROKE_W = 8.5
 const OPT_PORT_STROKE_W = 6.6
 
@@ -38,6 +46,16 @@ function isCatalogStepNode(node) {
   return /^cause-\d+$/.test(node.id) || /^hyp-\d+$/.test(node.id)
 }
 
+/** Столбики «запрос / цели / причины / гипотезы» на new-demo — один размер и шрифт. */
+function isNewDemoPillarRectNode(node) {
+  return (
+    node.id === 'userQuery' ||
+    /^scenario-\d+$/.test(node.id) ||
+    /^cause-\d+$/.test(node.id) ||
+    /^hyp-\d+$/.test(node.id)
+  )
+}
+
 /** Порядок «сверху вниз, слева направо» для стабильной нумерации подписей на сетке */
 function compareThinkingNodeLayoutOrder(a, b) {
   const dy = a.y - b.y
@@ -55,10 +73,102 @@ function buildThinkingSequentialDisplayLabels(nodes) {
     .filter((n) => n.type === 'outcome' || /^out-scenario-\d+$/.test(n.id))
     .sort(compareThinkingNodeLayoutOrder)
   const hypLabelById = new Map()
-  hypNodes.forEach((n, i) => hypLabelById.set(n.id, `Гипотеза ${i + 1}`))
   const outLabelById = new Map()
+  hypNodes.forEach((n, i) => hypLabelById.set(n.id, `Гипотеза ${i + 1}`))
   outNodes.forEach((n, i) => outLabelById.set(n.id, `Сценарий ${i + 1}`))
   return { hypLabelById, outLabelById }
+}
+
+/** При семантическом бандле подписи задаются на узлах; иначе — порядковые по раскладке. */
+function pickDisplayLabelForNode(node, graphBundle, hypLabelById, outLabelById) {
+  if (graphBundle != null && String(node.label ?? '').trim()) {
+    return node.label
+  }
+  return hypLabelById.get(node.id) ?? outLabelById.get(node.id) ?? undefined
+}
+
+const OUT_SCENARIO_ID_RE = /^out-scenario-\d+$/
+
+/**
+ * Узлы оптимального подграфа в порядке обхода от зелёных шаров к корню (BFS по обратным рёбрам).
+ * Сами шары out-scenario-* в список не входят — они считаются уже «зажжёнными» для стыковки рёбер.
+ */
+function buildOptimalGarlandNonOutcomeSequence(
+  edges,
+  optimalEdgeKeys,
+  optimalNodeIds,
+  preferredScenarioOutcomeIds,
+) {
+  if (!optimalEdgeKeys || !optimalNodeIds?.size) return []
+  const preds = new Map()
+  for (const e of edges) {
+    const k = `${e.from}|${e.to}`
+    if (!optimalEdgeKeys.has(k)) continue
+    if (!optimalNodeIds.has(e.from) || !optimalNodeIds.has(e.to)) continue
+    if (!preds.has(e.to)) preds.set(e.to, [])
+    preds.get(e.to).push(e.from)
+  }
+  const seeds = [...preferredScenarioOutcomeIds].filter((id) => optimalNodeIds.has(id))
+  if (!seeds.length) return []
+  const seen = new Set()
+  const q = []
+  for (const s of seeds) {
+    seen.add(s)
+    q.push(s)
+  }
+  const order = []
+  while (q.length) {
+    const v = q.shift()
+    for (const u of preds.get(v) || []) {
+      if (!optimalNodeIds.has(u) || seen.has(u)) continue
+      seen.add(u)
+      if (!OUT_SCENARIO_ID_RE.test(u)) order.push(u)
+      q.push(u)
+    }
+  }
+  return order
+}
+
+/**
+ * Узлы ветки к нежелательному шару сценария — от красных шаров к корню по рёбрам redLogical,
+ * без «обрубков» (dead stub, redTerminalHop на настоящих листах).
+ * Рёбра к шару `out-scenario-*` не считаются обрубом: иначе гирлянда не может отойти от красного шара.
+ */
+function buildRedGarlandNonOutcomeSequence(
+  visibleEdges,
+  edgeFlagRows,
+  redGarlandTerminalSkipByIdx,
+  canReachBadScenario,
+  badScenarioOutcomeIds,
+) {
+  const preds = new Map()
+  for (let i = 0; i < visibleEdges.length; i++) {
+    const e = visibleEdges[i]
+    const row = edgeFlagRows[i]
+    if (!row?.redLogical || row.isDeadStubEdge || redGarlandTerminalSkipByIdx[i]) continue
+    if (!canReachBadScenario.has(e.from) || !canReachBadScenario.has(e.to)) continue
+    if (!preds.has(e.to)) preds.set(e.to, [])
+    preds.get(e.to).push(e.from)
+  }
+  const seeds = [...badScenarioOutcomeIds].filter((id) => canReachBadScenario.has(id))
+  if (!seeds.length) return []
+  const seen = new Set()
+  const q = []
+  for (const s of seeds) {
+    seen.add(s)
+    q.push(s)
+  }
+  const order = []
+  while (q.length) {
+    const v = q.shift()
+    for (const u of preds.get(v) || []) {
+      if (!canReachBadScenario.has(u) || seen.has(u)) continue
+      seen.add(u)
+      if (!OUT_SCENARIO_ID_RE.test(u)) order.push(u)
+      q.push(u)
+    }
+  }
+  return order
 }
 
 function wrapLabelToLines(text, maxCharsPerLine, maxLines) {
@@ -88,10 +198,13 @@ function wrapLabelToLines(text, maxCharsPerLine, maxLines) {
   return lines.slice(0, maxLines)
 }
 
+const NEW_DEMO_PILLAR_BOX = { w: 132, h: 42, fontSize: 9.1, maxLines: 2, padY: 8, iconPad: 26 }
+
 function nodeBox(node, isNewDemo = false) {
+  if (isNewDemo && isNewDemoPillarRectNode(node)) {
+    return { ...NEW_DEMO_PILLAR_BOX }
+  }
   if (isNewDemo) {
-    if (node.type === 'start') return { w: 112, h: 36, fontSize: 9, maxLines: 2, padY: 7, iconPad: 20 }
-    if (node.type === 'scenario') return { w: 88, h: 32, fontSize: 8.5, maxLines: 2, padY: 6, iconPad: 18 }
     if (node.type === 'milestone') return { w: 90, h: 32, fontSize: 8.5, maxLines: 2, padY: 6, iconPad: 18 }
     return { w: 88, h: 32, fontSize: 8.5, maxLines: 2, padY: 6, iconPad: 18 }
   }
@@ -111,11 +224,12 @@ function estimateRenderedBox(node, isNewDemo = false, displayLabel) {
   const textSource = displayLabel != null ? displayLabel : node.label
   if (node.type === 'outcome') {
     const label = String(textSource || '')
-    const D = isNewDemo ? 78 : 94
+    const isCdBall = /^cd-\d+$/.test(node.id)
+    const D = isNewDemo ? (isCdBall ? 54 : 78) : 94
     const charN = Math.max(1, label.length)
     const fs = Math.min(
-      isNewDemo ? 10 : 11.5,
-      Math.max(isNewDemo ? 7.2 : 8.2, (D * 0.88) / (charN * 0.58)),
+      isNewDemo ? (isCdBall ? 9 : 10) : 11.5,
+      Math.max(isNewDemo ? (isCdBall ? 6.8 : 7.2) : 8.2, (D * 0.88) / (charN * 0.58)),
     )
     const box = { w: D, h: D, fontSize: fs, maxLines: 1, padY: 0, iconPad: 0 }
     return { w: D, h: D, lines: [label], box }
@@ -125,6 +239,20 @@ function estimateRenderedBox(node, isNewDemo = false, displayLabel) {
 
   if (isCatalogStepNode(node)) {
     const label = String(textSource || '')
+    if (isNewDemo && isNewDemoPillarRectNode(node)) {
+      const w = NEW_DEMO_PILLAR_BOX.w
+      const iconPad = NEW_DEMO_PILLAR_BOX.iconPad
+      const innerW = w - 12 - iconPad
+      const maxChars = maxCharsForWidth(innerW, NEW_DEMO_PILLAR_BOX.fontSize)
+      const lines =
+        label.trim().length > 0
+          ? wrapLabelToLines(label.trim(), maxChars, NEW_DEMO_PILLAR_BOX.maxLines)
+          : ['']
+      const box = { ...boxBase, w, iconPad, fontSize: NEW_DEMO_PILLAR_BOX.fontSize, maxLines: NEW_DEMO_PILLAR_BOX.maxLines }
+      const textBlockH = lines.length * LINE_HEIGHT
+      const rectH = Math.max(box.h, textBlockH + box.padY * 2 + 4)
+      return { w: box.w, h: rectH, lines, box }
+    }
     const w = isNewDemo ? 104 : 216
     const iconPad = isNewDemo ? 16 : 22
     const innerW = w - 12 - iconPad
@@ -141,7 +269,9 @@ function estimateRenderedBox(node, isNewDemo = false, displayLabel) {
   const iconPad = box.iconPad ?? 26
   const innerW = box.w - 12 - iconPad
   const maxChars = maxCharsForWidth(innerW, box.fontSize)
-  const lines = wrapLabelToLines(textSource, maxChars, box.maxLines)
+  const trimmed = String(textSource ?? '').trim()
+  const lines =
+    trimmed.length > 0 ? wrapLabelToLines(trimmed, maxChars, box.maxLines) : ['']
   const textBlockH = lines.length * LINE_HEIGHT
   const rectH = Math.max(box.h, textBlockH + box.padY * 2)
   return { w: box.w, h: rectH, lines, box }
@@ -267,7 +397,7 @@ const NodeIcon = memo(function NodeIcon({ type }) {
   )
 })
 
-function computeBBoxForNodeIds(ids, nodesById, boxById, viewW, viewH) {
+function computeBBoxForNodeIds(ids, nodesById, boxById, viewW, viewH, extraTopY = null) {
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
@@ -285,6 +415,9 @@ function computeBBoxForNodeIds(ids, nodesById, boxById, viewW, viewH) {
     minY = Math.min(minY, top)
     maxY = Math.max(maxY, bottom)
   }
+  if (Number.isFinite(extraTopY)) {
+    minY = Math.min(minY, extraTopY)
+  }
   if (!Number.isFinite(minX)) {
     return { minX: 0, minY: 0, maxX: viewW, maxY: viewH, cx: viewW / 2, cy: viewH / 2, bw: viewW, bh: viewH }
   }
@@ -295,8 +428,8 @@ function computeBBoxForNodeIds(ids, nodesById, boxById, viewW, viewH) {
   return { minX, minY, maxX, maxY, cx, cy, bw, bh }
 }
 
-function viewFromBBox(bbox, viewW, viewH) {
-  const z = Math.min(viewW / bbox.bw, viewH / bbox.bh) * 0.97
+function viewFromBBox(bbox, viewW, viewH, fitScale = 0.97) {
+  const z = Math.min(viewW / bbox.bw, viewH / bbox.bh) * fitScale
   const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
   return {
     zoom,
@@ -312,17 +445,20 @@ const OutcomeBallNode = memo(function OutcomeBallNode({
   isNewDemo = false,
   onNodeClick,
 }) {
-  const { bw, strokeColor, strokeW, portStroke, portStrokeW, box, linesClamped } = layout
+  const { bw, strokeColor, strokeW, portStroke, portStrokeW, box, linesClamped, bodyOpacity, stubBreakCross } = layout
   const R = bw / 2
   const enterClass = visible && isEntering ? 'sg-node-entering' : ''
   const fs = box.fontSize
+  const bodyOp = bodyOpacity != null ? bodyOpacity : 1
+  const showDeadScenarioCross = Boolean(stubBreakCross)
+  const crossHalf = Math.max(12, R * 0.82)
 
   return (
     <g>
       <g
         className={enterClass}
         style={{
-          opacity: visible ? (isEntering ? undefined : 1) : 0,
+          opacity: visible ? (isEntering ? undefined : bodyOp) : 0,
           transition: visible && !isEntering ? 'opacity 0.35s ease-out' : undefined,
           transformBox: 'fill-box',
           transformOrigin: `${node.x}px ${node.y}px`,
@@ -364,11 +500,34 @@ const OutcomeBallNode = memo(function OutcomeBallNode({
           <circle cx={node.x + R} cy={node.y} r={4.5} fill="#0a0e14" stroke={portStroke} strokeWidth={portStrokeW} />
         </g>
       )}
+      {visible && showDeadScenarioCross && (
+        <g className="sg-stub-cross pointer-events-none" transform={`translate(${node.x},${node.y})`}>
+          <line
+            x1={-crossHalf}
+            y1={-crossHalf}
+            x2={crossHalf}
+            y2={crossHalf}
+            stroke="#ff0f0f"
+            strokeWidth={isNewDemo ? 3.6 : 3.2}
+            strokeLinecap="round"
+          />
+          <line
+            x1={-crossHalf}
+            y1={crossHalf}
+            x2={crossHalf}
+            y2={-crossHalf}
+            stroke="#ff0f0f"
+            strokeWidth={isNewDemo ? 3.6 : 3.2}
+            strokeLinecap="round"
+          />
+        </g>
+      )}
     </g>
   )
 })
 
 const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEntering, isNewDemo = false, onNodeClick }) {
+  const scenarioStub = node.type === 'scenario' && node.scenarioSlotUnused
   const {
     bw,
     rectH,
@@ -386,7 +545,11 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
     portStrokeW,
     isOptimal,
     nodeType,
+    bodyOpacity,
+    stubBreakCross,
   } = layout
+  const bodyOp = bodyOpacity != null ? bodyOpacity : 1
+  const showStubCross = Boolean(stubBreakCross)
   const showDualIn = nodeType === 'milestone' && inc >= 2
   const enterClass = visible && isEntering ? 'sg-node-entering' : ''
   const glowClass = visible && isEntering ? 'sg-node-glow-rect' : ''
@@ -397,7 +560,9 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
         <g
           className={enterClass}
           style={{
-            opacity: visible ? (isEntering ? undefined : 1) : 0,
+            opacity: visible
+              ? (isEntering ? undefined : scenarioStub && !isNewDemo ? 0.24 : bodyOp)
+              : 0,
             transition: visible && !isEntering ? 'opacity 0.35s ease-out' : undefined,
             transformBox: 'fill-box',
             transformOrigin: 'center center',
@@ -437,7 +602,7 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
               </tspan>
             ))}
           </text>
-          {visible && onNodeClick ? (
+          {visible && onNodeClick && !(scenarioStub && !isNewDemo) ? (
             <rect
               data-sg-node-hit
               width={bw}
@@ -511,18 +676,32 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
           />
         </g>
       )}
+      {visible && showStubCross && (
+        <g className="sg-stub-cross pointer-events-none" transform={`translate(${node.x},${node.y})`}>
+          <line x1="-17" y1="-17" x2="17" y2="17" stroke="#ff0f0f" strokeWidth="3.6" strokeLinecap="round" />
+          <line x1="-17" y1="17" x2="17" y2="-17" stroke="#ff0f0f" strokeWidth="3.6" strokeLinecap="round" />
+        </g>
+      )}
     </g>
   )
 })
 
 const DETAIL_POPOVER_W = 300
 const DETAIL_POPOVER_MAX_H = 228
+const DETAIL_POPOVER_MAX_H_CD = 340
 
 function NodeDetailPopover({ node, layout, graphWidth, onClose, isNewDemo, title: titleOverride }) {
+  const isScenarioGoal = /^scenario-\d+$/.test(node.id)
+  const detailText = String(node.detailText ?? '').trim()
   const title = String(titleOverride ?? node.label ?? '')
-  const detail = String(node.detailText ?? node.label ?? '').trim()
+  const detail =
+    isScenarioGoal && detailText
+      ? detailText
+      : String(node.detailText ?? node.label ?? '').trim()
+
   const approxLines = Math.max(2, Math.ceil(detail.length / 40))
-  const h = Math.min(DETAIL_POPOVER_MAX_H, Math.max(104, 56 + approxLines * 16))
+  const cap = /^cd-\d+$/.test(node.id) ? DETAIL_POPOVER_MAX_H_CD : DETAIL_POPOVER_MAX_H
+  const h = Math.min(cap, Math.max(104, 56 + approxLines * 16))
   const { rectH } = layout
   const half = rectH / 2
   const spaceAbove = node.y - half
@@ -645,8 +824,15 @@ function ScenarioGraph({
         optimalNodePort: '#d5fff0',
         edgeGlow: 'rgba(56, 189, 248, 0.36)',
         edgeFore: 'rgba(56, 189, 248, 0.84)',
-        optimalEdgeGlow: 'rgba(186, 255, 226, 0.62)',
-        optimalEdgeFore: 'rgba(227, 255, 243, 0.98)',
+        optimalEdgeGlow: 'rgba(200, 255, 236, 0.78)',
+        optimalEdgeFore: 'rgba(252, 255, 254, 1)',
+        deadEdgeGlow: 'rgba(255, 40, 40, 0.95)',
+        deadEdgeFore: '#ff1e1e',
+        deadScenarioFill: 'rgba(55, 12, 12, 0.9)',
+        deadScenarioStroke: '#ff6b6b',
+        deadScenarioPort: '#fecaca',
+        deadOutcomeStroke: 'rgba(248, 113, 113, 0.88)',
+        deadOutcomePort: 'rgba(254, 202, 202, 0.9)',
         canvasGrid: 'rgba(47,180,233,0.08)',
         outcomeFill: 'none',
         outcomeStroke: 'rgba(148, 163, 184, 0.88)',
@@ -673,8 +859,8 @@ function ScenarioGraph({
         optimalNodePort: '#ecfdf5',
         edgeGlow: 'rgba(56, 189, 248, 0.35)',
         edgeFore: 'rgba(56, 189, 248, 0.42)',
-        optimalEdgeGlow: 'rgba(134, 239, 172, 0.72)',
-        optimalEdgeFore: 'rgba(240, 253, 244, 0.98)',
+        optimalEdgeGlow: 'rgba(167, 243, 198, 0.75)',
+        optimalEdgeFore: 'rgba(252, 255, 254, 1)',
         canvasGrid: 'rgba(51,65,85,0.07)',
         outcomeFill: 'none',
         outcomeStroke: 'rgba(148, 163, 184, 0.82)',
@@ -684,6 +870,7 @@ function ScenarioGraph({
         controlText: 'text-slate-100',
       }
   const [openDetailIds, setOpenDetailIds] = useState(() => new Set())
+  const [graphFullscreen, setGraphFullscreen] = useState(false)
 
   const openNodeDetail = useCallback((id) => {
     setOpenDetailIds((prev) => {
@@ -707,11 +894,26 @@ function ScenarioGraph({
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') closeAllDetails()
+      if (e.key !== 'Escape') return
+      if (graphFullscreen) {
+        e.preventDefault()
+        setGraphFullscreen(false)
+        return
+      }
+      closeAllDetails()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [closeAllDetails])
+  }, [closeAllDetails, graphFullscreen])
+
+  useEffect(() => {
+    if (!graphFullscreen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [graphFullscreen])
 
   const containerRef = useRef(null)
   const viewRef = useRef(null)
@@ -724,6 +926,7 @@ function ScenarioGraph({
   const pinchLastDistRef = useRef(0)
   const prevVisibleRef = useRef(new Set(visibleNodeIds))
   const fitDebounceRef = useRef(null)
+  const fullscreenFitOnceRef = useRef(false)
 
   const enteringNodeIds = useMemo(() => {
     const added = new Set()
@@ -732,6 +935,45 @@ function ScenarioGraph({
     }
     return added
   }, [visibleNodeIds])
+
+  /** Узлы, для которых уже можно показывать красный «тупик» (рёбра + зачёркивание). */
+  const [revealAccentSettledIds, setRevealAccentSettledIds] = useState(() => new Set())
+  /** new-demo: шаг подсветки оптимального пути от зелёных шаров к корню (гирлянда). */
+  const [optimalGarlandStep, setOptimalGarlandStep] = useState(0)
+  /** new-demo: шаг подсветки красной ветви от «плохих» шаров сценария к корню. */
+  const [redGarlandStep, setRedGarlandStep] = useState(0)
+  useEffect(() => {
+    if (!isNewDemo || enteringNodeIds.size === 0 || graphComplete) return
+    const timers = []
+    for (const id of enteringNodeIds) {
+      setRevealAccentSettledIds((prev) => {
+        const n = new Set(prev)
+        n.delete(id)
+        return n
+      })
+      timers.push(
+        window.setTimeout(() => {
+          setRevealAccentSettledIds((prev) => {
+            const n = new Set(prev)
+            n.add(id)
+            return n
+          })
+        }, REVEAL_ACCENT_DELAY_MS)
+      )
+    }
+    return () => {
+      for (const t of timers) window.clearTimeout(t)
+    }
+  }, [enteringNodeIds, isNewDemo, graphComplete])
+
+  useEffect(() => {
+    if (!graphComplete) return
+    setRevealAccentSettledIds((prev) => {
+      const n = new Set(prev)
+      for (const id of visibleNodeIds) n.add(id)
+      return n
+    })
+  }, [graphComplete, visibleNodeIds])
 
   useLayoutEffect(() => {
     prevVisibleRef.current = new Set(visibleNodeIds)
@@ -766,17 +1008,189 @@ function ScenarioGraph({
     return m
   }, [nodes])
 
+  /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
+  const preferredScenarioOutcomeIds = useMemo(() => {
+    const outs = nodes
+      .filter((n) => n.type === 'outcome' && /^out-scenario-\d+$/.test(n.id))
+      .sort((a, b) => {
+        const ma = /^out-scenario-(\d+)$/.exec(a.id)
+        const mb = /^out-scenario-(\d+)$/.exec(b.id)
+        return (ma ? parseInt(ma[1], 10) : 0) - (mb ? parseInt(mb[1], 10) : 0)
+      })
+    const k = Math.min(3, outs.length)
+    return new Set(outs.slice(0, k).map((n) => n.id))
+  }, [nodes])
+
+  /** Предки по рёбрам: из узла вперёд можно дойти до «зелёного» шара сценария (топ‑3). */
+  const reachPreferredScenarioAncestors = useMemo(() => {
+    if (!isNewDemo || preferredScenarioOutcomeIds.size === 0) {
+      return new Set()
+    }
+    const preds = new Map()
+    for (const e of edges) {
+      if (!preds.has(e.to)) preds.set(e.to, [])
+      preds.get(e.to).push(e.from)
+    }
+    const s = new Set(preferredScenarioOutcomeIds)
+    const q = [...preferredScenarioOutcomeIds]
+    while (q.length) {
+      const v = q.shift()
+      for (const u of preds.get(v) || []) {
+        if (s.has(u)) continue
+        s.add(u)
+        q.push(u)
+      }
+    }
+    return s
+  }, [isNewDemo, edges, preferredScenarioOutcomeIds])
+
+  const optimalGarlandSequence = useMemo(
+    () =>
+      isNewDemo && graphComplete
+        ? buildOptimalGarlandNonOutcomeSequence(
+            edges,
+            optimalEdgeKeys,
+            optimalNodeIds,
+            preferredScenarioOutcomeIds,
+          )
+        : [],
+    [isNewDemo, graphComplete, edges, optimalEdgeKeys, optimalNodeIds, preferredScenarioOutcomeIds],
+  )
+
+  const optimalGarlandLitIds = useMemo(() => {
+    const s = new Set()
+    if (!isNewDemo || !graphComplete) return s
+    const n = Math.min(optimalGarlandStep, optimalGarlandSequence.length)
+    for (let i = 0; i < n; i++) s.add(optimalGarlandSequence[i])
+    return s
+  }, [isNewDemo, graphComplete, optimalGarlandStep, optimalGarlandSequence])
+
+  /** Стабильный ключ, чтобы не сбрасывать гирлянду из‑за новой ссылки на массив при неизменном пути. */
+  const optimalGarlandFingerprint = useMemo(
+    () => optimalGarlandSequence.join('\x1e'),
+    [optimalGarlandSequence],
+  )
+
+  useEffect(() => {
+    if (!isNewDemo || !graphComplete) {
+      setOptimalGarlandStep(0)
+      return
+    }
+    const seq = optimalGarlandSequence
+    const n = seq.length
+    if (n === 0) {
+      setOptimalGarlandStep(0)
+      return
+    }
+    setOptimalGarlandStep(0)
+    // #region agent log
+    fetch('http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'dbfff3' },
+      body: JSON.stringify({
+        sessionId: 'dbfff3',
+        runId: 'garland',
+        hypothesisId: 'H3',
+        location: 'ScenarioGraph.jsx:garlandEffect',
+        message: 'garland sequence init',
+        data: { n, head: seq[0], tail: seq[n - 1] },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
+    const id = window.setInterval(() => {
+      setOptimalGarlandStep((s) => {
+        const next = s >= n ? n : s + 1
+        // #region agent log
+        fetch('http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'dbfff3' },
+          body: JSON.stringify({
+            sessionId: 'dbfff3',
+            runId: 'garland',
+            hypothesisId: 'H1',
+            location: 'ScenarioGraph.jsx:garlandInterval',
+            message: 'garland step',
+            data: { prev: s, next, n },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+        // #endregion
+        return next
+      })
+    }, BRANCH_GARLAND_STEP_MS)
+    return () => window.clearInterval(id)
+  }, [isNewDemo, graphComplete, optimalGarlandFingerprint])
+
   const { hypLabelById, outLabelById } = useMemo(() => buildThinkingSequentialDisplayLabels(nodes), [nodes])
 
-  /** Вертикальные полосы этапов: user→цели→причины→гипотезы→сценарии (одинаковая ширина между осями). */
+  const incomingCount = useMemo(() => {
+    const c = new Map()
+    for (const n of nodes) c.set(n.id, 0)
+    for (const e of edges) {
+      c.set(e.to, (c.get(e.to) || 0) + 1)
+    }
+    return c
+  }, [nodes, edges])
+
+  const boxById = useMemo(() => {
+    const m = new Map()
+    for (const n of nodes) {
+      const display = pickDisplayLabelForNode(n, graphBundle, hypLabelById, outLabelById)
+      m.set(n.id, estimateRenderedBox(n, isNewDemo, display))
+    }
+    return m
+  }, [nodes, isNewDemo, hypLabelById, outLabelById, graphBundle])
+
+  /** Вертикальные полосы этапов. На new-demo — см. getNewDemoThinkingBandLayout (3–4-я полосы шире, см. NEW_DEMO_LAST_TWO_BANDS_SCALE). */
   const columnBandGeometry = useMemo(() => {
+    const spanH = HEIGHT * 18
+    const y0 = -HEIGHT * 8
+    const labelFontSize = isNewDemo ? 24 : 18.5
+    let minTopAll = Infinity
+    for (const n of nodes) {
+      const b = boxById.get(n.id)
+      if (!b) continue
+      minTopAll = Math.min(minTopAll, n.y - b.h / 2)
+    }
+    const gapAboveNodes = isNewDemo ? 12 : 14
+    const minLabelY = labelFontSize * 0.9 + 8
+    const labelY = Number.isFinite(minTopAll)
+      ? Math.max(minLabelY, minTopAll - gapAboveNodes)
+      : (isNewDemo ? 52 : 46)
+    const fitExtraTopY = labelY - labelFontSize * 1.08
+
+    if (isNewDemo && WIDTH > 64) {
+      const bl = getNewDemoThinkingBandLayout(WIDTH)
+      return {
+        band0x: bl.band0x,
+        band0w: bl.b0w,
+        band1x: bl.band1x,
+        band1w: bl.b1w,
+        band2x: bl.band2x,
+        band2w: bl.b2w,
+        band3x: bl.band3x,
+        band3w: bl.b3w,
+        y0,
+        spanH,
+        labelY,
+        labelFontSize,
+        fitExtraTopY,
+      }
+    }
+
     const xOf = (pred) => {
       const xs = nodes.filter((n) => pred(n.id)).map((n) => n.x)
       if (!xs.length) return null
       return xs[0]
     }
+    const xMean = (pred) => {
+      const xs = nodes.filter((n) => pred(n.id)).map((n) => n.x)
+      if (!xs.length) return null
+      return xs.reduce((a, b) => a + b, 0) / xs.length
+    }
     const xUser = xOf((id) => id === 'userQuery')
-    const xGoal = xOf((id) => /^scenario-\d+$/.test(id))
+    const xGoal = xMean((id) => /^scenario-\d+$/.test(id)) ?? xOf((id) => /^scenario-\d+$/.test(id))
     const xCause = xOf((id) => /^cause-\d+$/.test(id))
     const xHyp = xOf((id) => /^hyp-\d+$/.test(id))
     if (xUser == null || xGoal == null || xCause == null || xHyp == null) return null
@@ -791,10 +1205,6 @@ function ScenarioGraph({
     const band3x = Math.max(xHyp, xCause)
     const band3w = band2w
 
-    const spanH = HEIGHT * 18
-    const y0 = -HEIGHT * 8
-    const labelY = isNewDemo ? 30 : 30
-    const labelFontSize = isNewDemo ? 24 : 18.5
     return {
       band0x,
       band0w,
@@ -808,67 +1218,348 @@ function ScenarioGraph({
       spanH,
       labelY,
       labelFontSize,
+      fitExtraTopY,
     }
-  }, [nodes, HEIGHT, isNewDemo])
+  }, [nodes, HEIGHT, WIDTH, isNewDemo, boxById])
 
-  const incomingCount = useMemo(() => {
-    const c = new Map()
-    for (const n of nodes) c.set(n.id, 0)
-    for (const e of edges) {
-      c.set(e.to, (c.get(e.to) || 0) + 1)
+  const { edgeLayouts, dualRedCauseHypIds, redGarlandSequence } = useMemo(() => {
+    const isBadScenarioOutcomeId = (id) =>
+      isNewDemo &&
+      /^out-scenario-\d+$/.test(id) &&
+      !preferredScenarioOutcomeIds.has(id)
+
+    const badScenarioOutcomeIds = new Set()
+    for (const n of nodesById.values()) {
+      if (n.type === 'outcome' && /^out-scenario-\d+$/.test(n.id) && !preferredScenarioOutcomeIds.has(n.id)) {
+        badScenarioOutcomeIds.add(n.id)
+      }
     }
-    return c
-  }, [nodes, edges])
-
-  const boxById = useMemo(() => {
-    const m = new Map()
-    for (const n of nodes) {
-      const display =
-        hypLabelById.get(n.id) ?? outLabelById.get(n.id) ?? undefined
-      m.set(n.id, estimateRenderedBox(n, isNewDemo, display))
+    const preds = new Map()
+    for (const e of visibleEdges) {
+      if (!preds.has(e.to)) preds.set(e.to, [])
+      preds.get(e.to).push(e.from)
     }
-    return m
-  }, [nodes, isNewDemo, hypLabelById, outLabelById])
+    const canReachBadScenario = new Set(badScenarioOutcomeIds)
+    const reachQ = [...badScenarioOutcomeIds]
+    while (reachQ.length) {
+      const v = reachQ.shift()
+      for (const u of preds.get(v) || []) {
+        if (canReachBadScenario.has(u)) continue
+        canReachBadScenario.add(u)
+        reachQ.push(u)
+      }
+    }
 
-  const edgeLayouts = useMemo(() => {
-    return visibleEdges.map((edge, idx) => {
+    const weakSemanticTargetIds = new Set()
+    if (isNewDemo && graphBundle?.semanticUiChain) {
+      for (const n of nodesById.values()) {
+        if (
+          (/^cause-\d+$/.test(n.id) || /^hyp-\d+$/.test(n.id)) &&
+          n.semanticChainActive === false &&
+          !reachPreferredScenarioAncestors.has(n.id)
+        ) {
+          weakSemanticTargetIds.add(n.id)
+        }
+      }
+    }
+    const canReachWeakSemanticStep = new Set(weakSemanticTargetIds)
+    const weakReachQ = [...weakSemanticTargetIds]
+    while (weakReachQ.length) {
+      const v = weakReachQ.shift()
+      for (const u of preds.get(v) || []) {
+        if (canReachWeakSemanticStep.has(u)) continue
+        canReachWeakSemanticStep.add(u)
+        weakReachQ.push(u)
+      }
+    }
+
+    const getEdgeBranchFlags = (edge) => {
       const from = nodesById.get(edge.from)
       const to = nodesById.get(edge.to)
       if (!from || !to) return null
+      const ekey = `${edge.from}|${edge.to}`
+      const feedsBadHypScenarioChain =
+        isNewDemo &&
+        canReachBadScenario.has(edge.to) &&
+        (/^hyp-\d+$/.test(edge.from) || (from.cdSegment === 'hs' && /^cd-\d+$/.test(edge.from)))
+      const feedsTowardWeakSemanticStep =
+        isNewDemo &&
+        Boolean(graphBundle?.semanticUiChain) &&
+        canReachWeakSemanticStep.has(edge.to)
+      const inOptimalClosure = graphComplete && optimalEdgeKeys.has(ekey)
+      const touchesBadScenarioBall = isBadScenarioOutcomeId(edge.from) || isBadScenarioOutcomeId(edge.to)
+      const isOptimalStructureEdge =
+        inOptimalClosure &&
+        !touchesBadScenarioBall &&
+        !feedsBadHypScenarioChain &&
+        !feedsTowardWeakSemanticStep
+      const isDeadStubEdge =
+        isNewDemo &&
+        edge.from === 'userQuery' &&
+        /^scenario-\d+$/.test(edge.to) &&
+        !optimalNodeIds.has(edge.to)
+      const strongRedEdge =
+        isNewDemo &&
+        !isDeadStubEdge &&
+        ((graphComplete && !isOptimalStructureEdge) ||
+          (!graphComplete && (feedsBadHypScenarioChain || feedsTowardWeakSemanticStep)))
+      const redLogical = isDeadStubEdge || strongRedEdge
+      return {
+        edge,
+        from,
+        to,
+        ekey,
+        feedsBadHypScenarioChain,
+        feedsTowardWeakSemanticStep,
+        inOptimalClosure,
+        touchesBadScenarioBall,
+        isOptimalStructureEdge,
+        isDeadStubEdge,
+        strongRedEdge,
+        redLogical,
+      }
+    }
+
+    const edgeFlagRows = visibleEdges.map((edge) => getEdgeBranchFlags(edge))
+    const redBranchSources = new Set()
+    for (let i = 0; i < visibleEdges.length; i++) {
+      const row = edgeFlagRows[i]
+      if (row?.redLogical) {
+        redBranchSources.add(visibleEdges[i].from)
+      }
+    }
+
+    /** Исходящая степень по видимым рёбрам. */
+    const visibleOutDeg = new Map()
+    for (const e of visibleEdges) {
+      visibleOutDeg.set(e.from, (visibleOutDeg.get(e.from) || 0) + 1)
+    }
+    /** Полный граф: причина/цель не считаются листом, если дальше в данных есть узлы (ещё не раскрыты на экране). */
+    const fullOutDeg = new Map()
+    for (const e of edges) {
+      fullOutDeg.set(e.from, (fullOutDeg.get(e.from) || 0) + 1)
+    }
+
+    const redTerminalHopByIdx = visibleEdges.map((edge, idx) => {
+      const row = edgeFlagRows[idx]
+      if (!row) return false
+      const rl = row.redLogical
+      const toVis = visibleOutDeg.get(edge.to) || 0
+      const toFull = fullOutDeg.get(edge.to) || 0
+      const noStructuralContinuation = toVis === 0 && toFull === 0
+      const isGoalNode = /^scenario-\d+$/.test(edge.to)
+      return Boolean(rl && noStructuralContinuation && !isGoalNode)
+    })
+
+    /** Для топологии гирлянды: не отрезать вход в красный шар сценария (он лист, но не «обруб» ветки). */
+    const redGarlandTerminalSkipByIdx = visibleEdges.map((edge, idx) => {
+      if (OUT_SCENARIO_ID_RE.test(edge.to)) return false
+      return redTerminalHopByIdx[idx]
+    })
+
+    const redGarlandSequence =
+      isNewDemo && graphComplete
+        ? buildRedGarlandNonOutcomeSequence(
+            visibleEdges,
+            edgeFlagRows,
+            redGarlandTerminalSkipByIdx,
+            canReachBadScenario,
+            badScenarioOutcomeIds,
+          )
+        : []
+
+    const edgeLayoutsOut = visibleEdges.map((edge, idx) => {
+      const g = edgeFlagRows[idx]
+      if (!g) return null
+      const { from, to, isOptimalStructureEdge, isDeadStubEdge, strongRedEdge, redLogical } = g
       const fb = boxById.get(edge.from)
       const tb = boxById.get(edge.to)
       if (!fb || !tb) return null
       const d = createSmoothBezierPath(from, to, fb, tb, edge)
-      const ekey = `${edge.from}|${edge.to}`
-      const isOptimalEdge = graphComplete && optimalEdgeKeys.has(ekey)
       const baseW = isNewDemo ? Math.max(1.2, idx % 8 === 0 ? 1.8 : 1.2) : Math.max(2.2, idx % 7 === 0 ? 2.8 : 2.2)
       const isNewEdge = enteringNodeIds.has(edge.to) && visibleNodeIds.has(edge.from)
+      const redChainContinuesAtTo = Boolean(redLogical && redBranchSources.has(edge.to))
+      const toFull = fullOutDeg.get(edge.to) || 0
+      const redTerminalHop = redTerminalHopByIdx[idx]
+      const redToBadScenarioChain =
+        canReachBadScenario.has(edge.from) && canReachBadScenario.has(edge.to)
+      const redGarlandEligible = Boolean(
+        redLogical && !isDeadStubEdge && !redTerminalHop && redToBadScenarioChain,
+      )
       return {
         d,
         key: `${edge.from}-${edge.to}-${idx}`,
-        isOptimalEdge,
+        edgeFrom: edge.from,
+        edgeTo: edge.to,
+        toFullStructuralOut: toFull,
+        isOptimalStructureEdge,
+        isDeadStubEdge,
+        strongRedEdge,
+        redChainContinuesAtTo,
+        redTerminalHop,
+        redGarlandEligible,
         baseW,
         isNewEdge,
+        fromX: from.x,
+        fromY: from.y,
+        toX: to.x,
+        toY: to.y,
+        taperIdx: idx,
       }
     })
-  }, [visibleEdges, graphComplete, nodesById, boxById, enteringNodeIds, visibleNodeIds, isNewDemo, optimalEdgeKeys])
+
+    const redIncomingTo = new Set()
+    const redOutgoingFrom = new Set()
+    if (isNewDemo) {
+      for (let i = 0; i < visibleEdges.length; i++) {
+        if (!edgeFlagRows[i]?.redLogical) continue
+        const e = visibleEdges[i]
+        redIncomingTo.add(e.to)
+        redOutgoingFrom.add(e.from)
+      }
+    }
+    const dualRedCauseHypIds = new Set()
+    if (isNewDemo) {
+      for (const n of nodes) {
+        const id = n.id
+        if (!/^cause-\d+$/.test(id) && !/^hyp-\d+$/.test(id)) continue
+        if (redIncomingTo.has(id) && redOutgoingFrom.has(id)) dualRedCauseHypIds.add(id)
+      }
+    }
+
+    return { edgeLayouts: edgeLayoutsOut, dualRedCauseHypIds, redGarlandSequence }
+  }, [
+    visibleEdges,
+    edges,
+    graphComplete,
+    nodesById,
+    boxById,
+    enteringNodeIds,
+    visibleNodeIds,
+    isNewDemo,
+    optimalEdgeKeys,
+    optimalNodeIds,
+    preferredScenarioOutcomeIds,
+    graphBundle,
+    reachPreferredScenarioAncestors,
+    nodes,
+  ])
+
+  const redGarlandLitIds = useMemo(() => {
+    const s = new Set()
+    if (!isNewDemo || !graphComplete) return s
+    const n = Math.min(redGarlandStep, redGarlandSequence.length)
+    for (let i = 0; i < n; i++) s.add(redGarlandSequence[i])
+    return s
+  }, [isNewDemo, graphComplete, redGarlandStep, redGarlandSequence])
+
+  const redGarlandFingerprint = useMemo(() => redGarlandSequence.join('\x1e'), [redGarlandSequence])
+
+  useEffect(() => {
+    if (!isNewDemo || !graphComplete) {
+      setRedGarlandStep(0)
+      return
+    }
+    const seq = redGarlandSequence
+    const n = seq.length
+    if (n === 0) {
+      setRedGarlandStep(0)
+      return
+    }
+    setRedGarlandStep(0)
+    // #region agent log
+    fetch('http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'dbfff3' },
+      body: JSON.stringify({
+        sessionId: 'dbfff3',
+        runId: 'garland-red',
+        hypothesisId: 'H4',
+        location: 'ScenarioGraph.jsx:redGarlandEffect',
+        message: 'red garland sequence init',
+        data: { n, head: seq[0], tail: seq[n - 1] },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
+    const id = window.setInterval(() => {
+      setRedGarlandStep((s) => {
+        const next = s >= n ? n : s + 1
+        // #region agent log
+        fetch('http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'dbfff3' },
+          body: JSON.stringify({
+            sessionId: 'dbfff3',
+            runId: 'garland-red',
+            hypothesisId: 'H5',
+            location: 'ScenarioGraph.jsx:redGarlandInterval',
+            message: 'red garland step',
+            data: { prev: s, next, n },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {})
+        // #endregion
+        return next
+      })
+    }, BRANCH_GARLAND_STEP_MS)
+    return () => window.clearInterval(id)
+  }, [isNewDemo, graphComplete, redGarlandFingerprint])
 
   const nodeLayouts = useMemo(() => {
     const m = new Map()
     for (const node of nodes) {
-      const displayLabel = hypLabelById.get(node.id) ?? outLabelById.get(node.id) ?? undefined
+      const displayLabel = pickDisplayLabelForNode(node, graphBundle, hypLabelById, outLabelById)
       if (node.type === 'outcome') {
         const estimated = estimateRenderedBox(node, isNewDemo, displayLabel)
         const { w: bw, h: rectH, lines: linesClamped, box } = estimated
         const left = node.x - bw / 2
         const top = node.y - rectH / 2
         const styles = nodeStyleByType('outcome', palette)
-        const isOptimal = graphComplete && optimalNodeIds.has(node.id)
-        const strokeColor = isOptimal ? palette.optimalNodeStroke : styles.stroke
-        const strokeW = isOptimal ? (isNewDemo ? 3.2 : OPT_NODE_STROKE_W) : isNewDemo ? 2.2 : 2.6
+        const isScenarioBall = /^out-scenario-\d+$/.test(node.id)
+        const isCdBall = /^cd-\d+$/.test(node.id)
+        const preferredBall =
+          isNewDemo && isScenarioBall && preferredScenarioOutcomeIds.has(node.id)
+        const optimalLegacy = graphComplete && !isNewDemo && optimalNodeIds.has(node.id)
+        const isGreenBall = preferredBall || optimalLegacy
+        const isDeadScenarioBall =
+          isNewDemo && isScenarioBall && !preferredScenarioOutcomeIds.has(node.id)
+        let cdSemanticDead =
+          isNewDemo &&
+          isCdBall &&
+          graphBundle?.semanticUiChain &&
+          node.semanticChainActive === false
+        if (cdSemanticDead && isNewDemo) {
+          if (node.cdSegment === 'hs') {
+            const hypUp = edges.find((e) => e.to === node.id && /^hyp-\d+$/.test(e.from))?.from
+            if (hypUp && reachPreferredScenarioAncestors.has(hypUp)) cdSemanticDead = false
+          } else if (node.cdSegment === 'ch' && node.cdEdgePair) {
+            const m = /^(cause-\d+)-(hyp-\d+)$/.exec(String(node.cdEdgePair))
+            if (
+              m &&
+              (reachPreferredScenarioAncestors.has(m[1]) ||
+                reachPreferredScenarioAncestors.has(m[2]))
+            ) {
+              cdSemanticDead = false
+            }
+          }
+        }
+        const deadBallVisual = isDeadScenarioBall
+        const cdDeadVisual = cdSemanticDead
+        const strokeColor = isGreenBall
+          ? palette.optimalNodeStroke
+          : deadBallVisual || cdDeadVisual
+            ? palette.deadOutcomeStroke
+            : styles.stroke
+        const strokeW = isGreenBall ? (isNewDemo ? 3.2 : OPT_NODE_STROKE_W) : isNewDemo ? 2.2 : 2.6
         const fillCol = 'none'
-        const portStroke = isOptimal ? palette.optimalNodePort : styles.port
-        const portStrokeW = isOptimal ? (isNewDemo ? 2.4 : OPT_PORT_STROKE_W) : isNewDemo ? 1.6 : 2
+        const portStroke = isGreenBall
+          ? palette.optimalNodePort
+          : deadBallVisual || cdDeadVisual
+            ? palette.deadOutcomePort
+            : styles.port
+        const portStrokeW = isGreenBall ? (isNewDemo ? 2.4 : OPT_PORT_STROKE_W) : isNewDemo ? 1.6 : 2
+        const stubBreakCross = isNewDemo && (deadBallVisual || cdDeadVisual)
         m.set(node.id, {
           bw,
           rectH,
@@ -885,8 +1576,10 @@ function ScenarioGraph({
           fillCol,
           portStroke,
           portStrokeW,
-          isOptimal,
+          isOptimal: isGreenBall,
           nodeType: 'outcome',
+          bodyOpacity: cdDeadVisual ? 0.42 : 1,
+          stubBreakCross,
         })
         continue
       }
@@ -896,18 +1589,84 @@ function ScenarioGraph({
       const top = node.y - rectH / 2
       const iconPad = box.iconPad ?? 26
       const textStartX = iconPad + 6
-      const catalog = isCatalogStepNode(node)
+      const catalog =
+        isCatalogStepNode(node) && !(isNewDemo && isNewDemoPillarRectNode(node))
       const textBlockH = catalog
         ? Math.max(LINE_HEIGHT, box.fontSize * 1.35)
         : linesClamped.length * LINE_HEIGHT
       const textStartY = catalog ? rectH / 2 : rectH / 2 - textBlockH / 2 + LINE_HEIGHT * 0.72
       const styles = nodeStyleByType(node.type, palette)
-      const isOptimal = graphComplete && optimalNodeIds.has(node.id)
-      const strokeColor = isOptimal ? palette.optimalNodeStroke : styles.stroke
-      const strokeW = isOptimal ? (isNewDemo ? 3.2 : OPT_NODE_STROKE_W) : (isNewDemo ? 0.9 : 1.2)
-      const fillCol = isOptimal ? palette.optimalNodeFill : styles.fill
-      const portStroke = isOptimal ? palette.optimalNodePort : styles.port
-      const portStrokeW = isOptimal ? (isNewDemo ? 2.4 : OPT_PORT_STROKE_W) : (isNewDemo ? 1.2 : 1.8)
+      const dualRedStrong =
+        isNewDemo &&
+        graphComplete &&
+        (/^cause-\d+$/.test(node.id) || /^hyp-\d+$/.test(node.id)) &&
+        dualRedCauseHypIds.has(node.id)
+      const semanticWeakRaw =
+        isNewDemo &&
+        graphBundle?.semanticUiChain &&
+        node.semanticChainActive === false &&
+        (/^cause-\d+$/.test(node.id) || /^hyp-\d+$/.test(node.id)) &&
+        !reachPreferredScenarioAncestors.has(node.id)
+      /** До полной сборки — не красим слабую семантику (иначе столбики красные, а рёбра ещё синие). */
+      const semanticWeakVisual = semanticWeakRaw && !dualRedStrong && (!isNewDemo || graphComplete)
+      const isOptimal =
+        optimalNodeIds.has(node.id) &&
+        !semanticWeakRaw &&
+        !dualRedStrong &&
+        (!isNewDemo || (graphComplete && optimalGarlandLitIds.has(node.id)))
+      const isDeadStubScenario =
+        isNewDemo && node.type === 'scenario' && !optimalNodeIds.has(node.id)
+      const deadStubVisual = isDeadStubScenario
+      /** Цель не ведёт ни к одному «зелёному» шару сценария (топ предпочтительных итогов). */
+      const scenarioNoPreferredOutcome =
+        isNewDemo &&
+        node.type === 'scenario' &&
+        preferredScenarioOutcomeIds.size > 0 &&
+        !reachPreferredScenarioAncestors.has(node.id)
+      const strokeColor = dualRedStrong
+        ? palette.deadScenarioStroke
+        : semanticWeakVisual
+          ? palette.deadScenarioStroke
+          : isOptimal
+            ? palette.optimalNodeStroke
+            : deadStubVisual
+              ? palette.deadScenarioStroke
+              : styles.stroke
+      const strokeW = dualRedStrong
+        ? isNewDemo ? 2.85 : 2.2
+        : semanticWeakVisual
+          ? isNewDemo ? 1.05 : 1.2
+          : isOptimal ? (isNewDemo ? 3.2 : OPT_NODE_STROKE_W) : (isNewDemo ? 0.9 : 1.2)
+      const fillCol = dualRedStrong
+        ? palette.deadScenarioFill
+        : semanticWeakVisual
+          ? palette.deadScenarioFill
+          : isOptimal
+            ? palette.optimalNodeFill
+            : deadStubVisual
+              ? palette.deadScenarioFill
+              : styles.fill
+      const portStroke = dualRedStrong
+        ? palette.deadScenarioPort
+        : semanticWeakVisual
+          ? palette.deadScenarioPort
+          : isOptimal
+            ? palette.optimalNodePort
+            : deadStubVisual
+              ? palette.deadScenarioPort
+              : styles.port
+      const portStrokeW = dualRedStrong
+        ? isNewDemo ? 2.35 : 2
+        : semanticWeakVisual
+          ? isNewDemo ? 1.1 : 1.5
+          : isOptimal ? (isNewDemo ? 2.4 : OPT_PORT_STROKE_W) : (isNewDemo ? 1.2 : 1.8)
+      /** Крест сразу с красной стилизацией (без задержки revealAccentSettledIds). */
+      const stubBreakCross =
+        isNewDemo &&
+        ((node.type === 'scenario' &&
+          (Boolean(node.scenarioSlotUnused) || scenarioNoPreferredOutcome || isDeadStubScenario)) ||
+          semanticWeakVisual ||
+          dualRedStrong)
       m.set(node.id, {
         bw,
         rectH,
@@ -925,10 +1684,25 @@ function ScenarioGraph({
         portStrokeW,
         isOptimal,
         nodeType: node.type,
+        bodyOpacity: dualRedStrong ? 1 : semanticWeakVisual ? 0.48 : 1,
+        stubBreakCross,
       })
     }
     return m
-  }, [graphComplete, isNewDemo, nodes, optimalNodeIds, hypLabelById, outLabelById])
+  }, [
+    graphComplete,
+    isNewDemo,
+    nodes,
+    optimalNodeIds,
+    hypLabelById,
+    outLabelById,
+    graphBundle,
+    preferredScenarioOutcomeIds,
+    reachPreferredScenarioAncestors,
+    edges,
+    dualRedCauseHypIds,
+    optimalGarlandLitIds,
+  ])
 
   const animateToView = useCallback(
     (targetZoom, targetPan) => {
@@ -956,32 +1730,84 @@ function ScenarioGraph({
     [applyViewTransform]
   )
 
+  /** Мгновенный зум относительно центра видимой области (та же геометрия, что у wheel). */
+  const zoomAtViewBoxCenterByFactor = useCallback(
+    (factor) => {
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current)
+        animRef.current = null
+      }
+      if (fitDebounceRef.current) {
+        clearTimeout(fitDebounceRef.current)
+        fitDebounceRef.current = null
+      }
+      const el = containerRef.current
+      const z0 = zoomRef.current
+      const p0 = panRef.current
+      let nz = z0 * factor
+      nz = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number(nz.toFixed(5))))
+      if (!el || z0 <= 0) {
+        zoomRef.current = nz
+        applyViewTransform()
+        return
+      }
+      const rect = el.getBoundingClientRect()
+      const sx = (rect.width / 2 / rect.width) * WIDTH
+      const sy = (rect.height / 2 / rect.height) * HEIGHT
+      const wx = (sx - p0.x) / z0
+      const wy = (sy - p0.y) / z0
+      zoomRef.current = nz
+      panRef.current = { x: sx - wx * nz, y: sy - wy * nz }
+      applyViewTransform()
+    },
+    [applyViewTransform, WIDTH, HEIGHT]
+  )
+
+  const stageLabelFitTopY = columnBandGeometry?.fitExtraTopY ?? null
+
   const fitAllVisible = useCallback(() => {
-    const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT)
-    const v = viewFromBBox(bbox, WIDTH, HEIGHT)
+    const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
+    const fitScale = isNewDemo ? 0.82 : 0.97
+    const v = viewFromBBox(bbox, WIDTH, HEIGHT, fitScale)
     animateToView(v.zoom, v.pan)
-  }, [visibleIds, nodesById, boxById, animateToView, WIDTH, HEIGHT])
+  }, [visibleIds, nodesById, boxById, animateToView, WIDTH, HEIGHT, stageLabelFitTopY, isNewDemo])
 
   const fitOptimalOnly = useCallback(() => {
     const ids = [...optimalNodeIds].filter((id) => visibleIds.has(id))
-    const bbox = computeBBoxForNodeIds(ids, nodesById, boxById, WIDTH, HEIGHT)
-    const v = viewFromBBox(bbox, WIDTH, HEIGHT)
+    const bbox = computeBBoxForNodeIds(ids, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
+    const fitScale = isNewDemo ? 0.82 : 0.97
+    const v = viewFromBBox(bbox, WIDTH, HEIGHT, fitScale)
     animateToView(v.zoom, v.pan)
-  }, [visibleIds, nodesById, boxById, animateToView, optimalNodeIds, WIDTH, HEIGHT])
+  }, [visibleIds, nodesById, boxById, animateToView, optimalNodeIds, WIDTH, HEIGHT, stageLabelFitTopY, isNewDemo])
+
+  const toggleGraphFullscreen = useCallback(() => {
+    setGraphFullscreen((v) => !v)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!graphFullscreen) {
+      fullscreenFitOnceRef.current = false
+      return
+    }
+    if (fullscreenFitOnceRef.current) return
+    fullscreenFitOnceRef.current = true
+    fitAllVisible()
+  }, [graphFullscreen, fitAllVisible])
 
   useEffect(() => {
     if (visibleIds.size === 0) return
     if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
     fitDebounceRef.current = setTimeout(() => {
       fitDebounceRef.current = null
-      const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT)
-      const v = viewFromBBox(bbox, WIDTH, HEIGHT)
+      const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
+      const fitScale = isNewDemo ? 0.82 : 0.97
+      const v = viewFromBBox(bbox, WIDTH, HEIGHT, fitScale)
       animateToView(v.zoom, v.pan)
     }, FIT_DEBOUNCE_MS)
     return () => {
       if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
     }
-  }, [visibleIds, graphComplete, nodesById, boxById, animateToView, WIDTH, HEIGHT])
+  }, [visibleIds, graphComplete, nodesById, boxById, animateToView, WIDTH, HEIGHT, stageLabelFitTopY, isNewDemo])
 
   useEffect(() => {
     const el = containerRef.current
@@ -1006,23 +1832,21 @@ function ScenarioGraph({
     return () => el.removeEventListener('wheel', onWheel)
   }, [applyViewTransform, WIDTH, HEIGHT])
 
-  const zoomIn = () => {
-    const nz = Math.min(ZOOM_MAX, zoomRef.current * 1.18)
-    animateToView(nz, panRef.current)
-  }
-  const zoomOut = () => {
-    const nz = Math.max(ZOOM_MIN, zoomRef.current / 1.18)
-    animateToView(nz, panRef.current)
-  }
+  const zoomIn = () => zoomAtViewBoxCenterByFactor(1.18)
+  const zoomOut = () => zoomAtViewBoxCenterByFactor(1 / 1.18)
 
   return (
-    <div className="w-full">
-      {!isBoardLayout && (
+    <div className={graphFullscreen ? 'relative z-[90] w-full' : 'w-full'}>
+      {!isBoardLayout && !graphFullscreen && (
         <h3 className={`${chrome.drawerTitle} ${chrome.drawerTitleSpaced}`}>Граф сценария</h3>
       )}
       <div
         ref={containerRef}
-        className={`relative ${isBoardLayout ? "h-[640px]" : "h-[620px]"} w-full cursor-grab overflow-hidden rounded-2xl border active:cursor-grabbing ${isNewDemo ? "border-sky-400/40" : "border-slate-700/50"} ${isNewDemo ? "bg-[#03182d]" : "bg-[#0a0e14]"}`}
+        className={
+          graphFullscreen
+            ? `fixed inset-0 z-[100] h-[100dvh] w-full cursor-grab overflow-hidden border active:cursor-grabbing ${isNewDemo ? 'border-sky-400/50' : 'border-slate-600/70'} ${isNewDemo ? 'bg-[#03182d]' : 'bg-[#0a0e14]'} rounded-none shadow-[0_0_0_1px_rgba(0,0,0,0.35)]`
+            : `relative ${isBoardLayout ? 'h-[640px]' : 'h-[620px]'} w-full cursor-grab overflow-hidden rounded-2xl border active:cursor-grabbing ${isNewDemo ? 'border-sky-400/40' : 'border-slate-700/50'} ${isNewDemo ? 'bg-[#03182d]' : 'bg-[#0a0e14]'}`
+        }
         style={{
           touchAction: 'none',
           backgroundImage:
@@ -1167,9 +1991,9 @@ function ScenarioGraph({
                 }
                 .sg-opt-flow {
                   animation: sg-flow-opt 0.62s linear infinite;
-                  filter: drop-shadow(0 0 4px rgba(240, 253, 244, 1))
-                    drop-shadow(0 0 12px rgba(134, 239, 172, 0.95))
-                    drop-shadow(0 0 22px rgba(34, 197, 94, 0.65));
+                  filter: drop-shadow(0 0 1.5px rgba(252, 255, 254, 0.98))
+                    drop-shadow(0 0 5px rgba(167, 243, 198, 0.92))
+                    drop-shadow(0 0 14px rgba(52, 211, 153, 0.55));
                 }
                 @keyframes sg-node-enter {
                   from {
@@ -1203,7 +2027,20 @@ function ScenarioGraph({
                 .sg-edge-draw-in {
                   stroke-dasharray: 1;
                   stroke-dashoffset: 1;
-                  animation: sg-edge-draw 0.48s ease-out forwards;
+                  animation: sg-edge-draw 0.72s ease-out forwards;
+                }
+                @keyframes sg-stub-cross-blink {
+                  0%, 100% {
+                    opacity: 1;
+                    filter: drop-shadow(0 0 8px rgba(255, 30, 30, 0.95));
+                  }
+                  50% {
+                    opacity: 0.38;
+                    filter: drop-shadow(0 0 3px rgba(255, 30, 30, 0.55));
+                  }
+                }
+                .sg-stub-cross {
+                  animation: sg-stub-cross-blink 0.82s ease-in-out infinite;
                 }
               `}
             </style>
@@ -1270,30 +2107,154 @@ function ScenarioGraph({
             <g className="pointer-events-none">
               {edgeLayouts.map((item) => {
                 if (!item) return null
-                const { d, key, isOptimalEdge, baseW, isNewEdge } = item
-                const useDraw = isNewEdge && !isOptimalEdge
+                const {
+                  d,
+                  key,
+                  edgeFrom,
+                  edgeTo,
+                  toFullStructuralOut,
+                  isOptimalStructureEdge,
+                  isDeadStubEdge,
+                  strongRedEdge,
+                  redChainContinuesAtTo,
+                  redTerminalHop,
+                  redGarlandEligible,
+                  baseW,
+                  isNewEdge,
+                  fromX,
+                  fromY,
+                  toX,
+                  toY,
+                  taperIdx,
+                } = item
+                const garlandEndpointLit = (id) =>
+                  optimalGarlandLitIds.has(id) ||
+                  (OUT_SCENARIO_ID_RE.test(id) && preferredScenarioOutcomeIds.has(id))
+                const isOptimalEdgeVisual =
+                  isOptimalStructureEdge &&
+                  (!isNewDemo || (garlandEndpointLit(edgeFrom) && garlandEndpointLit(edgeTo)))
+                const useDraw = isNewEdge && !isOptimalEdgeVisual
+                const redLogical = isDeadStubEdge || strongRedEdge
+                const redGarlandEndpointLit = (id) =>
+                  redGarlandLitIds.has(id) ||
+                  (OUT_SCENARIO_ID_RE.test(id) && !preferredScenarioOutcomeIds.has(id))
+                const redAccentGate = !(isNewDemo && useDraw && !revealAccentSettledIds.has(edgeTo))
+                /**
+                 * Пока граф строится — не красим обычные «сценарные» ветки (strongRed до complete),
+                 * иначе красный → сброс при complete → гирлянда. Тупик user→цель и redTerminalHop — сразу.
+                 */
+                const suppressRedDuringIncompleteBuild =
+                  isNewDemo && !graphComplete && !isDeadStubEdge && !redTerminalHop
+                const useRedGarlandStaging =
+                  isNewDemo &&
+                  graphComplete &&
+                  redGarlandEligible &&
+                  redGarlandSequence.length > 0
+                const redShownVisual =
+                  redLogical &&
+                  !suppressRedDuringIncompleteBuild &&
+                  (useRedGarlandStaging
+                    ? redGarlandEndpointLit(edgeFrom) && redGarlandEndpointLit(edgeTo) && redAccentGate
+                    : graphComplete || !redGarlandEligible || !isNewDemo
+                      ? redAccentGate
+                      : false)
+                const deadRedBoost = isNewDemo && redShownVisual
+                const stripRedTaperMask =
+                  deadRedBoost &&
+                  toFullStructuralOut > 0 &&
+                  (/^scenario-\d+$/.test(edgeTo) || /^cause-\d+$/.test(edgeTo))
+                const junctionDampen = deadRedBoost && redTerminalHop
+                const glowStroke = isOptimalEdgeVisual
+                  ? palette.optimalEdgeGlow
+                  : redShownVisual
+                    ? palette.deadEdgeGlow
+                    : palette.edgeGlow
+                const foreStroke = isOptimalEdgeVisual
+                  ? palette.optimalEdgeFore
+                  : redShownVisual
+                    ? palette.deadEdgeFore
+                    : palette.edgeFore
+                const glowW = isOptimalEdgeVisual
+                  ? Math.max(OPT_EDGE_GLOW_W, baseW * 1.75 + 4)
+                  : deadRedBoost
+                    ? junctionDampen
+                      ? Math.max(4, baseW * 1.12)
+                      : Math.max(8, baseW * 2.6)
+                    : baseW
+                const foreW = isOptimalEdgeVisual
+                  ? OPT_EDGE_FORE_W
+                  : deadRedBoost
+                    ? junctionDampen
+                      ? Math.max(1.2, baseW * 0.46)
+                      : Math.max(2, baseW * 0.88)
+                    : baseW * 0.55
+                const taperMaskId =
+                  deadRedBoost && !stripRedTaperMask ? `sg-red-taper-mask-${taperIdx}` : null
+                const taperGradId =
+                  deadRedBoost && !stripRedTaperMask ? `sg-red-taper-grad-${taperIdx}` : null
                 return (
                   <g key={key}>
+                    {deadRedBoost && !stripRedTaperMask ? (
+                      <defs>
+                        <linearGradient
+                          id={taperGradId}
+                          gradientUnits="userSpaceOnUse"
+                          x1={fromX}
+                          y1={fromY}
+                          x2={toX}
+                          y2={toY}
+                        >
+                          {redTerminalHop ? (
+                            <>
+                              <stop offset="0%" stopColor="white" stopOpacity="1" />
+                              <stop offset="28%" stopColor="white" stopOpacity="1" />
+                              <stop offset="55%" stopColor="white" stopOpacity="0.5" />
+                              <stop offset="78%" stopColor="white" stopOpacity="0.16" />
+                              <stop offset="100%" stopColor="white" stopOpacity="0" />
+                            </>
+                          ) : redChainContinuesAtTo ? (
+                            <>
+                              <stop offset="0%" stopColor="white" stopOpacity="1" />
+                              <stop offset="72%" stopColor="white" stopOpacity="1" />
+                              <stop offset="88%" stopColor="white" stopOpacity="0.52" />
+                              <stop offset="100%" stopColor="white" stopOpacity="0.18" />
+                            </>
+                          ) : (
+                            <>
+                              <stop offset="0%" stopColor="white" stopOpacity="0.12" />
+                              <stop offset="34%" stopColor="white" stopOpacity="0.68" />
+                              <stop offset="66%" stopColor="white" stopOpacity="0.68" />
+                              <stop offset="100%" stopColor="white" stopOpacity="0.12" />
+                            </>
+                          )}
+                        </linearGradient>
+                        <mask id={taperMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width={WIDTH} height={HEIGHT}>
+                          <rect x="0" y="0" width={WIDTH} height={HEIGHT} fill={`url(#${taperGradId})`} />
+                        </mask>
+                      </defs>
+                    ) : null}
                     <path
                       d={d}
                       fill="none"
-                      stroke={isOptimalEdge ? palette.optimalEdgeGlow : palette.edgeGlow}
-                      strokeWidth={isOptimalEdge ? Math.max(OPT_EDGE_GLOW_W, baseW * 3 + 9) : baseW}
+                      stroke={glowStroke}
+                      strokeWidth={glowW}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       pathLength={useDraw ? 1 : undefined}
                       className={useDraw ? 'sg-edge-draw-in' : undefined}
+                      mask={taperMaskId ? `url(#${taperMaskId})` : undefined}
                     />
                     <path
                       d={d}
                       fill="none"
-                      stroke={isOptimalEdge ? palette.optimalEdgeFore : palette.edgeFore}
-                      strokeWidth={isOptimalEdge ? OPT_EDGE_FORE_W : baseW * 0.55}
+                      stroke={foreStroke}
+                      strokeWidth={foreW}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       pathLength={useDraw ? 1 : undefined}
-                      strokeDasharray={isOptimalEdge ? '18 42' : undefined}
-                      className={isOptimalEdge ? 'sg-opt-flow' : useDraw ? 'sg-edge-draw-in' : undefined}
+                      strokeDasharray={isOptimalEdgeVisual ? '11 30' : undefined}
+                      className={isOptimalEdgeVisual ? 'sg-opt-flow' : useDraw ? 'sg-edge-draw-in' : undefined}
+                      mask={taperMaskId ? `url(#${taperMaskId})` : undefined}
                     />
                   </g>
                 )
@@ -1336,7 +2297,15 @@ function ScenarioGraph({
               const layout = nodeLayouts.get(id)
               if (!node || !layout) return null
               const popoverTitle =
-                hypLabelById.get(id) ?? outLabelById.get(id) ?? layout.linesClamped?.[0] ?? node.label
+                id === 'userQuery'
+                  ? 'Пользовательский запрос'
+                  : /^cd-\d+$/.test(id) && String(node.label ?? '').trim()
+                    ? `Цифровой двойник: ${String(node.label ?? '').trim()}`
+                    : String(node.label ?? '').trim() ||
+                      (hypLabelById.get(id) ??
+                        outLabelById.get(id) ??
+                        layout.linesClamped?.[0] ??
+                        '')
               return (
                 <NodeDetailPopover
                   key={`detail-${id}`}
@@ -1351,6 +2320,36 @@ function ScenarioGraph({
             })}
           </g>
         </svg>
+
+        <div
+          className="absolute top-3 right-3 z-10"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            data-sg-control
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border shadow-none transition-colors hover:bg-slate-900/60 active:bg-slate-800/60 ${palette.controlBorder} ${palette.controlBg} ${palette.controlText}`}
+            aria-label={graphFullscreen ? 'Свернуть граф' : 'Развернуть граф на весь экран'}
+            title={graphFullscreen ? 'Свернуть' : 'На весь экран'}
+            onClick={toggleGraphFullscreen}
+          >
+            {graphFullscreen ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 14v4h4" />
+                <path d="M20 10V6h-4" />
+                <path d="M14 20h4v-4" />
+                <path d="M10 4H6v4" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            )}
+          </button>
+        </div>
 
         <div className="absolute bottom-3 right-3 z-10 grid grid-cols-2 gap-2" onPointerDown={(e) => e.stopPropagation()}>
           <button

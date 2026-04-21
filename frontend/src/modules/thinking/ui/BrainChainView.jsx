@@ -19,6 +19,7 @@ import {
 } from '../lib/brainPanelKpi.js'
 import { buildPredsOuts, getRevealableNodeIds, revealDelayMs } from '../lib/graphRevealSchedule'
 import { useAppStore } from '../../../core/store/appStore.js'
+import { useThinkingStore } from '../model/thinkingStore.js'
 import { PANELS_SCENARIO_CONTENT } from '../../ai/lib/panelsScenarioContent.js'
 import { AI_PLANNING_BOARD_PRESETS } from '../../planning/data/aiPlanningBoardPresets.js'
 
@@ -50,6 +51,7 @@ function BrainChainView({
   graphNodes: _graphNodesFromLayout = [],
 }) {
   const aiFaceBrainPreset = useAppStore((s) => s.aiFaceBrainPreset)
+  const thinkingGraphBundleOverride = useThinkingStore((s) => s.thinkingGraphBundleOverride)
   const panelsBlock =
     aiFaceBrainPreset && PANELS_SCENARIO_CONTENT[aiFaceBrainPreset]
       ? PANELS_SCENARIO_CONTENT[aiFaceBrainPreset]
@@ -80,9 +82,10 @@ function BrainChainView({
   const recCardSecondary = panelsBlock?.cards?.[1]
 
   const activeGraphBundle = useMemo(() => {
+    if (thinkingGraphBundleOverride) return thinkingGraphBundleOverride
     if (aiFaceBrainPreset) return getScenarioGraphBundleForAiPreset(aiFaceBrainPreset)
     return defaultScenarioGraphBundle
-  }, [aiFaceBrainPreset])
+  }, [thinkingGraphBundleOverride, aiFaceBrainPreset])
 
   const graphNodesForReveal = useMemo(
     () => activeGraphBundle.nodes,
@@ -113,6 +116,30 @@ function BrainChainView({
     }
     return true
   }, [chainAlreadyRevealed, visibleNodeIds, graphRevealTargetIds])
+
+  /** Доля шаров out-scenario-* в оптимальном замыкании — подпись «~30% / ~70%» на new-demo. */
+  const analysisHeadlineExtended = useMemo(() => {
+    const base = analysisHeadline
+    if (!graphBuildComplete) return base
+    const nodes = activeGraphBundle?.nodes || []
+    const opt = activeGraphBundle?.optimalNodeIds
+    if (!(opt instanceof Set)) return base
+    const outcomes = nodes.filter(
+      (n) => n.type === 'outcome' && /^out-scenario-\d+$/.test(n.id),
+    )
+    if (!outcomes.length) return base
+    const green = outcomes.filter((n) => opt.has(n.id)).length
+    const total = outcomes.length
+    const red = total - green
+    const gp = Math.round((green / total) * 100)
+    const rp = Math.round((red / total) * 100)
+    const near3070 = Math.abs(gp - 30) <= 8 && Math.abs(rp - 70) <= 8
+    const tail = near3070
+      ? `Шары сценариев: порядка 30% в перспективной зоне (${green} из ${total}), порядка 70% отсеяно как тупиковые (${red} из ${total}).`
+      : `Шары сценариев: ${gp}% в перспективной зоне (${green} из ${total}), ${rp}% отсеяно как тупиковые (${red} из ${total}).`
+    return `${base} ${tail}`
+  }, [analysisHeadline, graphBuildComplete, activeGraphBundle])
+
   const graphTargetPercent = useMemo(() => {
     if (chainAlreadyRevealed) return 100
     const n = graphRevealTargetIds.size
@@ -267,7 +294,7 @@ function BrainChainView({
           aria-hidden={!graphBuildComplete}
         >
           <div className={styles.boardProgressInner}>
-            <p className={styles.boardProgressText}>{analysisHeadline}</p>
+            <p className={styles.boardProgressText}>{analysisHeadlineExtended}</p>
           </div>
         </section>
 
@@ -384,7 +411,7 @@ function BrainChainView({
           isNewDemo={false}
           scenarioBranchCount={scenarioBranchCount}
           optimalVariant={optimalVariant}
-          headlineLine={analysisHeadline}
+          headlineLine={analysisHeadlineExtended}
           primaryCard={
             recCardPrimary
               ? { title: recCardPrimary.title, bullets: recCardPrimary.bullets }

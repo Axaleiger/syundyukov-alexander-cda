@@ -1,0 +1,4271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Конструктор сценария актива</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419; --panel: #1a2332; --border: #2d3a4d; --text: #e8eef5; --muted: #8b9cb3;
+      --accent: #3d8fd1; --ok: #2a9d8f; --warn: #e9c46a; --cause: #264653;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; line-height: 1.5; font-size: 15px; }
+    header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--panel); }
+    header h1 { font-size: 1.2rem; margin: 0 0 0.25rem; font-weight: 600; }
+    header .sub { margin: 0; color: var(--muted); font-size: 0.88rem; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; margin-top: 0.6rem; }
+    .toolbar label.btn-file { cursor: pointer; background: var(--accent); color: #fff; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.82rem; }
+    .toolbar input[type="file"] { display: none; }
+    .status { font-size: 0.82rem; color: var(--warn); }
+    .status.ok { color: var(--ok); }
+    nav.main-tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--border); background: var(--panel); padding: 0 0.5rem; }
+    nav.main-tabs button {
+      background: transparent; border: none; color: var(--muted); padding: 0.65rem 1rem; cursor: pointer;
+      font-size: 0.88rem; border-bottom: 2px solid transparent;
+    }
+    nav.main-tabs button:hover { color: var(--text); }
+    nav.main-tabs button.active { color: var(--ok); border-bottom-color: var(--ok); }
+    main { max-width: 960px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .step { margin-bottom: 1.5rem; }
+    .step h2 { font-size: 1.02rem; color: var(--ok); margin: 0 0 0.45rem; font-weight: 600; }
+    fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.85rem; margin: 0 0 0.75rem; background: rgba(26,35,50,0.45); }
+    legend { color: var(--muted); font-size: 0.78rem; padding: 0 0.25rem; }
+    .help { font-size: 0.78rem; color: var(--muted); margin: 0.15rem 0 0.4rem; line-height: 1.45; }
+    label.block { display: block; margin: 0.3rem 0; cursor: pointer; font-size: 0.88rem; }
+    label.block input { margin-right: 0.4rem; vertical-align: middle; }
+    input[type="text"], input[type="search"], textarea {
+      width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.4rem 0.5rem; font: inherit;
+    }
+    textarea { min-height: 64px; resize: vertical; }
+    .nested { margin: 0.2rem 0 0.2rem 1rem; padding-left: 0.5rem; border-left: 2px solid var(--border); }
+    .human-out, .mermaid-wrap {
+      background: #0a0e14; border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem 1rem;
+      font-size: 0.93rem; line-height: 1.55; white-space: normal; overflow-x: auto;
+    }
+    .human-out.prompt-human {
+      display: block; width: 100%; min-height: 12rem; max-height: 28rem; overflow-y: auto;
+      font-family: inherit; outline: none;
+    }
+    .human-out.prompt-human:focus { box-shadow: 0 0 0 1px var(--ok); }
+    .prompt-skeleton { color: #5fd88a; font-weight: 500; }
+    .prompt-item { color: var(--text); font-weight: 400; }
+    .ai-out-of-domain-title { color: #b87878; font-weight: 500; }
+    .ai-out-of-domain-voice-hint { color: #5fb894; font-weight: 500; }
+    .mermaid-wrap { white-space: normal; min-height: 120px; }
+    .n8n-panel { margin-top: 0.35rem; }
+    .n8n-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.65rem;
+      margin-bottom: 0.45rem; font-size: 0.82rem;
+    }
+    .n8n-toolbar-hint { flex: 1 1 12rem; min-width: 0; }
+    .n8n-scroll {
+      overflow: auto;
+      max-height: min(70vh, 520px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #06090d;
+      padding: 0.5rem;
+    }
+    .n8n-inner {
+      display: inline-block;
+      vertical-align: top;
+      min-width: min-content;
+      transform-origin: 0 0;
+    }
+    .n8n-mermaid-host.mermaid-wrap {
+      min-height: 180px;
+      border: none;
+      padding: 0.25rem;
+      background: transparent;
+    }
+    .n8n-best-summary {
+      margin: 0.65rem 0 0.35rem;
+      padding: 0.55rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid rgba(95, 216, 138, 0.35);
+      background: rgba(21, 61, 37, 0.2);
+    }
+    .n8n-stats-line { margin: 0.35rem 0 0.65rem; font-size: 0.82rem; }
+    .n8n-mermaid-details { margin-top: 0.5rem; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; align-items: center; }
+    button { border: none; border-radius: 6px; padding: 0.4rem 0.85rem; font: inherit; cursor: pointer; }
+    button.primary { background: var(--ok); color: #fff; }
+    button.secondary { background: var(--border); color: var(--text); }
+    button.preset { background: #2d4a5e; color: var(--text); font-size: 0.82rem; text-align: left; }
+    code { font-size: 0.8em; background: var(--border); padding: 0.05rem 0.22rem; border-radius: 4px; }
+    .search-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.45rem 0; align-items: center; }
+    .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.35rem 0; }
+    .chips label { font-size: 0.8rem; cursor: pointer; padding: 0.12rem 0.4rem; border-radius: 999px; border: 1px solid var(--border); }
+    .chips input { margin-right: 0.25rem; }
+    .cause-card { background: var(--cause); border-radius: 8px; padding: 0.55rem 0.7rem; margin: 0.45rem 0; border: 1px solid var(--border); }
+    .cause-card h4 { margin: 0 0 0.3rem; font-size: 0.86rem; font-weight: 600; }
+    .cause-card ul { margin: 0.2rem 0 0 1rem; padding: 0; font-size: 0.82rem; color: var(--muted); }
+    .lever-list label { font-size: 0.82rem; }
+    .muted { color: var(--muted); font-size: 0.8rem; }
+    .gate-box { border: 1px dashed var(--warn); border-radius: 8px; padding: 1rem; margin: 0.5rem 0; color: var(--muted); }
+    .causes-prompt-list { margin: 0; padding: 0; list-style: none; }
+    .cause-deep-card {
+      background: rgba(26,35,50,0.55); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.85rem 1rem; margin-bottom: 1rem;
+    }
+    .cause-deep-card h3 { font-size: 0.98rem; color: var(--ok); margin: 0 0 0.35rem; font-weight: 600; }
+    .cause-deep-card .prompt-echo {
+      font-size: 0.9rem; color: var(--text); margin-bottom: 0.55rem; padding: 0.4rem 0.55rem;
+      background: #0a0e14; border-radius: 6px; border-left: 3px solid var(--accent); line-height: 1.45;
+    }
+    .cause-deep-card .cause-intro { font-size: 0.86rem; color: var(--muted); line-height: 1.55; margin: 0 0 0.55rem; }
+    .cause-deep-card ul { margin: 0.35rem 0 0 1rem; padding: 0; font-size: 0.86rem; line-height: 1.5; color: var(--text); }
+    .cause-deep-card li { margin-bottom: 0.4rem; }
+    /* Один столбец: иначе при переносе flex соседние карточки ДО визуально «смешиваются» с чужими месторождениями */
+    .entity-picker-row {
+      display: flex; flex-direction: column; gap: 0.55rem; align-items: stretch;
+    }
+    .entity-do {
+      flex: none; width: 100%; max-width: none; min-width: 0;
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.55rem; background: rgba(26,35,50,0.55);
+    }
+    details.do-details > summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; list-style-position: outside; }
+    details.do-details > summary code { font-weight: normal; margin-left: 0.3rem; font-size: 0.75rem; }
+    .do-body { margin: 0.4rem 0 0.15rem 0.25rem; padding-left: 0.45rem; border-left: 2px solid var(--border); }
+    .field-line { font-size: 0.84rem; margin: 0.2rem 0; }
+    .field-line code { font-size: 0.72rem; margin-left: 0.25rem; }
+    .dim-opt-hint { font-size: 0.78rem; margin: 0.1rem 0 0.45rem 1.55rem; max-width: 42rem; line-height: 1.45; }
+    .horizon-phases-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; margin: 0.35rem 0 0.5rem 1.55rem; padding: 0.4rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: rgba(15,20,25,0.35); }
+    .horizon-phases-inline.muted { opacity: 0.45; pointer-events: none; }
+    .horizon-phases-inline .phase-label { font-size: 0.82rem; white-space: nowrap; }
+    .objective-row {
+      display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.35rem 0.75rem;
+      margin: 0.35rem 0; padding: 0.35rem 0.4rem; border-radius: 6px; border: 1px solid var(--border);
+      background: rgba(15,20,25,0.25);
+    }
+    .objective-main { flex: 0 1 20rem; min-width: 12rem; }
+    .objective-target-controls {
+      flex: 1 1 18rem; display: none; flex-direction: column; gap: 0.4rem;
+      font-size: 0.82rem; padding: 0.35rem 0.45rem; border-left: 2px solid var(--border); margin-left: 0.2rem;
+    }
+    .objective-target-controls.visible { display: flex; }
+    .obj-mode-row { display: flex; flex-wrap: wrap; gap: 0.45rem 1.1rem; align-items: center; }
+    .obj-mode-opt { cursor: pointer; }
+    .obj-arrow { font-size: 1rem; color: var(--ok); font-weight: 600; margin-left: 0.2rem; vertical-align: middle; letter-spacing: 0.02em; }
+    .obj-threshold-fields { display: none; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.55rem; }
+    .obj-threshold-fields.visible { display: flex; }
+    .obj-threshold-fields input[type="number"] { width: 4.2rem; font: inherit; }
+    .obj-threshold-fields select { font: inherit; max-width: 22rem; }
+    .objective-key-block { margin-top: 0.35rem; margin-bottom: 0.45rem; }
+    .constraint-row, .lever-row {
+      margin: 0.35rem 0; padding: 0.35rem 0.45rem; border-radius: 6px; border: 1px solid var(--border);
+      background: rgba(15,20,25,0.2);
+    }
+    .constraint-row.mutually-blocked, .lever-row.mutually-blocked { opacity: 0.45; }
+    .constraint-row label.block, .lever-row label.block { margin-top: 0.15rem; }
+    .constraint-param-wrap {
+      margin: 0.35rem 0 0.15rem 1.45rem; font-size: 0.82rem; display: none;
+    }
+    .constraint-param-wrap input[type="text"], .constraint-param-wrap input[type="number"] {
+      max-width: 22rem; margin-top: 0.2rem;
+    }
+    .constraint-param-wrap label { display: block; color: var(--muted); font-size: 0.78rem; margin-bottom: 0.15rem; }
+    .constraint-row .dim-opt-hint, .lever-row .dim-opt-hint { margin-left: 0; margin-top: 0.25rem; }
+    ._panel_1dxkf_90 {
+      max-width: 780px;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(26, 35, 50, 0.9);
+      padding: 0.9rem;
+    }
+    ._panelHeader_1dxkf_117 { display: flex; align-items: center; gap: 0.55rem; margin-bottom: 0.55rem; }
+    ._panelTitle_1dxkf_123 { font-size: 1rem; font-weight: 600; color: var(--ok); }
+    ._online_1dxkf_128 { font-size: 0.82rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.3rem; }
+    ._dot_1dxkf_45 { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--ok); display: inline-block; }
+    ._panelClose_1dxkf_158 { margin-left: auto; background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    ._greeting_1dxkf_124 { margin: 0 0 0.65rem; color: var(--muted); font-size: 0.9rem; }
+    ._suggestionList_1dxkf_215 { display: grid; gap: 0.45rem; margin-bottom: 0.65rem; }
+    ._suggestionButton_1dxkf_221 { text-align: left; width: 100%; }
+    ._buttonGhost_gvl8e_46 { background: #1f2e42; color: var(--text); border: 1px solid var(--border); }
+    ._inputRow_1dxkf_258 { display: flex; gap: 0.45rem; align-items: flex-end; margin-bottom: 0.55rem; }
+    ._input_1dxkf_258 { flex: 1 1 auto; min-height: 4.2rem; }
+    ._buttonBase_gvl8e_21 { background: var(--border); color: var(--text); }
+    ._actionsRow_1dxkf_320 { display: flex; gap: 0.45rem; justify-content: flex-end; }
+    ._buttonPrimary_gvl8e_34 { background: var(--ok); color: #fff; }
+    ._openThinking_1dxkf_328[disabled] { opacity: 0.55; cursor: not-allowed; }
+    .ai-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 0.75rem; margin-top: 0.7rem; align-items: start; }
+    .ai-steps-col { display: grid; gap: 0.6rem; align-content: start; }
+    .ai-steps { display: grid; gap: 0.45rem; align-content: start; }
+    .ai-step-chip {
+      border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.55rem;
+      background: #162030; color: var(--muted); cursor: pointer; text-align: left;
+    }
+    .ai-step-chip.active { border-color: #8fc2ff; box-shadow: 0 0 0 2px rgba(143,194,255,0.45), 0 0 14px rgba(143,194,255,0.25); color: #f3f8ff; }
+    .ai-step-chip.done { background: rgba(42,157,143,0.22); color: #c6f4df; border-color: rgba(42,157,143,0.8); }
+    .ai-step-chip.locked { opacity: 0.52; cursor: not-allowed; }
+    .ai-stage { border: 1px solid var(--border); border-radius: 10px; padding: 0.55rem; background: rgba(10, 14, 20, 0.45); min-height: 18rem; }
+    .ai-step-nav { display: flex; gap: 0.35rem; align-items: center; }
+    .ai-step-nav button { width: auto; }
+    .ai-step-nav .ai-nav-arrow { width: 2.2rem; min-width: 2.2rem; padding: 0.32rem 0.2rem; line-height: 1; font-weight: 700; }
+    .ai-step-nav .ai-nav-confirm { flex: 1 1 auto; min-width: 0; }
+    .ai-separator { border-top: 1px dashed var(--border); margin: 0.65rem 0; padding-top: 0.5rem; color: var(--muted); font-size: 0.84rem; }
+    .ai-prompt-live { margin-top: 0.7rem; }
+    .ai-prompt-out-row { display: flex; align-items: flex-start; gap: 0.5rem; }
+    .ai-prompt-out-row .human-out { flex: 1; min-width: 0; }
+    .ai-prompt-footer { margin-top: 0.45rem; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+    .ai-transforming { color: var(--muted); animation: aiBlink 0.9s linear infinite; }
+    .ai-transforming.done { animation: none; }
+    .ai-mic-btn { position: relative; overflow: visible; }
+    .ai-mic-recording {
+      border-color: #ff8a65 !important; color: #ffd8c8 !important;
+      animation: aiMicPulse 1.15s ease-in-out infinite;
+    }
+    .ai-mic-recorded {
+      border-color: rgba(42, 157, 143, 0.95) !important; color: #b8ebe0 !important;
+      background: rgba(42, 157, 143, 0.2) !important;
+      animation: none;
+    }
+    .ai-mic-done-mark {
+      position: absolute;
+      right: 2px;
+      bottom: 4px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: rgba(15, 20, 25, 0.92);
+      color: #4fbf95;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      box-shadow: 0 0 0 1px rgba(79, 191, 149, 0.45);
+    }
+    .ai-mic-recorded .ai-mic-done-mark { display: flex; }
+    .ai-mic-done-mark svg { display: block; }
+    @keyframes aiMicPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 138, 101, 0.45); transform: scale(1); }
+      50% { box-shadow: 0 0 0 7px rgba(255, 138, 101, 0.12); transform: scale(1.04); }
+    }
+    @keyframes aiBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .ai-parking { display: none; }
+    @media (max-width: 980px) { .ai-layout { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Конструктор запроса к моделированию актива</h1>
+    <p class="sub">Вкладки по порядку работы. Файл <code>data/actives.xlsx</code>, лист <strong>Справочник</strong>, столбцы A–D (№ п/п, ДО, Месторождение, Пласт) → <code>python scripts/actives_to_json.py</code> → <code>actives_tree.json</code> (в конструкторе — только ДО и месторождения). Экспорт <code>build_excel.py</code>: справочник активов — лист <strong>Справочник_ДО</strong>.</p>
+    <div class="toolbar">
+      <label class="btn-file">Знания<input type="file" id="fKnowledge" accept=".json" /></label>
+      <label class="btn-file">Теги<input type="file" id="fTags" accept=".json" /></label>
+      <label class="btn-file">Активы<input type="file" id="fActives" accept=".json" /></label>
+      <label class="btn-file">Лексикон<input type="file" id="fLexicon" accept=".json" /></label>
+      <label class="btn-file">Пресеты<input type="file" id="fPresets" accept=".json" /></label>
+      <button type="button" class="secondary" id="btnFetchAll">Загрузить всё с сервера</button>
+    </div>
+    <p class="status" id="loadStatus">Запуск: <code>python -m http.server 8080</code> из корня проекта.</p>
+  </header>
+
+  <nav class="main-tabs" role="tablist">
+    <button type="button" class="active" data-tab="tab-construct">Конструктор промпта</button>
+    <button type="button" data-tab="tab-causes">Анализ причин</button>
+    <button type="button" data-tab="tab-hyps">Формирование гипотез</button>
+    <button type="button" data-tab="tab-n8n">n8n</button>
+    <button type="button" data-tab="tab-ai-assistant">ИИ-помощник</button>
+  </nav>
+
+  <main>
+    <div id="tab-construct" class="tab-panel active">
+      <section class="step">
+        <h2>Выбор активов сценария</h2>
+        <p class="help">Каждое ДО — отдельный блок ниже; месторождения только из строк этого блока. После смены <code>actives_tree.json</code> снова нажмите «Загрузить всё с сервера» или перезагрузите страницу с обходом кэша (Ctrl+F5).</p>
+        <div id="entityPicker"></div>
+      </section>
+
+      <section class="step">
+        <h2>Быстрые пресеты</h2>
+        <p class="help">
+          Можно выбрать готовую постановку или <strong>пропустить этот шаг</strong> и листать ниже, чтобы собрать свой промпт вручную (база, горизонт, цели, ограничения, рычаги).
+        </p>
+        <div class="btn-row" id="presetRow" style="flex-direction:column;align-items:stretch"></div>
+        <p class="muted" id="presetHint"></p>
+      </section>
+
+      <section class="step">
+        <h2>Условия сценария</h2>
+        <p class="help">Где нужно несколько вариантов — отметьте несколько галочек (например две базы или две цели). Пустой блок значит «модель уточняет сама».</p>
+        <div id="dimCompact"></div>
+        <fieldset>
+          <legend>Ограничения</legend>
+          <input type="search" id="searchConstraints" placeholder="Поиск…" />
+          <div id="constraintsBox" class="lever-list"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Рычаги</legend>
+          <input type="search" id="searchLevers" placeholder="трубопровод, ГТМ, CAPEX…" />
+          <div id="leversBox" class="lever-list"></div>
+        </fieldset>
+      </section>
+
+      <section class="step">
+        <h2>Текст промпта</h2>
+        <p class="help">Текст можно править в поле. «Обновить» пересоберёт его из конструктора (ручные правки будут заменены). Зелёным выделены типовые формулировки, белым — выбранные актив, горизонт, цели, ограничения и рычаги.</p>
+        <div class="btn-row">
+          <button type="button" class="primary" id="btnHumanPrompt">Обновить текст промпта</button>
+          <button type="button" class="secondary" id="btnRandomPrompt" title="Случайная комбинация по всем пунктам конструктора">Случайный промпт</button>
+          <button type="button" class="primary" id="btnConfirmPrompt">Подтвердить промпт → открыть анализ причин</button>
+          <button type="button" class="secondary" id="btnCopyHuman">Копировать промпт</button>
+        </div>
+        <div class="human-out prompt-human" id="outHuman" contenteditable="true" spellcheck="true" role="textbox" aria-label="Текст промпта для модели"></div>
+      </section>
+    </div>
+
+    <div id="tab-causes" class="tab-panel">
+      <div class="gate-box" id="gateCauses">Сначала на вкладке «Конструктор промпта» нажмите <strong>«Подтвердить промпт → открыть анализ причин»</strong>. До этого разбор не строится.</div>
+      <div id="causesPanel" style="display:none"></div>
+      <p class="help" id="causesIntro" style="display:none">Элементы промпта — как в поле промпта. Кратко: контекст и типовые причины отклонения.</p>
+    </div>
+
+    <div id="tab-hyps" class="tab-panel">
+      <div class="gate-box" id="gateHyps">Сначала подтвердите промпт на первой вкладке.</div>
+      <div id="hypsWrap" style="display:none">
+        <p class="help" id="hypsIntro">Те же элементы и формулировки, что на «Анализ причин». Ниже — что может повлиять на причины (меры и факторы), не менее двух пунктов на элемент.</p>
+        <div id="hypPanel"></div>
+      </div>
+    </div>
+
+    <div id="tab-n8n" class="tab-panel">
+      <div class="gate-box" id="gateFinal">Подтвердите промпт на первой вкладке. Здесь строится схема влияний для n8n.</div>
+      <div id="finalWrap" style="display:none">
+        <div class="n8n-panel">
+          <div class="n8n-toolbar">
+            <button type="button" class="secondary" id="n8nZoomOut" title="Уменьшить">−</button>
+            <span id="n8nZoomLabel" class="muted">100%</span>
+            <button type="button" class="secondary" id="n8nZoomIn" title="Увеличить">+</button>
+            <button type="button" class="secondary" id="n8nZoomReset" title="Сброс масштаба">1:1</button>
+            <span class="muted n8n-toolbar-hint">Удерживайте Ctrl и крутите колёсико для масштаба · перетаскивание — скролл</span>
+          </div>
+          <div class="n8n-scroll" id="n8nScroll">
+            <div class="n8n-inner" id="n8nInner">
+              <div class="mermaid-wrap n8n-mermaid-host" id="mermaidHost"></div>
+            </div>
+          </div>
+          <div id="n8nBestSummary" class="n8n-best-summary"></div>
+          <p id="n8nStats" class="muted n8n-stats-line"></p>
+          <details class="n8n-mermaid-details">
+            <summary class="muted">Код Mermaid</summary>
+            <div class="btn-row" style="margin-top:0.35rem">
+              <button type="button" class="secondary" id="btnCopyMermaid">Копировать код</button>
+            </div>
+            <pre id="mermaidCode" class="human-out" style="font-size:0.78rem;margin-top:0.35rem"></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-ai-assistant" class="tab-panel">
+      <div class="_panel_1dxkf_90 _surfaceGlass_gvl8e_1">
+        <div class="_panelHeader_1dxkf_117">
+          <span class="_panelTitle_1dxkf_123">ИИ-помощник</span>
+          <span class="_online_1dxkf_128"><span class="_dot_1dxkf_45"></span> online</span>
+          <button type="button" class="_panelClose_1dxkf_158 _closeButton_gvl8e_78" aria-label="Свернуть">×</button>
+        </div>
+        <p class="_greeting_1dxkf_124">Введите запрос или выберите пресет.</p>
+        <div class="_suggestionList_1dxkf_215" aria-label="Готовые промпты">
+          <button type="button" class="_suggestionButton_1dxkf_221 _buttonGhost_gvl8e_46" id="aiPreset1">★ Лучший пресет 1</button>
+          <button type="button" class="_suggestionButton_1dxkf_221 _buttonGhost_gvl8e_46" id="aiPreset2">★ Лучший пресет 2</button>
+          <button type="button" class="_suggestionButton_1dxkf_221 _buttonGhost_gvl8e_46" id="aiPreset3">★ Лучший пресет 3</button>
+          <button type="button" class="_suggestionButton_1dxkf_221 _buttonGhost_gvl8e_46 _suggestionButtonReset_1dxkf_221" id="aiResetBtn">Сбросить сценарий расчёта</button>
+        </div>
+        <div class="ai-separator">Конструктор</div>
+        <div class="ai-layout">
+          <div class="ai-steps-col">
+            <div class="ai-steps" id="aiSteps"></div>
+            <div class="ai-step-nav">
+            <button type="button" class="secondary ai-nav-arrow" id="aiPrevStep">↑</button>
+            <button type="button" class="secondary ai-nav-arrow" id="aiNextStep">↓</button>
+            <button type="button" class="primary ai-nav-confirm" id="aiConfirmStep">Подтвердить</button>
+            </div>
+          </div>
+          <div class="ai-stage" id="aiStage"></div>
+        </div>
+        <div class="ai-parking" id="aiParking"></div>
+        <div class="ai-prompt-live">
+          <div class="ai-prompt-out-row">
+            <div class="human-out prompt-human" id="aiPromptOut" contenteditable="true" spellcheck="true"></div>
+            <button type="button" class="ai-mic-btn _mic_1dxkf_287 _buttonBase_gvl8e_21" title="Голосовой ввод" aria-label="Голосовой ввод" id="aiMicBtn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="_micSvg_1dxkf_305">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" x2="12" y1="19" y2="22"></line>
+              </svg>
+              <span class="ai-mic-done-mark" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+            </button>
+          </div>
+          <div class="ai-prompt-footer">
+            <button type="button" class="secondary" id="aiRandomPrompt">Случайный промпт</button>
+            <button type="button" class="_send_1dxkf_353 _buttonPrimary_gvl8e_34" id="aiApproveBtn">Согласовать</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+(function () {
+  let K = null, T = null, A = null, LEX = null, PRE = null, SRULES = null, SREG = null;
+  let promptConfirmed = false;
+
+  /** Порядок «ключевых» целей в блоке «Цели» (id из справочника). */
+  const KEY_OBJECTIVE_IDS = ["G01", "G16", "G03"];
+  /** Максимизация добычи нефти — всегда выбрана по умолчанию (см. asset_modeling_knowledge G03). */
+  const DEFAULT_OIL_OBJECTIVE_ID = "G03";
+
+  const $ = (id) => document.getElementById(id);
+
+  function getPromptText() {
+    const el = $("outHuman");
+    if (!el) return "";
+    return String(el.innerText || "");
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function skel(t) {
+    return '<span class="prompt-skeleton">' + escapeHtml(t) + "</span>";
+  }
+
+  function item(t) {
+    return '<span class="prompt-item">' + escapeHtml(t) + "</span>";
+  }
+
+  function promptPlainFromHtml(html) {
+    const d = document.createElement("div");
+    d.innerHTML = html;
+    return (d.innerText || "").replace(/\u00a0/g, " ").trim();
+  }
+
+  /** Завершает текст промпта точкой, если последний символ ещё не . ! ? … */
+  function appendFinalPeriodIfNeeded(html) {
+    if (!html) return html;
+    const t = promptPlainFromHtml(html).replace(/\s+/g, " ").trim();
+    if (!t) return html;
+    if (/[.!?…]\s*$/.test(t)) return html;
+    return html + item(".");
+  }
+
+  function renderHumanPrompt() {
+    const el = $("outHuman");
+    if (!el) return;
+    el.innerHTML = buildHumanPromptHtml();
+  }
+
+  function setStatus(msg, ok) {
+    const el = $("loadStatus");
+    el.textContent = msg;
+    el.className = "status" + (ok ? " ok" : "");
+  }
+
+  function normArr(x) {
+    if (x == null || x === "") return [];
+    return Array.isArray(x) ? x : [x];
+  }
+
+  function setChecks(name, ids) {
+    const arr = normArr(ids);
+    if (name === "bases") {
+      const want = arr.length ? arr[0] : "B01";
+      const inputs = document.querySelectorAll('input[type="radio"][name="bases"]');
+      if (!inputs.length) return;
+      let hit = false;
+      inputs.forEach((inp) => {
+        const on = inp.value === want;
+        inp.checked = on;
+        if (on) hit = true;
+      });
+      if (!hit) {
+        const b01 = document.querySelector('input[type="radio"][name="bases"][value="B01"]');
+        if (b01) b01.checked = true;
+        else inputs[0].checked = true;
+      }
+      return;
+    }
+    if (name === "horizons") {
+      const want = arr.length ? arr[0] : "T02";
+      const inputs = document.querySelectorAll('input[type="radio"][name="horizons"]');
+      if (!inputs.length) return;
+      let hit = false;
+      inputs.forEach((inp) => {
+        const on = inp.value === want;
+        inp.checked = on;
+        if (on) hit = true;
+      });
+      if (!hit) {
+        const t02 = document.querySelector('input[type="radio"][name="horizons"][value="T02"]');
+        if (t02) t02.checked = true;
+        else if (inputs[0]) inputs[0].checked = true;
+      }
+      return;
+    }
+    if (name === "horizon_phases") {
+      const set = new Set(arr);
+      document.querySelectorAll('input[name="horizon_phases"]').forEach((inp) => {
+        inp.checked = set.has(inp.value);
+      });
+      return;
+    }
+    const set = new Set(arr);
+    document.querySelectorAll(`input[name="${name}"]`).forEach((inp) => {
+      inp.checked = set.has(inp.value);
+    });
+  }
+
+  function getChecked(name) {
+    if (name === "bases") {
+      const el = document.querySelector('input[type="radio"][name="bases"]:checked');
+      return el ? [el.value] : ["B01"];
+    }
+    if (name === "horizons") {
+      const el = document.querySelector('input[type="radio"][name="horizons"]:checked');
+      return el ? [el.value] : ["T02"];
+    }
+    return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map((x) => x.value);
+  }
+
+  function displayBaseLabel(name) {
+    return String(name || "")
+      .replace(/\s*\/\s*base\s*case\s*/gi, "")
+      .trim();
+  }
+
+  function getCheckedHorizonPhases() {
+    if (getChecked("horizons")[0] !== "T04") return [];
+    return Array.from(document.querySelectorAll('input[name="horizon_phases"]:checked')).map((x) => x.value);
+  }
+
+  /**
+   * Фрагмент после «с горизонтом планирования …»: для названий, которые уже начинаются с предлога
+   * («до конца …», «по фазам»), без дублирования «в» («… планирования до конца …», не «… в до конца …»).
+   */
+  function formatHorizonPlanningPhraseFromState(dim, hid, phaseIds) {
+    const d = dim || (K && K.dimensions) || {};
+    let s = nameById(d.horizons, hid);
+    const phases = phaseIds || [];
+    if (hid === "T04" && phases.length) {
+      const phNames = phases.map((id) => nameById(d.horizon_phases || [], id)).filter(Boolean);
+      if (phNames.length) s += " (фазы: " + phNames.join(", ") + ")";
+    }
+    const lower = s.toLowerCase();
+    const first = lower.trim().split(/\s+/)[0] || "";
+    if (first === "до" || first === "по") return lower;
+    return "в " + lower;
+  }
+
+  function formatHorizonPlanningPhrase(dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const hid = getChecked("horizons")[0] || "T02";
+    return formatHorizonPlanningPhraseFromState(d, hid, getCheckedHorizonPhases());
+  }
+
+  function openingEntityHtml() {
+    const full = buildEntityOpeningSentence();
+    const m = full.match(/^Сформируй сценарий для (.+)$/);
+    if (m) return skel("Сформируй сценарий для ") + item(m[1]);
+    return item(full);
+  }
+
+  /** Убирает хвостовую пунктуацию, чтобы заново расставить ; и . по разделам. */
+  function normalizeClauseText(s) {
+    let t = String(s || "").trim();
+    t = t.replace(/;+\s*$/g, "");
+    if (/[.!?…]\s*$/.test(t)) t = t.slice(0, -1).trim();
+    return t;
+  }
+
+  /**
+   * Маркированные строки одного раздела (цели / ограничения / рычаги).
+   * hasMoreAfterSection — после этого раздела идёт следующий (тогда у последнего пункта нет «;»).
+   */
+  function appendBulletBlock(h, lines, hasMoreAfterSection) {
+    const n = lines.length;
+    if (!n) return h;
+    lines.forEach((t, i) => {
+      const isLast = i === n - 1;
+      let line;
+      if (n === 1) {
+        line = hasMoreAfterSection ? "• " + t : "• " + t + ".";
+      } else if (!isLast) {
+        line = "• " + t + ";";
+      } else {
+        line = hasMoreAfterSection ? "• " + t : "• " + t + ".";
+      }
+      h += "<br>" + item(line);
+    });
+    return h;
+  }
+
+  function buildGoalsConsLeversHtml(goals, cons, levs, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const g = goals || [];
+    const c = cons || [];
+    const l = levs || [];
+    let h = "";
+
+    const goalLines = g.map((gid) => normalizeClauseText(formatGoalClause(gid, d))).filter(Boolean);
+    h = appendBulletBlock(h, goalLines, c.length > 0 || l.length > 0);
+
+    if (c.length) {
+      h += skel(", с учётом следующих ограничений:");
+      const consLines = c.map((cid) => normalizeClauseText(formatConstraintLineForPrompt(cid, d))).filter(Boolean);
+      h = appendBulletBlock(h, consLines, l.length > 0);
+    }
+    if (l.length) {
+      h += skel(", за счёт применения рычагов:");
+      const levLines = l.map((lid) => {
+        const n = nameById(d.levers, lid).trim();
+        const lower = n ? n.charAt(0).toLowerCase() + n.slice(1) : n;
+        return normalizeClauseText(lower);
+      }).filter(Boolean);
+      h = appendBulletBlock(h, levLines, false);
+    }
+    return h;
+  }
+
+  function aiObjectiveTargetDefaults(obj) {
+    const sem = semanticsFromObjective(obj);
+    const profile = getObjectiveProfile(obj);
+    return {
+      mode: "max",
+      value: sem === "reserves_in_situ" ? "20" : "5",
+      unit: (profile.unitOptions[0] && profile.unitOptions[0].value) || "pct",
+      base: "inherit",
+    };
+  }
+
+  function aiEnsureObjectiveTarget(goalId, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    if (!aiWizard.state.objectiveTargets) aiWizard.state.objectiveTargets = {};
+    if (aiWizard.state.objectiveTargets[goalId]) return aiWizard.state.objectiveTargets[goalId];
+    const obj = (d.objectives || []).find((o) => o.id === goalId);
+    const def = aiObjectiveTargetDefaults(obj || { id: goalId });
+    aiWizard.state.objectiveTargets[goalId] = def;
+    return def;
+  }
+
+  /** Цели в мастере ИИ: поддерживает лаконичный порог как в конструкторе. */
+  function formatGoalClauseAi(goalId, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const obj = (d.objectives || []).find((o) => o.id === goalId);
+    if (!obj) return nameById(d.objectives, goalId).toLowerCase();
+    const sem = semanticsFromObjective(obj);
+    const target = aiEnsureObjectiveTarget(goalId, d);
+    const nm = obj.name.toLowerCase();
+    const profile = getObjectiveProfile(obj);
+    if (!target || target.mode !== "threshold") return nm + " (" + profile.modeLabel + " " + profile.arrow + ")";
+    const val = target.value && String(target.value).trim() ? String(target.value).replace(",", ".") : "5";
+    const unitKey = target.unit || (profile.unitOptions[0] && profile.unitOptions[0].value) || "pct";
+    const bid = target.base && target.base !== "inherit" ? target.base : (aiWizard.state.base || "B01");
+    const gen = baseGenitivePhrase(bid, d);
+    return formatThresholdClause(goalId, obj, sem, val, unitKey, gen);
+  }
+
+  /** Ограничения в мастере ИИ: параметры по умолчанию из JSON, без полей конструктора. */
+  function formatConstraintLineForPromptAi(cid, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const baseName = nameById(d.constraints, cid).toLowerCase();
+    const pdef = (d.constraint_params || {})[cid];
+    if (!pdef) return baseName;
+    const pmap = aiWizard.state.constraintParams || {};
+    const vRaw = pmap[cid] != null ? pmap[cid] : pdef.default;
+    const v = vRaw != null ? String(vRaw) : "";
+    if (pdef.kind === "money_rub") {
+      const amt = v !== "" ? formatRubLong(v) : formatRubLong(pdef.default);
+      return baseName + " (потолок " + amt + ")";
+    }
+    if (pdef.kind === "number") {
+      const n = v !== "" ? v : String(pdef.default != null ? pdef.default : "");
+      const lab = pdef.label ? " — " + pdef.label + ": " + n : ": " + n;
+      return baseName + lab;
+    }
+    if (pdef.kind === "text" && v) return baseName + " (" + v + ")";
+    return baseName;
+  }
+
+  function buildGoalsConsLeversHtmlAi(goals, cons, levs, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const g = goals || [];
+    const c = cons || [];
+    const l = levs || [];
+    let h = "";
+
+    const goalLines = g.map((gid) => normalizeClauseText(formatGoalClauseAi(gid, d))).filter(Boolean);
+    h = appendBulletBlock(h, goalLines, c.length > 0 || l.length > 0);
+
+    if (c.length) {
+      h += skel(", с учётом следующих ограничений:");
+      const consLines = c.map((cid) => normalizeClauseText(formatConstraintLineForPromptAi(cid, d))).filter(Boolean);
+      h = appendBulletBlock(h, consLines, l.length > 0);
+    }
+    if (l.length) {
+      h += skel(", за счёт применения рычагов:");
+      const levLines = l.map((lid) => {
+        const n = nameById(d.levers, lid).trim();
+        const lower = n ? n.charAt(0).toLowerCase() + n.slice(1) : n;
+        return normalizeClauseText(lower);
+      }).filter(Boolean);
+      h = appendBulletBlock(h, levLines, false);
+    }
+    return h;
+  }
+
+  /** Тот же HTML-промпт, что в конструкторе, но из состояния мастера ИИ и с раскрытием по шагам. */
+  function buildHumanPromptHtmlAi() {
+    if (!K) return "";
+    const d = K.dimensions || {};
+    const done = aiConfirmedStepCount();
+    let reveal = done;
+    if (aiWizard.current === done && done < aiWizard.steps.length) reveal = done + 1;
+    const goals = aiWizard.state.goals;
+    const cons = aiWizard.state.constraints;
+    const levs = aiWizard.state.levers;
+    const gShow = reveal >= 3 ? goals : [];
+    const cShow = reveal >= 4 ? cons : [];
+    const lShow = reveal >= 5 ? levs : [];
+
+    let h = openingEntityHtml();
+    if (reveal < 2) {
+      return appendFinalPeriodIfNeeded(h + skel("…"));
+    }
+
+    const hid = aiWizard.state.horizon || "T02";
+    h += skel(" с горизонтом планирования ");
+    h += item(formatHorizonPlanningPhraseFromState(d, hid, []));
+
+    if (reveal < 3) {
+      if (!goals.length && !cons.length && !levs.length) {
+        h += skel(".");
+        return appendFinalPeriodIfNeeded(h);
+      }
+      return appendFinalPeriodIfNeeded(h + skel("…"));
+    }
+
+    if (!gShow.length && !cShow.length && !lShow.length) {
+      h += skel(".");
+      return appendFinalPeriodIfNeeded(h);
+    }
+    if (gShow.length) {
+      h += skel(", который должен достигать следующих целей:");
+      h += buildGoalsConsLeversHtmlAi(gShow, cShow, lShow, d);
+    } else {
+      h += buildGoalsConsLeversHtmlAi([], cShow, lShow, d);
+    }
+    return appendFinalPeriodIfNeeded(h);
+  }
+
+  function buildHumanPromptHtml() {
+    if (!K) return "";
+    const d = K.dimensions || {};
+    const goals = getChecked("objectives");
+    const cons = getChecked("constraints");
+    const levs = getChecked("levers");
+
+    let h = openingEntityHtml();
+    h += skel(" с горизонтом планирования ");
+    h += item(formatHorizonPlanningPhrase(d));
+
+    if (!goals.length && !cons.length && !levs.length) {
+      h += skel(".");
+      return appendFinalPeriodIfNeeded(h);
+    }
+    if (goals.length) {
+      h += skel(", который должен достигать следующих целей:");
+      h += buildGoalsConsLeversHtml(goals, cons, levs, d);
+    } else {
+      h += buildGoalsConsLeversHtml([], cons, levs, d);
+    }
+    return appendFinalPeriodIfNeeded(h);
+  }
+
+  function syncHorizonPhasesRow() {
+    const hid = getChecked("horizons")[0];
+    const row = $("horizonPhasesRow");
+    if (!row) return;
+    const on = hid === "T04";
+    row.classList.toggle("muted", !on);
+    row.querySelectorAll('input[name="horizon_phases"]').forEach((inp) => {
+      inp.disabled = !on;
+    });
+    if (!on) {
+      row.querySelectorAll('input[name="horizon_phases"]').forEach((inp) => {
+        inp.checked = false;
+      });
+    }
+  }
+
+  function nameById(arr, id) {
+    const x = (arr || []).find((y) => y.id === id);
+    return x ? x.name : id;
+  }
+
+  /** Родительный падеж для пометки «(относительно …)» в промпте */
+  function baseGenitivePhrase(baseId, dim) {
+    const m = {
+      B01: "утверждённого бизнес-плана",
+      B02: "текущего рабочего прогноза",
+      B03: "факта с корректировкой на разовые эффекты",
+      B04: "предыдущего сценария платформы",
+    };
+    if (m[baseId]) return m[baseId];
+    const raw = nameById((dim && dim.bases) || [], baseId);
+    return raw.split("/")[0].trim().toLowerCase();
+  }
+
+  function getGlobalBaseId() {
+    return getChecked("bases")[0] || "B01";
+  }
+
+  /** База сравнения для числового порога по цели Gxx. */
+  function getObjectiveBaseId(gid) {
+    const el = document.querySelector('[name="obj_' + gid + '_base"]');
+    if (!el || el.value === "inherit") return getGlobalBaseId();
+    return el.value;
+  }
+
+  function semanticsFromObjective(obj) {
+    if (!obj) return "maximize";
+    if (obj.semantics) return obj.semantics;
+    const dir = obj.direction || "max";
+    if (dir === "max") return "maximize";
+    if (dir === "min") return "minimize";
+    if (dir === "optimize") return "optimize";
+    if (dir === "stewardship") return "reserves_in_situ";
+    return "maximize";
+  }
+
+  const SEMANTIC_PROFILES = {
+    maximize: {
+      modeLabel: "Максимизация показателя",
+      arrow: "→+∞",
+      arrowTitle: "Стремление к наилучшему достижимому уровню",
+      thresholdHint: "повысить не менее чем на",
+      unitOptions: [
+        { value: "pct", label: "% к базе" },
+        { value: "pp", label: "п.п." },
+        { value: "mln_rub", label: "млн ₽ к базе" },
+      ],
+    },
+    minimize: {
+      modeLabel: "Минимизация показателя",
+      arrow: "→ 0",
+      arrowTitle: "Стремление к нулю (минимум срока, затрат или другой метрики «меньше — лучше»)",
+      thresholdHint: "снизить не менее чем на",
+      unitOptions: [
+        { value: "pct", label: "% к базе" },
+        { value: "pp", label: "п.п." },
+        { value: "months", label: "мес. к базе" },
+        { value: "years", label: "лет к базе" },
+      ],
+    },
+    reserves_in_situ: {
+      modeLabel: "Минимизация интенсивности отбора в пользу сохранения в пласте",
+      arrow: "→ 0",
+      arrowTitle: "Стремление к меньшему извлечению при сохранении запасов",
+      thresholdHint: "сохранить не менее",
+      unitOptions: [
+        { value: "pct_reserves", label: "% извлекаемых запасов (нижний порог)" },
+        { value: "pct_vs_plan", label: "% от запасов по выбранной базе" },
+      ],
+    },
+    resilience: {
+      modeLabel: "Максимизация устойчивости / полноты учёта",
+      arrow: "→+∞",
+      arrowTitle: "Стремление к большей устойчивости к шокам и неопределённости",
+      thresholdHint: "падение показателя не более чем на",
+      unitOptions: [
+        { value: "pct", label: "% к ключевому показателю базы" },
+        { value: "pp", label: "п.п." },
+      ],
+    },
+    sensitivity_down: {
+      modeLabel: "Снижение чувствительности",
+      arrow: "→ 0",
+      arrowTitle: "Стремление к меньшей чувствительности метрики к шокам",
+      thresholdHint: "снизить чувствительность не менее чем на",
+      unitOptions: [
+        { value: "pp", label: "п.п. при эталонном шоке" },
+        { value: "elasticity_pct", label: "% к базовой эластичности" },
+      ],
+    },
+  };
+
+  function getObjectiveProfile(obj) {
+    const sem = semanticsFromObjective(obj);
+    if (sem === "optimize" && obj.id === "G09") {
+      return {
+        modeLabel: "Оптимизация WC без числового порога",
+        arrow: "→+∞",
+        arrowTitle: "Стремление к большему высвобождению оборотного капитала",
+        thresholdHint: "высвободить не менее чем на",
+        unitOptions: [
+          { value: "dso_days", label: "дней DSO к базе" },
+          { value: "wc_pct", label: "% WC в деньгах к базе" },
+          { value: "pp", label: "п.п. доли WC в балансе" },
+        ],
+      };
+    }
+    if (sem === "optimize") {
+      return {
+        modeLabel: "Оптимизация CAPEX без числового порога",
+        arrow: "→+∞",
+        arrowTitle: "Стремление к лучшему фазированию и сглаживанию CAPEX",
+        thresholdHint: "перенести на более поздние годы не менее",
+        unitOptions: [
+          { value: "capex_shift", label: "% суммарного CAPEX горизонта" },
+          { value: "pct", label: "% к базе по сумме CAPEX" },
+          { value: "pp", label: "п.п. структуры CAPEX" },
+        ],
+      };
+    }
+    return SEMANTIC_PROFILES[sem] || SEMANTIC_PROFILES.maximize;
+  }
+
+  function formatThresholdClause(goalId, obj, sem, val, unitKey, gen) {
+    const nm = obj.name.toLowerCase();
+    const n = parseFloat(String(val).replace(",", "."));
+    const v = isNaN(n) ? val : String(val).replace(",", ".");
+    if (sem === "reserves_in_situ") {
+      if (unitKey === "pct_vs_plan") {
+        return (
+          nm +
+          ": удерживать извлекаемые запасы не ниже " +
+          v +
+          "% от уровня, соответствующего " +
+          gen +
+          "."
+        );
+      }
+      return (
+        nm +
+        ": сохранить не менее " +
+        v +
+        "% извлекаемых запасов (в терминах модели), отсчёт относительно " +
+        gen +
+        "."
+      );
+    }
+    if (sem === "resilience") {
+      if (unitKey === "pp") {
+        return nm + ": падение ключевого показателя относительно " + gen + " — не более " + v + " п.п.";
+      }
+      return nm + ": падение ключевого показателя относительно " + gen + " — не более " + v + "%.";
+    }
+    if (sem === "sensitivity_down") {
+      const suf = unitKey === "elasticity_pct" ? "% к базовой эластичности" : " п.п.";
+      return nm + ": снизить чувствительность не менее чем на " + v + suf + " относительно " + gen + ".";
+    }
+    if (sem === "optimize" && obj.id === "G06") {
+      if (unitKey === "capex_shift") {
+        return (
+          nm +
+          ": перенести на более поздние годы не менее " +
+          v +
+          "% суммарного CAPEX горизонта относительно профиля " +
+          gen +
+          "."
+        );
+      }
+      if (unitKey === "pp") {
+        return nm + ": изменить структуру CAPEX не менее чем на " + v + " п.п. относительно " + gen + ".";
+      }
+      return nm + ": по сумме CAPEX — не менее чем на " + v + "% относительно " + gen + ".";
+    }
+    if (sem === "optimize" && obj.id === "G09") {
+      if (unitKey === "dso_days") {
+        return nm + ": сократить DSO не менее чем на " + v + " дней относительно " + gen + ".";
+      }
+      if (unitKey === "wc_pct") {
+        return nm + ": высвободить WC в деньгах не менее чем на " + v + "% относительно " + gen + ".";
+      }
+      return nm + ": изменить долю WC не менее чем на " + v + " п.п. относительно " + gen + ".";
+    }
+    if (sem === "minimize") {
+      let suf = "%";
+      if (unitKey === "pp") suf = " п.п.";
+      else if (unitKey === "months") suf = " мес.";
+      else if (unitKey === "years") suf = " лет";
+      return nm + ": снизить не менее чем на " + v + suf + " относительно " + gen + ".";
+    }
+    if (sem === "maximize") {
+      let suf = "%";
+      if (unitKey === "pp") suf = " п.п.";
+      else if (unitKey === "mln_rub") suf = " млн ₽";
+      return nm + ": повысить не менее чем на " + v + suf + " относительно " + gen + ".";
+    }
+    return nm + ": порог " + v + " (ед. изм. " + unitKey + ") относительно " + gen + ".";
+  }
+
+  function unitStepForSemantics(sem, gid) {
+    if (gid === "G09") return "1";
+    if (sem === "reserves_in_situ") return "1";
+    return "0.1";
+  }
+
+  function updateObjectiveRowVisibility(cb) {
+    const row = cb.closest(".objective-row");
+    if (!row) return;
+    const ctrl = row.querySelector(".objective-target-controls");
+    if (ctrl) ctrl.classList.toggle("visible", cb.checked);
+    if (cb.checked) updateObjectiveThresholdFieldsVisibility(cb.value);
+  }
+
+  function updateObjectiveThresholdFieldsVisibility(gid) {
+    const row = document.querySelector('.objective-row[data-obj-id="' + gid + '"]');
+    if (!row) return;
+    const thr = row.querySelector(".obj-threshold-fields");
+    if (!thr) return;
+    const on = row.querySelector('input[name="obj_' + gid + '_mode"][value="threshold"]:checked');
+    thr.classList.toggle("visible", !!on);
+  }
+
+  function formatGoalClause(goalId, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const obj = (d.objectives || []).find((o) => o.id === goalId);
+    if (!obj) return nameById(d.objectives, goalId).toLowerCase();
+    const row = document.querySelector('.objective-row[data-obj-id="' + goalId + '"]');
+    const modeEl = row && row.querySelector('input[name="obj_' + goalId + '_mode"]:checked');
+    const mode = modeEl ? modeEl.value : "max";
+    const nm = obj.name.toLowerCase();
+    const sem = semanticsFromObjective(obj);
+    const profile = getObjectiveProfile(obj);
+    if (mode === "max") {
+      return nm + " (" + profile.modeLabel + " " + profile.arrow + ")";
+    }
+    const vEl = row && row.querySelector('[name="obj_' + goalId + '_value"]');
+    const uEl = row && row.querySelector('[name="obj_' + goalId + '_unit"]');
+    const val = vEl && vEl.value !== "" ? String(vEl.value).replace(",", ".") : "5";
+    const unitKey = (uEl && uEl.value) || (profile.unitOptions[0] && profile.unitOptions[0].value) || "pct";
+    const bid = getObjectiveBaseId(goalId);
+    const gen = baseGenitivePhrase(bid, d);
+    return formatThresholdClause(goalId, obj, sem, val, unitKey, gen);
+  }
+
+  /** Ограничение → рычаги, семантически несовместимые с ним */
+  const CONSTRAINT_DISABLES_LEVERS = {
+    C01: ["L10"],
+    C04: ["L09"],
+    C07: ["L09"],
+    C09: ["L15"],
+  };
+
+  /** Рычаг → ограничения, с которыми он конфликтует */
+  const LEVER_DISABLES_CONSTRAINTS = {
+    L10: ["C01"],
+    L09: ["C04", "C07"],
+    L15: ["C09"],
+  };
+
+  function formatRubLong(raw) {
+    const x = parseInt(String(raw).replace(/\s/g, ""), 10);
+    if (isNaN(x)) return String(raw).trim() || "—";
+    return x.toLocaleString("ru-RU") + " ₽";
+  }
+
+  function updateConstraintParamRow(cb) {
+    const row = cb.closest(".constraint-row");
+    if (!row) return;
+    const wrap = row.querySelector(".constraint-param-wrap");
+    if (wrap) wrap.style.display = cb.checked ? "block" : "none";
+  }
+
+  function syncConstraintLeverMutualExclusion() {
+    const checkedC = new Set(getChecked("constraints"));
+    const checkedL = new Set(getChecked("levers"));
+    const disabledLevers = new Set();
+    checkedC.forEach((cid) => {
+      (CONSTRAINT_DISABLES_LEVERS[cid] || []).forEach((lid) => disabledLevers.add(lid));
+    });
+    const disabledConstraints = new Set();
+    checkedL.forEach((lid) => {
+      (LEVER_DISABLES_CONSTRAINTS[lid] || []).forEach((cid) => disabledConstraints.add(cid));
+    });
+
+    document.querySelectorAll('input[name="levers"]').forEach((inp) => {
+      const lid = inp.value;
+      const dis = disabledLevers.has(lid);
+      const row = inp.closest(".lever-row");
+      inp.disabled = dis;
+      if (row) {
+        row.classList.toggle("mutually-blocked", dis);
+        row.title = dis
+          ? "Несовместимо с выбранным ограничением (снимите ограничение или этот рычаг)"
+          : "";
+      }
+      if (dis && inp.checked) inp.checked = false;
+    });
+
+    document.querySelectorAll('input[name="constraints"]').forEach((inp) => {
+      const cid = inp.value;
+      const dis = disabledConstraints.has(cid);
+      const row = inp.closest(".constraint-row");
+      inp.disabled = dis;
+      if (row) {
+        row.classList.toggle("mutually-blocked", dis);
+        row.title = dis
+          ? "Несовместимо с выбранным рычагом (снимите рычаг или это ограничение)"
+          : "";
+      }
+      if (dis && inp.checked) {
+        inp.checked = false;
+        updateConstraintParamRow(inp);
+      }
+    });
+  }
+
+  function formatConstraintLineForPrompt(cid, dim) {
+    const d = dim || (K && K.dimensions) || {};
+    const baseName = nameById(d.constraints, cid).toLowerCase();
+    const pdef = (d.constraint_params || {})[cid];
+    const el = document.querySelector('[name="constraint_param_' + cid + '"]');
+    if (!pdef || !el) return baseName;
+    const v = (el.value || "").trim();
+    if (pdef.kind === "money_rub") {
+      const amt = v !== "" ? formatRubLong(v) : formatRubLong(pdef.default);
+      return baseName + " (потолок " + amt + ")";
+    }
+    if (pdef.kind === "number") {
+      const n = v !== "" ? v : String(pdef.default != null ? pdef.default : "");
+      const lab = pdef.label ? " — " + pdef.label + ": " + n : ": " + n;
+      return baseName + lab;
+    }
+    if (pdef.kind === "text" && v) return baseName + " (" + v + ")";
+    return baseName;
+  }
+
+  function fillBaseSelectOptions(select, includeInherit) {
+    if (!select || !K || !K.dimensions) return;
+    select.innerHTML = "";
+    if (includeInherit) {
+      const o0 = document.createElement("option");
+      o0.value = "inherit";
+      o0.textContent = "Как в блоке «База сравнения»";
+      select.appendChild(o0);
+    }
+    (K.dimensions.bases || []).forEach((b) => {
+      const o = document.createElement("option");
+      o.value = b.id;
+      o.textContent = displayBaseLabel(b.name) + " (" + b.id + ")";
+      select.appendChild(o);
+    });
+  }
+
+  function refreshBaseCompareHint() {
+    const el = $("baseCompareHint");
+    if (!el || !K) return;
+    const d = K.dimensions || {};
+    const id = getGlobalBaseId();
+    const nm = displayBaseLabel(nameById(d.bases, id));
+    const gen = baseGenitivePhrase(id, d);
+    el.textContent =
+      "Глобальная база по умолчанию: «" +
+      nm +
+      "». Для каждой отмеченной цели с режимом «порог» можно выбрать базу сравнения для числа (или оставить «как в блоке „База сравнения“»). Числовые пороги задаются только в блоке «Цели».";
+  }
+
+  function namesJoin(arr, ids) {
+    if (!ids || !ids.length) return "";
+    return ids.map((id) => nameById(arr, id)).join("; ");
+  }
+
+  function updateGates() {
+    const on = promptConfirmed;
+    ["gateCauses", "gateHyps", "gateFinal"].forEach((id) => {
+      const el = $(id);
+      if (el) el.style.display = on ? "none" : "";
+    });
+    $("causesPanel").style.display = on ? "block" : "none";
+    const ci = $("causesIntro");
+    if (ci) ci.style.display = on ? "block" : "none";
+    $("hypsWrap").style.display = on ? "block" : "none";
+    $("finalWrap").style.display = on ? "block" : "none";
+  }
+
+  function mergeReady() {
+    promptConfirmed = false;
+    aiClauseCorpusCache = null;
+    updateGates();
+    if (K) renderDimsCompact();
+    if (K && A) {
+      renderEntity();
+      autoSelectDefaultDO();
+    }
+    if (PRE) renderPresets();
+    if (K) aiSyncDefaultsAndRefresh();
+    if (K) renderHumanPrompt();
+    const ok = K && T && A && LEX;
+    if (ok)
+      setStatus(
+        "Готово: знания, теги, активы (" + (A.actives && A.actives.length) + " ДО), лексикон" + (PRE ? ", пресеты" : "") + ".",
+        true
+      );
+    else if (K && T && A && !LEX) setStatus("Добавьте lexicon.json.", false);
+    else if (K && T && !A) setStatus("Добавьте actives_tree.json.", false);
+    else if (K && !T) setStatus("Добавьте influence_tags.json.", false);
+    else if (!K) setStatus("Загрузите asset_modeling_knowledge.json.", false);
+    attachDeepCausesLibrary();
+  }
+
+  function attachDeepCausesLibrary() {
+    if (!K) return;
+    if (K.prompt_deep_causes && Object.keys(K.prompt_deep_causes).length > 0) return;
+    if (location.protocol !== "http:" && location.protocol !== "https:") return;
+    fetch("data/prompt_deep_causes.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => {
+        if (!K) return;
+        K.prompt_deep_causes = d && typeof d === "object" ? d : {};
+        if (promptConfirmed) {
+          renderCausesOnly();
+          renderHypothesesPanel();
+        }
+      })
+      .catch(() => {});
+  }
+
+  function findDefaultNnGActive() {
+    if (!A || !A.actives) return null;
+    const exact = A.actives.find((a) => a.name === "ГАЗПРОМНЕФТЬ-ННГ АО");
+    if (exact) return exact;
+    return (
+      A.actives.find((a) => /ГАЗПРОМНЕФТЬ[^\n]*ННГ/i.test(a.name)) ||
+      A.actives.find((a) => /ННГ/i.test(a.name))
+    );
+  }
+
+  function autoSelectDefaultDO() {
+    const picker = $("entityPicker");
+    if (!picker) return;
+    const target = findDefaultNnGActive();
+    picker.querySelectorAll(".pick-whole").forEach((cb) => {
+      cb.checked = false;
+    });
+    picker.querySelectorAll(".pick-field").forEach((cb) => {
+      cb.checked = false;
+    });
+    const wrap = target
+      ? picker.querySelector('.entity-do[data-aid="' + target.id + '"]')
+      : picker.querySelector(".entity-do");
+    if (!wrap) return;
+    const pw = wrap.querySelector(".pick-whole");
+    if (pw) {
+      pw.checked = true;
+      wrap.querySelectorAll(".pick-field").forEach((cb) => {
+        cb.checked = true;
+      });
+    }
+  }
+
+  function readJson(input, fn) {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        fn(JSON.parse(r.result));
+      } catch (e) {
+        setStatus("Ошибка JSON: " + e.message, false);
+      }
+    };
+    r.readAsText(f, "UTF-8");
+  }
+
+  [["fKnowledge", (d) => { K = d; mergeReady(); }],
+   ["fTags", (d) => { T = d; mergeReady(); }],
+   ["fActives", (d) => { A = d; mergeReady(); }],
+   ["fLexicon", (d) => { LEX = d; mergeReady(); }],
+   ["fPresets", (d) => { PRE = d; mergeReady(); }],
+  ].forEach(([id, fn]) => {
+    $(id).addEventListener("change", function () {
+      readJson(this, fn);
+    });
+  });
+
+  $("btnFetchAll").addEventListener("click", () => {
+    Promise.all(
+      [
+        "data/asset_modeling_knowledge.json",
+        "data/influence_tags.json",
+        "data/actives_tree.json",
+        "data/lexicon.json",
+        "data/scenario_presets.json",
+        "data/prompt_deep_causes.json",
+        "data/semantic_rules.json",
+        "data/semantic_regression_cases.json",
+      ].map((u) =>
+        fetch(u, { cache: "no-store" }).then((r) => {
+          if (!r.ok) {
+            if (u.indexOf("prompt_deep_causes") >= 0 || u.indexOf("semantic_rules") >= 0 || u.indexOf("semantic_regression_cases") >= 0) return {};
+            throw new Error(u);
+          }
+          return r.json();
+        })
+      )
+    )
+      .then(([k, t, a, l, p, deep, sRules, sReg]) => {
+        K = k;
+        K.prompt_deep_causes = deep && typeof deep === "object" ? deep : {};
+        T = t;
+        A = a;
+        LEX = l;
+        PRE = p;
+        SRULES = sRules && typeof sRules === "object" ? sRules : {};
+        SREG = sReg && typeof sReg === "object" ? sReg : {};
+        mergeReady();
+      })
+      .catch(() => setStatus("Проверьте папку data/ и сервер из корня проекта.", false));
+  });
+
+  if (location.protocol === "http:" || location.protocol === "https:") $("btnFetchAll").click();
+
+  document.querySelectorAll("nav.main-tabs button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("nav.main-tabs button").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      $(btn.getAttribute("data-tab")).classList.add("active");
+      if (btn.getAttribute("data-tab") === "tab-n8n" && promptConfirmed) {
+        buildMermaidFromPanel();
+      }
+    });
+  });
+
+  document.getElementById("tab-construct").addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.name === "objectives") updateObjectiveRowVisibility(t);
+    if (t.name && /^obj_.+_mode$/.test(t.name)) {
+      const mm = t.name.match(/^obj_(.+)_mode$/);
+      if (mm) updateObjectiveThresholdFieldsVisibility(mm[1]);
+    }
+    if (t.classList && t.classList.contains("pick-whole")) {
+      const wrap = t.closest(".entity-do");
+      if (wrap) {
+        wrap.querySelectorAll(".pick-field").forEach((cb) => {
+          cb.checked = t.checked;
+        });
+      }
+    }
+    if (promptConfirmed) refreshAnalysis();
+  });
+
+  $("btnConfirmPrompt").addEventListener("click", () => {
+    try {
+      renderHumanPrompt();
+      promptConfirmed = true;
+      updateGates();
+      renderCausesOnly();
+      renderHypothesesPanel();
+      buildMermaidFromPanel();
+    } catch (e) {
+      console.error(e);
+      setStatus("Ошибка при подтверждении промпта: " + (e && e.message ? e.message : String(e)), false);
+    }
+  });
+
+  $("btnHumanPrompt").addEventListener("click", () => {
+    renderHumanPrompt();
+  });
+
+  function pickRandom(arr) {
+    if (!arr || !arr.length) return null;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function shuffleInPlace(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = a[i];
+      a[i] = a[j];
+      a[j] = t;
+    }
+    return a;
+  }
+
+  function randomBool(p) {
+    return Math.random() < p;
+  }
+
+  /**
+   * Случайная комбинация всех пунктов конструктора (актив, база, горизонт, цели, ограничения, рычаги).
+   * Пресет снимается. Ограничения/рычаги учитывают взаимные блокировки.
+   */
+  function randomizePromptScenario() {
+    if (!K) {
+      setStatus("Сначала загрузите знания (asset_modeling_knowledge.json).", false);
+      return;
+    }
+    const hint = $("presetHint");
+    if (hint) hint.textContent = "";
+
+    const box = $("entityPicker");
+    if (box && A && A.actives && A.actives.length) {
+      box.querySelectorAll(".pick-whole, .pick-field").forEach((cb) => {
+        cb.checked = false;
+      });
+      const act = pickRandom(A.actives);
+      const wrap = box.querySelector('.entity-do[data-aid="' + act.id + '"]');
+      if (wrap) {
+        const fields = act.fields || [];
+        const pw = wrap.querySelector(".pick-whole");
+        const fieldCbs = Array.from(wrap.querySelectorAll(".pick-field"));
+        if (!fields.length) {
+          if (pw) pw.checked = true;
+        } else if (randomBool(0.42)) {
+          if (pw) pw.checked = true;
+          fieldCbs.forEach((cb) => {
+            cb.checked = true;
+          });
+        } else {
+          shuffleInPlace(fieldCbs);
+          const n = 1 + Math.floor(Math.random() * fieldCbs.length);
+          fieldCbs.slice(0, n).forEach((cb) => {
+            cb.checked = true;
+          });
+        }
+      }
+    }
+
+    const baseRadios = Array.from(document.querySelectorAll('input[type="radio"][name="bases"]'));
+    if (baseRadios.length) {
+      baseRadios.forEach((r) => {
+        r.checked = false;
+      });
+      pickRandom(baseRadios).checked = true;
+    }
+
+    const horizonRadios = Array.from(document.querySelectorAll('input[type="radio"][name="horizons"]'));
+    if (horizonRadios.length) {
+      horizonRadios.forEach((r) => {
+        r.checked = false;
+      });
+      const hr = pickRandom(horizonRadios);
+      hr.checked = true;
+      syncHorizonPhasesRow();
+      const phaseInputs = Array.from(document.querySelectorAll('input[name="horizon_phases"]'));
+      if (hr.value === "T04" && phaseInputs.length) {
+        phaseInputs.forEach((p) => {
+          p.checked = false;
+        });
+        shuffleInPlace(phaseInputs);
+        const nk = 1 + Math.floor(Math.random() * phaseInputs.length);
+        phaseInputs.slice(0, nk).forEach((p) => {
+          p.checked = true;
+        });
+      }
+    }
+
+    const objCbs = Array.from(document.querySelectorAll('input[name="objectives"]'));
+    objCbs.forEach((cb) => {
+      cb.checked = randomBool(0.38);
+    });
+    if (!document.querySelector('input[name="objectives"]:checked') && objCbs.length) {
+      pickRandom(objCbs).checked = true;
+    }
+    ensureOilProductionObjectiveChecked();
+    objCbs.forEach((cb) => updateObjectiveRowVisibility(cb));
+
+    document.querySelectorAll(".objective-row").forEach((row) => {
+      const oid = row.dataset.objId;
+      if (!oid) return;
+      const rMax = row.querySelector('input[name="obj_' + oid + '_mode"][value="max"]');
+      const rThr = row.querySelector('input[name="obj_' + oid + '_mode"][value="threshold"]');
+      if (rMax && rThr) {
+        if (randomBool(0.72)) rMax.checked = true;
+        else rThr.checked = true;
+      }
+      updateObjectiveThresholdFieldsVisibility(oid);
+    });
+
+    document.querySelectorAll('input[name="constraints"]').forEach((cb) => {
+      cb.checked = false;
+    });
+    document.querySelectorAll('input[name="constraints"]').forEach((cb) => {
+      if (!cb.disabled) cb.checked = randomBool(0.32);
+    });
+    document.querySelectorAll('input[name="constraints"]').forEach((cb) => updateConstraintParamRow(cb));
+    syncConstraintLeverMutualExclusion();
+
+    document.querySelectorAll('input[name="levers"]').forEach((cb) => {
+      cb.checked = false;
+    });
+    document.querySelectorAll('input[name="levers"]').forEach((cb) => {
+      if (!cb.disabled) cb.checked = randomBool(0.32);
+    });
+    syncConstraintLeverMutualExclusion();
+
+    refreshBaseCompareHint();
+    renderHumanPrompt();
+    if (hint) {
+      hint.textContent =
+        "Случайная комбинация по всем пунктам конструктора (пресет снят). При необходимости нажмите «Обновить текст промпта».";
+    }
+    setStatus("Случайный набор применён.", true);
+    if (promptConfirmed) refreshAnalysis();
+  }
+
+  $("btnRandomPrompt").addEventListener("click", () => {
+    randomizePromptScenario();
+  });
+
+  function refreshAnalysis() {
+    if (!promptConfirmed) return;
+    renderCausesOnly();
+    renderHypothesesPanel();
+    buildMermaidFromPanel();
+  }
+
+  function renderEntity() {
+    if (!K || !A) return;
+    const box = $("entityPicker");
+    if (!box) return;
+    box.innerHTML = "";
+    const row = document.createElement("div");
+    row.className = "entity-picker-row";
+    box.appendChild(row);
+
+    const shared = A.field_shared_by_actives || {};
+
+    function otherDoNames(aids) {
+      return (aids || [])
+        .map((id) => {
+          const z = A.actives.find((x) => x.id === id);
+          return z ? z.name : id;
+        })
+        .join(", ");
+    }
+
+    (A.actives || []).forEach((act) => {
+      const wrap = document.createElement("div");
+      wrap.className = "entity-do";
+      wrap.setAttribute("data-aid", act.id);
+
+      const doDet = document.createElement("details");
+      doDet.className = "do-details";
+      doDet.open = false;
+
+      const doSum = document.createElement("summary");
+      doSum.className = "do-summary";
+      doSum.appendChild(document.createTextNode(act.name + " "));
+      const acode = document.createElement("code");
+      acode.textContent = act.id;
+      doSum.appendChild(acode);
+      doDet.appendChild(doSum);
+
+      const doBody = document.createElement("div");
+      doBody.className = "do-body";
+
+      const w = document.createElement("label");
+      w.className = "block";
+      const wh = document.createElement("input");
+      wh.type = "checkbox";
+      wh.className = "pick-whole";
+      wh.setAttribute("data-aid", act.id);
+      w.appendChild(wh);
+      w.appendChild(document.createTextNode(" Весь ДО"));
+      doBody.appendChild(w);
+
+      (act.fields || []).forEach((fld) => {
+        const flab = document.createElement("label");
+        flab.className = "block field-line";
+        const pf = document.createElement("input");
+        pf.type = "checkbox";
+        pf.className = "pick-field";
+        pf.setAttribute("data-aid", act.id);
+        pf.setAttribute("data-fid", fld.id);
+        pf.setAttribute("data-fname", fld.name);
+        flab.appendChild(pf);
+        flab.appendChild(document.createTextNode(" " + fld.name + " "));
+        const fc = document.createElement("code");
+        fc.textContent = fld.id;
+        flab.appendChild(fc);
+        if (shared[fld.id] && shared[fld.id].length) {
+          const sp = document.createElement("span");
+          sp.className = "muted";
+          sp.textContent = " (ещё в ДО: " + otherDoNames(shared[fld.id]) + ")";
+          flab.appendChild(sp);
+        }
+        doBody.appendChild(flab);
+      });
+
+      doDet.appendChild(doBody);
+      wrap.appendChild(doDet);
+      row.appendChild(wrap);
+    });
+  }
+
+  function addCheckboxGroup(title, key, items, oneLineHelp) {
+    const fs = document.createElement("fieldset");
+    const leg = document.createElement("legend");
+    leg.textContent = title;
+    fs.appendChild(leg);
+    if (oneLineHelp) {
+      const p = document.createElement("p");
+      p.className = "help";
+      p.textContent = oneLineHelp;
+      fs.appendChild(p);
+    }
+    items.forEach((it) => {
+      const lab = document.createElement("label");
+      lab.className = "block";
+      lab.innerHTML = `<input type="checkbox" name="${key}" value="${it.id}" /> ${it.name} <code>${it.id}</code>`;
+      fs.appendChild(lab);
+    });
+    return fs;
+  }
+
+  function addBaseComparisonRadios(dim) {
+    const items = dim.bases || [];
+    const bh = (K && K.dimension_help && K.dimension_help.bases) || {};
+    const fs = document.createElement("fieldset");
+    const leg = document.createElement("legend");
+    leg.textContent = "База сравнения";
+    fs.appendChild(leg);
+    const help = document.createElement("p");
+    help.className = "help";
+    help.textContent =
+      "Изменения параметров в сценарии и количественные пороги в поле ниже сопоставляй с показателями выбранной базы. Например формулировка «+10% к FCF» означает прирост относительно этой базы; в сформированном промпте это дублируется короткой пометкой в скобках.";
+    fs.appendChild(help);
+    const hint = document.createElement("p");
+    hint.className = "help";
+    hint.id = "baseCompareHint";
+    hint.style.marginTop = "0.15rem";
+    fs.appendChild(hint);
+    const defaultId = items.some((x) => x.id === "B01") ? "B01" : items[0] && items[0].id;
+    items.forEach((it) => {
+      const block = document.createElement("div");
+      block.style.marginBottom = "0.35rem";
+      const lab = document.createElement("label");
+      lab.className = "block";
+      lab.style.marginBottom = "0.05rem";
+      const inp = document.createElement("input");
+      inp.type = "radio";
+      inp.name = "bases";
+      inp.value = it.id;
+      inp.checked = it.id === defaultId;
+      lab.appendChild(inp);
+      lab.appendChild(document.createTextNode(" " + displayBaseLabel(it.name) + " "));
+      const c = document.createElement("code");
+      c.textContent = it.id;
+      lab.appendChild(c);
+      block.appendChild(lab);
+      if (bh[it.id]) {
+        const hi = document.createElement("p");
+        hi.className = "help dim-opt-hint";
+        hi.style.marginLeft = "1.55rem";
+        hi.textContent = bh[it.id];
+        block.appendChild(hi);
+      }
+      fs.appendChild(block);
+    });
+    return fs;
+  }
+
+  function addHorizonRadios(dim) {
+    const items = dim.horizons || [];
+    const phases = dim.horizon_phases || [];
+    const hh = (K && K.dimension_help && K.dimension_help.horizons) || {};
+    const fs = document.createElement("fieldset");
+    const leg = document.createElement("legend");
+    leg.textContent = "Горизонт";
+    fs.appendChild(leg);
+    const top = document.createElement("p");
+    top.className = "help";
+    top.textContent =
+      "Один вариант: насколько далеко вперёд распространяется сценарий. Для «По фазам» отметьте конкретные фазы в блоке справа в той же строке.";
+    fs.appendChild(top);
+    const defaultId = items.some((x) => x.id === "T02") ? "T02" : items[0] && items[0].id;
+    items.forEach((it) => {
+      const wrap = document.createElement("div");
+      wrap.style.marginBottom = "0.5rem";
+      const row = document.createElement("div");
+      row.style.display = "flex";
+      row.style.flexWrap = "wrap";
+      row.style.alignItems = "flex-start";
+      row.style.gap = "0.5rem 1rem";
+      const left = document.createElement("div");
+      left.style.flex = "1 1 12rem";
+      const lab = document.createElement("label");
+      lab.className = "block";
+      lab.style.marginBottom = "0";
+      const inp = document.createElement("input");
+      inp.type = "radio";
+      inp.name = "horizons";
+      inp.value = it.id;
+      inp.checked = it.id === defaultId;
+      lab.appendChild(inp);
+      lab.appendChild(document.createTextNode(" " + it.name + " "));
+      const c = document.createElement("code");
+      c.textContent = it.id;
+      lab.appendChild(c);
+      left.appendChild(lab);
+      row.appendChild(left);
+      if (it.id === "T04" && phases.length) {
+        const phBox = document.createElement("div");
+        phBox.id = "horizonPhasesRow";
+        phBox.className = "horizon-phases-inline muted";
+        phBox.style.flex = "2 1 16rem";
+        const sp = document.createElement("span");
+        sp.className = "muted";
+        sp.style.fontSize = "0.82rem";
+        sp.textContent = "Фазы:";
+        phBox.appendChild(sp);
+        phases.forEach((ph) => {
+          const pl = document.createElement("label");
+          pl.className = "phase-label";
+          const pInp = document.createElement("input");
+          pInp.type = "checkbox";
+          pInp.name = "horizon_phases";
+          pInp.value = ph.id;
+          pInp.disabled = true;
+          pl.appendChild(pInp);
+          pl.appendChild(document.createTextNode(" " + ph.name + " "));
+          const pc = document.createElement("code");
+          pc.style.fontSize = "0.75rem";
+          pc.textContent = ph.id;
+          pl.appendChild(pc);
+          phBox.appendChild(pl);
+        });
+        row.appendChild(phBox);
+      }
+      wrap.appendChild(row);
+      if (hh[it.id]) {
+        const hi = document.createElement("p");
+        hi.className = "help dim-opt-hint";
+        hi.textContent = hh[it.id];
+        wrap.appendChild(hi);
+      }
+      fs.appendChild(wrap);
+    });
+    return fs;
+  }
+
+  function appendObjectiveBlock(parent, it, oh) {
+    const row = document.createElement("div");
+    row.className = "objective-row";
+    row.dataset.objId = it.id;
+
+    const main = document.createElement("div");
+    main.className = "objective-main";
+    const lab = document.createElement("label");
+    lab.className = "block";
+    lab.style.marginBottom = "0";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.name = "objectives";
+    cb.value = it.id;
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(" " + it.name + " "));
+    const c = document.createElement("code");
+    c.textContent = it.id;
+    lab.appendChild(c);
+    main.appendChild(lab);
+    row.appendChild(main);
+
+    if (oh[it.id]) {
+      const hi = document.createElement("p");
+      hi.className = "help dim-opt-hint";
+      hi.style.marginLeft = "0";
+      hi.textContent = oh[it.id];
+      main.appendChild(hi);
+    }
+
+    const profile = getObjectiveProfile(it);
+    const sem = semanticsFromObjective(it);
+    const controls = document.createElement("div");
+    controls.className = "objective-target-controls";
+
+    const modeRow = document.createElement("div");
+    modeRow.className = "obj-mode-row";
+
+    const labMax = document.createElement("label");
+    labMax.className = "obj-mode-opt";
+    const rMax = document.createElement("input");
+    rMax.type = "radio";
+    rMax.name = "obj_" + it.id + "_mode";
+    rMax.value = "max";
+    rMax.checked = true;
+    labMax.appendChild(rMax);
+    labMax.appendChild(document.createTextNode(profile.modeLabel + " "));
+    const arrEl = document.createElement("span");
+    arrEl.className = "obj-arrow";
+    arrEl.title = profile.arrowTitle;
+    arrEl.textContent = profile.arrow;
+    labMax.appendChild(arrEl);
+
+    const labThr = document.createElement("label");
+    labThr.className = "obj-mode-opt";
+    const rThr = document.createElement("input");
+    rThr.type = "radio";
+    rThr.name = "obj_" + it.id + "_mode";
+    rThr.value = "threshold";
+    labThr.appendChild(rThr);
+    labThr.appendChild(document.createTextNode(" Или порог: "));
+    const verb = document.createElement("span");
+    verb.textContent = profile.thresholdHint;
+    labThr.appendChild(verb);
+
+    modeRow.appendChild(labMax);
+    modeRow.appendChild(labThr);
+    controls.appendChild(modeRow);
+
+    const thrFields = document.createElement("div");
+    thrFields.className = "obj-threshold-fields";
+
+    const num = document.createElement("input");
+    num.type = "number";
+    num.name = "obj_" + it.id + "_value";
+    num.value = sem === "reserves_in_situ" ? "20" : "5";
+    num.min = "0";
+    num.step = unitStepForSemantics(sem, it.id);
+    thrFields.appendChild(num);
+
+    const unit = document.createElement("select");
+    unit.name = "obj_" + it.id + "_unit";
+    (profile.unitOptions || []).forEach((uo) => {
+      const o = document.createElement("option");
+      o.value = uo.value;
+      o.textContent = uo.label;
+      unit.appendChild(o);
+    });
+    thrFields.appendChild(unit);
+
+    const baseLab = document.createElement("label");
+    baseLab.className = "obj-base-lab";
+    baseLab.appendChild(document.createTextNode("База: "));
+    const baseSel = document.createElement("select");
+    baseSel.name = "obj_" + it.id + "_base";
+    fillBaseSelectOptions(baseSel, true);
+    baseLab.appendChild(baseSel);
+    thrFields.appendChild(baseLab);
+
+    controls.appendChild(thrFields);
+    row.appendChild(controls);
+    parent.appendChild(row);
+  }
+
+  function addObjectivesWithTargets(dim) {
+    const items = dim.objectives || [];
+    const oh = (K && K.dimension_help && K.dimension_help.objectives) || {};
+    const keySet = new Set(KEY_OBJECTIVE_IDS);
+    const keyOrdered = KEY_OBJECTIVE_IDS.map((kid) => items.find((o) => o.id === kid)).filter(Boolean);
+    const groupOrder = [
+      { key: "economic", title: "Экономические" },
+      { key: "technological", title: "Технологические" },
+      { key: "strategic", title: "Стратегические (санкции, валюта, цены УВ, геополитика, регуляторика)" },
+    ];
+    const byGroup = { economic: [], technological: [], strategic: [], other: [] };
+    items.forEach((o) => {
+      if (keySet.has(o.id)) return;
+      const g = o.group || "economic";
+      if (byGroup[g]) byGroup[g].push(o);
+      else byGroup.other.push(o);
+    });
+    const fs = document.createElement("fieldset");
+    const leg = document.createElement("legend");
+    leg.textContent = "Цели";
+    fs.appendChild(leg);
+    const intro = document.createElement("p");
+    intro.className = "help";
+    intro.textContent =
+      "Отметьте цели. Для каждой: справа — либо максимизация/минимизация без фиксированного числа (∞), либо числовой порог «не менее чем на …» (% к базе или п.п.) относительно выбранной базы. Пороги задаются только в этом блоке.";
+    fs.appendChild(intro);
+    if (keyOrdered.length) {
+      const sub = document.createElement("fieldset");
+      sub.className = "objective-key-block";
+      const sleg = document.createElement("legend");
+      sleg.textContent = "Ключевые цели";
+      sleg.style.fontSize = "0.82rem";
+      sub.appendChild(sleg);
+      keyOrdered.forEach((it) => appendObjectiveBlock(sub, it, oh));
+      fs.appendChild(sub);
+    }
+    groupOrder.forEach(({ key, title }) => {
+      const list = byGroup[key];
+      if (!list || !list.length) return;
+      const sub = document.createElement("fieldset");
+      sub.style.marginTop = "0.45rem";
+      sub.style.paddingTop = "0.35rem";
+      const sleg = document.createElement("legend");
+      sleg.textContent = title;
+      sleg.style.fontSize = "0.82rem";
+      sub.appendChild(sleg);
+      list.forEach((it) => appendObjectiveBlock(sub, it, oh));
+      fs.appendChild(sub);
+    });
+    if (byGroup.other.length) {
+      const sub = document.createElement("fieldset");
+      sub.style.marginTop = "0.45rem";
+      const sleg = document.createElement("legend");
+      sleg.textContent = "Прочее";
+      sleg.style.fontSize = "0.82rem";
+      sub.appendChild(sleg);
+      byGroup.other.forEach((it) => appendObjectiveBlock(sub, it, oh));
+      fs.appendChild(sub);
+    }
+    return fs;
+  }
+
+  function captureDimCompactState() {
+    const st = { fields: {}, objectives: [] };
+    document.querySelectorAll('input[name="objectives"]:checked').forEach((cb) => {
+      st.objectives.push(cb.value);
+    });
+    document.querySelectorAll('input[type="radio"][name^="obj_"]').forEach((el) => {
+      if (el.checked) st.fields[el.name] = el.value;
+    });
+    document.querySelectorAll('select[name^="obj_"], input[type="number"][name^="obj_"]').forEach((el) => {
+      st.fields[el.name] = el.value;
+    });
+    return st;
+  }
+
+  function captureConstraintsAndLeversState() {
+    const st = { constraints: [], levers: [], fields: {} };
+    document.querySelectorAll('input[name="constraints"]:checked').forEach((cb) => st.constraints.push(cb.value));
+    document.querySelectorAll('input[name="levers"]:checked').forEach((cb) => st.levers.push(cb.value));
+    document.querySelectorAll("[name^=\"constraint_param_\"]").forEach((el) => {
+      st.fields[el.name] = el.value;
+    });
+    return st;
+  }
+
+  function restoreConstraintsAndLeversState(st) {
+    if (!st) return;
+    (st.constraints || []).forEach((cid) => {
+      const inp = document.querySelector('input[name="constraints"][value="' + cid + '"]');
+      if (inp && !inp.disabled) {
+        inp.checked = true;
+        updateConstraintParamRow(inp);
+      }
+    });
+    (st.levers || []).forEach((lid) => {
+      const inp = document.querySelector('input[name="levers"][value="' + lid + '"]');
+      if (inp && !inp.disabled) inp.checked = true;
+    });
+    Object.keys(st.fields || {}).forEach((n) => {
+      if (n.indexOf("constraint_param_") !== 0) return;
+      const el = document.querySelector('[name="' + n + '"]');
+      if (el && st.fields[n] != null) el.value = st.fields[n];
+    });
+    syncConstraintLeverMutualExclusion();
+  }
+
+  function restoreDimCompactState(st) {
+    if (!st) return;
+    if (Array.isArray(st.objectives)) {
+      document.querySelectorAll('input[name="objectives"]').forEach((cb) => {
+        cb.checked = st.objectives.indexOf(cb.value) >= 0;
+      });
+    }
+    Object.keys(st.fields || {}).forEach((n) => {
+      const val = st.fields[n];
+      if (val == null) return;
+      const nodes = document.querySelectorAll('[name="' + n + '"]');
+      if (!nodes.length) return;
+      const sample = nodes[0];
+      if (sample.type === "radio") {
+        nodes.forEach((inp) => {
+          inp.checked = inp.value === val;
+        });
+      } else {
+        sample.value = val;
+      }
+    });
+    document.querySelectorAll('select[name^="obj_"][name$="_unit"]').forEach((sel) => {
+      const has = Array.from(sel.options).some((o) => o.value === sel.value);
+      if (!has && sel.options.length) sel.selectedIndex = 0;
+    });
+    document.querySelectorAll('input[name="objectives"]').forEach((cb) => updateObjectiveRowVisibility(cb));
+  }
+
+  function ensureOilProductionObjectiveChecked() {
+    const el = document.querySelector(
+      'input[name="objectives"][value="' + DEFAULT_OIL_OBJECTIVE_ID + '"]'
+    );
+    if (el && !el.disabled) {
+      el.checked = true;
+      updateObjectiveRowVisibility(el);
+    }
+  }
+
+  function renderDimsCompact() {
+    if (!K) return;
+    const preserved = captureDimCompactState();
+    const preservedCL = captureConstraintsAndLeversState();
+    const d = K.dimensions || {};
+    const box = $("dimCompact");
+    box.innerHTML = "";
+
+    box.appendChild(addBaseComparisonRadios(d));
+    box.appendChild(addHorizonRadios(d));
+    box.appendChild(addObjectivesWithTargets(d));
+
+    restoreDimCompactState(preserved);
+    ensureOilProductionObjectiveChecked();
+
+    box.querySelectorAll('input[type="radio"][name="bases"]').forEach((x) =>
+      x.addEventListener("change", () => {
+        refreshBaseCompareHint();
+        if (promptConfirmed) refreshAnalysis();
+      })
+    );
+    refreshBaseCompareHint();
+    box.querySelectorAll('input[type="radio"][name="horizons"]').forEach((x) =>
+      x.addEventListener("change", () => {
+        syncHorizonPhasesRow();
+        if (promptConfirmed) refreshAnalysis();
+      })
+    );
+    box.querySelectorAll('input[name="horizon_phases"]').forEach((x) =>
+      x.addEventListener("change", () => {
+        if (promptConfirmed) refreshAnalysis();
+      })
+    );
+    syncHorizonPhasesRow();
+
+    const ch = (K && K.dimension_help && K.dimension_help.constraints) || {};
+    const lh = (K && K.dimension_help && K.dimension_help.levers) || {};
+    const cParams = d.constraint_params || {};
+
+    const cBox = $("constraintsBox");
+    cBox.innerHTML = "";
+    (d.constraints || []).forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "constraint-row";
+      row.dataset.q = (c.name + " " + c.id + " " + (ch[c.id] || "")).toLowerCase();
+
+      const lab = document.createElement("label");
+      lab.className = "block";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.name = "constraints";
+      cb.value = c.id;
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(" " + c.name + " "));
+      const cc = document.createElement("code");
+      cc.textContent = c.id;
+      lab.appendChild(cc);
+      row.appendChild(lab);
+
+      const pdef = cParams[c.id];
+      if (pdef) {
+        const wrap = document.createElement("div");
+        wrap.className = "constraint-param-wrap";
+        const inLab = document.createElement("label");
+        if (pdef.kind === "money_rub" || pdef.kind === "number") {
+          inLab.textContent = pdef.label || "";
+          const inp = document.createElement("input");
+          inp.type = "number";
+          inp.name = "constraint_param_" + c.id;
+          inp.value = pdef.default != null ? String(pdef.default) : "";
+          if (pdef.min != null) inp.min = String(pdef.min);
+          if (pdef.max != null) inp.max = String(pdef.max);
+          inp.step = pdef.step != null ? String(pdef.step) : pdef.kind === "money_rub" ? "1000000" : "1";
+          if (pdef.placeholder) inp.placeholder = pdef.placeholder;
+          wrap.appendChild(inLab);
+          wrap.appendChild(inp);
+        } else if (pdef.kind === "text") {
+          if (pdef.label) inLab.textContent = pdef.label;
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.name = "constraint_param_" + c.id;
+          inp.value = pdef.default != null ? pdef.default : "";
+          inp.placeholder = pdef.placeholder || "";
+          wrap.appendChild(inLab);
+          wrap.appendChild(inp);
+        }
+        row.appendChild(wrap);
+      }
+
+      if (ch[c.id]) {
+        const hi = document.createElement("p");
+        hi.className = "help dim-opt-hint";
+        hi.textContent = ch[c.id];
+        row.appendChild(hi);
+      }
+
+      cBox.appendChild(row);
+    });
+
+    const lBox = $("leversBox");
+    lBox.innerHTML = "";
+    (d.levers || []).forEach((lev) => {
+      const kw = (LEX && LEX.lever_keywords && LEX.lever_keywords[lev.id]) || [];
+      const row = document.createElement("div");
+      row.className = "lever-row";
+      row.dataset.q = (lev.name + " " + lev.id + " " + kw.join(" ") + " " + (lh[lev.id] || "")).toLowerCase();
+
+      const lab = document.createElement("label");
+      lab.className = "block";
+      lab.innerHTML = `<input type="checkbox" name="levers" value="${lev.id}" /> ${lev.name} <code>${lev.id}</code>`;
+      row.appendChild(lab);
+
+      if (lh[lev.id]) {
+        const hi = document.createElement("p");
+        hi.className = "help dim-opt-hint";
+        hi.textContent = lh[lev.id];
+        row.appendChild(hi);
+      }
+
+      lBox.appendChild(row);
+    });
+
+    cBox.querySelectorAll('input[name="constraints"]').forEach((x) =>
+      x.addEventListener("change", () => {
+        updateConstraintParamRow(x);
+        syncConstraintLeverMutualExclusion();
+        if (promptConfirmed) refreshAnalysis();
+      })
+    );
+    cBox.querySelectorAll("[name^=\"constraint_param_\"]").forEach((inp) =>
+      inp.addEventListener("input", () => {
+        if (promptConfirmed) refreshAnalysis();
+      })
+    );
+    lBox.querySelectorAll('input[name="levers"]').forEach((x) =>
+      x.addEventListener("change", () => {
+        syncConstraintLeverMutualExclusion();
+        if (promptConfirmed) refreshAnalysis();
+      })
+    );
+
+    restoreConstraintsAndLeversState(preservedCL);
+  }
+
+  $("searchConstraints").addEventListener("input", function () {
+    const q = this.value.trim().toLowerCase();
+    $("constraintsBox").querySelectorAll(".constraint-row").forEach((row) => {
+      const t = row.dataset.q || "";
+      row.style.display = !q || t.indexOf(q) >= 0 ? "" : "none";
+    });
+  });
+
+  $("searchLevers").addEventListener("input", function () {
+    const q = expandSearch(this.value.trim().toLowerCase());
+    $("leversBox").querySelectorAll(".lever-row").forEach((row) => {
+      const t = row.dataset.q || "";
+      const ok = !q.size || [...q].some((w) => t.indexOf(w) >= 0);
+      row.style.display = ok ? "" : "none";
+    });
+  });
+
+  function expandSearch(qraw) {
+    const set = new Set();
+    if (!qraw) return set;
+    qraw.split(/\s+/).forEach((w) => set.add(w));
+    (LEX && LEX.synonym_groups || []).forEach((g) => {
+      if (g.some((w) => qraw.indexOf(w) >= 0)) g.forEach((x) => set.add(x));
+    });
+    return set;
+  }
+
+  function collectPromptElementsForCausesPanel() {
+    if (!K || !K.dimensions) return [];
+    const d = K.dimensions;
+    const out = [];
+    getChecked("objectives").forEach((gid) => {
+      out.push({ key: gid, kind: "objective", labelExact: formatGoalClause(gid, d) });
+    });
+    getChecked("constraints").forEach((cid) => {
+      out.push({ key: cid, kind: "constraint", labelExact: formatConstraintLineForPrompt(cid, d) });
+    });
+    getChecked("levers").forEach((lid) => {
+      const n = nameById(d.levers, lid).trim();
+      out.push({
+        key: lid,
+        kind: "lever",
+        labelExact: n ? n.charAt(0).toLowerCase() + n.slice(1) : lid,
+      });
+    });
+    return out;
+  }
+
+  function genericFallbackDeepCauses(el, introHint) {
+    const dh = K.dimension_help || {};
+    let intro =
+      introHint ||
+      (el.kind === "objective" && dh.objectives && dh.objectives[el.key]) ||
+      (el.kind === "constraint" && dh.constraints && dh.constraints[el.key]) ||
+      (el.kind === "lever" && dh.levers && dh.levers[el.key]) ||
+      "";
+    if (!intro) {
+      intro =
+        "Отклонение от ожиданий по элементу — из рассогласования базы, горизонта и допущений модели с фактом.";
+    }
+    return {
+      situation: "",
+      introduction: intro,
+      causes: [
+        "База/горизонт/метрика не совпадают с фактом актива.",
+        "Ограничения и блокировки рычагов переносят эффект на другие годы.",
+        "Цены, курс, налоги и логистика меняют netback и потоки.",
+      ],
+    };
+  }
+
+  function resolveDeepCauseBundle(el) {
+    const lib = (K && K.prompt_deep_causes) || {};
+    const fromLib = lib[el.key];
+    if (fromLib && fromLib.causes && fromLib.causes.length >= 2) {
+      return {
+        situation: fromLib.situation != null ? String(fromLib.situation) : "",
+        introduction: fromLib.introduction || "",
+        causes: fromLib.causes.slice(),
+      };
+    }
+    const fb = genericFallbackDeepCauses(el, fromLib && fromLib.introduction);
+    return {
+      situation: "",
+      introduction: fb.introduction || "",
+      causes: fb.causes || [],
+    };
+  }
+
+  function clipInfluence(s, n) {
+    const t = (s || "").trim();
+    if (t.length <= n) return t;
+    return t.slice(0, n - 1) + "…";
+  }
+
+  /** Меры и факторы, которые могут сдвинуть ситуацию по причинам (действия, не «проверка»). */
+  function influenceFallbackFromCauses(deep) {
+    const c = deep.causes || [];
+    const out = [];
+    if (c[0]) out.push(clipInfluence(c[0], 100));
+    if (c[1]) out.push(clipInfluence(c[1], 100));
+    while (out.length < 2) out.push("Согласовать выбранные рычаги и лимиты с допущениями модели.");
+    return out.slice(0, 10);
+  }
+
+  function resolveInfluenceList(el, deep, row) {
+    if (row && row.influences && row.influences.length) {
+      const arr = row.influences.map((x) => String(x || "").trim()).filter(Boolean);
+      if (arr.length >= 2) return arr.slice(0, 10);
+      if (arr.length === 1) {
+        const fb = influenceFallbackFromCauses(deep);
+        return [arr[0], fb[0]].filter(Boolean);
+      }
+    }
+    if (row && row.hypothesis_proposals && row.hypothesis_proposals.length) {
+      const legacy = row.hypothesis_proposals.map((x) => String(x || "").trim()).filter(Boolean);
+      if (legacy.length >= 2) return legacy.slice(0, 10);
+    }
+    return influenceFallbackFromCauses(deep);
+  }
+
+  function resolveHypothesisBundle(el) {
+    const lib = (K && K.prompt_deep_causes) || {};
+    const row = lib[el.key];
+    const deep = resolveDeepCauseBundle(el);
+    const proposals = resolveInfluenceList(el, deep, row);
+    return {
+      situation: deep.situation || "",
+      hypothesis_introduction: row && row.hypothesis_introduction ? String(row.hypothesis_introduction).trim() : "",
+      proposals: proposals.length >= 2 ? proposals : influenceFallbackFromCauses(deep),
+    };
+  }
+
+  function normalizeInfluenceKey(s) {
+    return String(s || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  }
+
+  /** Полное сопоставление формулировок влияния (prompt_deep_causes) → «что сделать?». Обновление: python scripts/_gen_hypothesis_exact_phrase.py */
+  const HYPOTHESIS_EXACT_PHRASE = {
+    "Второй квалифицированный поставщик на критичные позиции":
+      "Привлечь второго квалифицированного поставщика на критичные позиции",
+    "Выбор инструментов с учётом ковенантов и ликвидности":
+      "Выбрать инструменты с учётом ковенантов и ликвидности",
+    "Выбор скважин под shut-in с гидродинамической проверкой зоны":
+      "Выбрать скважины под shut-in с гидродинамической проверкой зоны",
+    "Выравнивание хеджа под профиль офтейка по месяцам":
+      "Выровнять хедж под профиль офтейка по месяцам",
+    "Готовить приём и коллектор до ввода ствола в эксплуатацию":
+      "Подготовить приём и коллектор до ввода ствола в эксплуатацию",
+    "Диверсификация маршрутов и контрагентов сбыта":
+      "Диверсифицировать маршруты и контрагентов сбыта",
+    "Долгосрочные контракты с индексацией к рыночной формуле":
+      "Заключить долгосрочные контракты с индексацией к рыночной формуле",
+    "Единая методика учёта инвестиций и выгоды для PI в модели":
+      "Ввести единую методику учёта инвестиций и выгоды для PI в модели",
+    "Единые правила капитала для сравнения альтернатив в ROI":
+      "Ввести единые правила капитала для сравнения альтернатив в ROI",
+    "Закладываемый резерв снижения OPEX и переноса CAPEX при стресс‑наборе":
+      "Заложить резерв снижения OPEX и переноса CAPEX при стресс‑наборе",
+    "Инвестиции в утилизацию ПНГ с приоритетом по штрафам и KPI":
+      "Инвестировать в утилизацию ПНГ с приоритетом по штрафам и KPI",
+    "Инвестиции или долгосрочные слоты в узком участке инфраструктуры":
+      "Инвестировать или забронировать долгосрочные слоты в узком участке инфраструктуры",
+    "Интеграция данных датчиков с системой учёта простоев и ремонтов":
+      "Обеспечить интеграцию данных датчиков с системой учёта простоев и ремонтов",
+    "Калибровка закачки и инжекторов под актуальное пластовое давление":
+      "Откалибровать закачку и инжекторы под актуальное пластовое давление",
+    "Компенсация отбора на оставшихся скважинах в пределах поля":
+      "Компенсировать отбор на оставшихся скважинах в пределах поля",
+    "Конкурентный тендер с заранее заданными KPI и объёмом":
+      "Провести конкурентный тендер с заранее заданными KPI и объёмом",
+    "Контроль геориска и корректировка программы бурения":
+      "Усилить контроль геориска и скорректировать программу бурения",
+    "Логистические альтернативы с явным сравнением netback":
+      "Рассмотреть логистические альтернативы с явным сравнением netback",
+    "Локализация критичных поставок и дублирование поставщиков":
+      "Локализовать критичные поставки и обеспечить дублирование поставщиков",
+    "Локальные соглашения по водному контуру и выбросам":
+      "Заключить локальные соглашения по водному контуру и выбросам",
+    "Моделирование альтернативного маршрута с полным netback":
+      "Провести моделирование альтернативного маршрута с полным netback",
+    "Модернизация электроснабжения или поэтапное снижение нагрузки":
+      "Модернизировать электроснабжение или поэтапно снизить нагрузку",
+    "Наращивание закачки и поддержание пластового давления в рамках лицензии и ГДМ":
+      "Нарастить закачку и поддерживать пластовое давление в рамках лицензии и ГДМ",
+    "Настройка режима сепарации под требования сбытового контракта":
+      "Настроить режим сепарации под требования сбытового контракта",
+    "Оптимизация в рамках действующего закона с явным горизонтом льгот":
+      "Провести оптимизацию в рамках действующего закона с явным горизонтом льгот",
+    "Оптимизация страховых запасов относительно срока ввода мероприятий":
+      "Оптимизировать страховые запасы относительно срока ввода мероприятий",
+    "Опция пересмотра цены по индексу в длинном контракте":
+      "Включить опцию пересмотра цены по индексу в длинном контракте",
+    "Оценка альтернативного маршрута с полным сравнением netback":
+      "Провести оценку альтернативного маршрута с полным сравнением netback",
+    "Очистка и оборот воды без выхода за лимиты сброса":
+      "Организовать очистку и оборот воды без выхода за лимиты сброса",
+    "Пакет мер по стабилизации дебита (ГТМ) для снижения удельного OPEX":
+      "Реализовать пакет мер по стабилизации дебита (ГТМ) для снижения удельного OPEX",
+    "Пакет мер с коротким циклом от решения до кассы":
+      "Реализовать пакет мер с коротким циклом от решения до кассы",
+    "Параллельное выполнение независимых работ без общего простоя":
+      "Обеспечить параллельное выполнение независимых работ без общего простоя",
+    "Переговоры об индексации и форс‑мажорных объёмах в рамках контракта":
+      "Вести переговоры об индексации и форс‑мажорных объёмах в рамках контракта",
+    "Переговоры по офтейку и логистике; блендинг потоков":
+      "Вести переговоры по офтейку и логистике; организовать блендинг потоков",
+    "Переговоры по штрафам и допустимым отклонениям качества":
+      "Вести переговоры по штрафам и допустимым отклонениям качества",
+    "Перенастройка объёмов и распределения закачки по зоне":
+      "Перенастроить объёмы и распределение закачки по зоне",
+    "Перенастройка программы закачки и выбора инжекторов под фактическое давление":
+      "Перенастроить программу закачки и подбор инжекторов под фактическое давление",
+    "Перераспределение отборов между скважинами и зонами без новых стволов":
+      "Перераспределить отборы между скважинами и зонами без новых стволов",
+    "Пересмотр долгосрочных контрактов в валюте расчётов":
+      "Пересмотреть долгосрочные контракты в валюте расчётов",
+    "Пересмотр критичности ремонтов и очереди ТКРС":
+      "Пересмотреть критичность ремонтов и очередь ТКРС",
+    "Пересмотр лимита в сопоставимой валюте и с НДС":
+      "Пересмотреть лимит в сопоставимой валюте и с НДС",
+    "Пересмотр маршрута экспорта при сопоставимых затратах":
+      "Пересмотреть маршрут экспорта при сопоставимых затратах",
+    "Перестройка логистики обслуживания скважин и объектов":
+      "Перестроить логистику обслуживания скважин и объектов",
+    "Пересчёт способа подъёма под текущий деградационный профиль":
+      "Пересчитать способ подъёма под текущий деградационный профиль",
+    "Переторговка полиса и диверсификация страховщиков":
+      "Провести переторговку полиса и диверсифицировать страховщиков",
+    "Переторжка энергоснабжения и сетевых тарифов на объектах добычи":
+      "Провести переторжку энергоснабжения и сетевых тарифов на объектах добычи",
+    "Переупорядочивание портфеля проектов по NPV и кассовому эффекту по годам":
+      "Переупорядочить портфель проектов по NPV и кассовому эффекту по годам",
+    "Пилот на ограниченном фонде с измеримым KPI по простоям":
+      "Провести пилот на ограниченном фонде с измеримым KPI по простоям",
+    "План бригад и согласованные окна простоя без нарушения ограничений сети":
+      "Согласовать план бригад и окна простоя без нарушения ограничений сети",
+    "Подбор скважин под соблюдение пола без лишней потери инкремента":
+      "Подобрать скважины под соблюдение пола без лишней потери инкремента",
+    "Проактивный мониторинг и план корректирующих мер до штрафа":
+      "Обеспечить проактивный мониторинг и план корректирующих мер до штрафа",
+    "Программа ГТМ и капремонт на скважинах с максимальным ожидаемым приростом дебита":
+      "Реализовать программу ГТМ и капремонт на скважинах с максимальным ожидаемым приростом дебита",
+    "Программа замены и защиты оборудования под фактическую среду":
+      "Реализовать программу замены и защиты оборудования под фактическую среду",
+    "Проектирование кратких окон с временным обводом потока":
+      "Спроектировать краткие окна с временным обводом потока",
+    "Разделение авансов под CAPEX и операционного WC в учёте и платежах":
+      "Разделить авансы под CAPEX и операционный WC в учёте и платежах",
+    "Ранжирование портфеля по NPV и FCF по годам":
+      "Ранжировать портфель по NPV и FCF по годам",
+    "Расширение приёма и перекачки на узком месте":
+      "Расширить приём и перекачку на узком месте",
+    "Резерв под доначисления в стресс‑годах":
+      "Заложить резерв под доначисления в стресс‑годах",
+    "Резерв под споры и доначисления в отдельных периодах":
+      "Заложить резерв под споры и доначисления в отдельных периодах",
+    "Резерв сроков ввода под задержки таможни и сертификации":
+      "Заложить резерв сроков ввода под задержки таможни и сертификации",
+    "Рефинансирование и снижение стоимости долга":
+      "Провести рефинансирование и снизить стоимость долга",
+    "Сбалансировать валюту выручки и затрат; хедж под открытый остаток":
+      "Сбалансировать валюту выручки и затрат; хедж под открытый остаток",
+    "Сбалансировать валюту долга и выручки":
+      "Сбалансировать валюту долга и выручки",
+    "Сбыт: блендинг, маршруты и условия офтейка для улучшения цены":
+      "Организовать сбыт: блендинг, маршруты и условия офтейка для улучшения цены",
+    "Связка проектов «инфраструктура + добыча» одним пакетом ввода":
+      "Связать проекты «инфраструктура + добыча» одним пакетом ввода",
+    "Связывание ввода CAPEX с готовностью приёма и транспорта":
+      "Связать ввод CAPEX с готовностью приёма и транспорта",
+    "Сглаживание профиля отбора по скважинам и зонам":
+      "Сгладить профиль отбора по скважинам и зонам",
+    "Сдвиг CAPEX и структуры финансирования под ковенанты":
+      "Сдвинуть CAPEX и структуру финансирования под ковенанты",
+    "Сдвиг во времени CAPEX и управление WC; рефинансирование или структура долга под кассу":
+      "Сдвинуть во времени CAPEX и управлять WC; провести рефинансирование или изменить структуру долга под кассу",
+    "Сдвиг инвестиций и ранний эффект мер по добыче и OPEX":
+      "Сдвинуть инвестиции и обеспечить ранний эффект мер по добыче и OPEX",
+    "Сдвиг портфеля в сторону проектов с более ранним денежным эффектом":
+      "Сдвинуть портфель в сторону проектов с более ранним денежным эффектом",
+    "Сдвиг старта закупок и резерв бригад под критический путь":
+      "Сдвинуть старт закупок и заложить резерв бригад под критический путь",
+    "Снижение аварийности и внеплановых простоев по фонду":
+      "Снизить аварийность и внеплановые простои по фонду",
+    "Снижение запасов через точку заказа и поставок под график работ":
+      "Снизить запасы через точку заказа и поставки под график работ",
+    "Снижение пикового стартового CAPEX за счёт фазирования":
+      "Снизить пик стартового CAPEX за счёт фазирования",
+    "Снизить стоимость долга за счёт срока и ставки в допустимых пределах":
+      "Снизить стоимость долга за счёт срока и ставки в допустимых пределах",
+    "Снятие ограничения приёма модернизацией ДНС или графиком":
+      "Снять ограничение приёма модернизацией ДНС или графиком",
+    "Совместная оптимизация q по скважинам с учётом сети и обводнения":
+      "Провести совместную оптимизацию q по скважинам с учётом сети и обводнения",
+    "Согласование определения qₙ в модели с текстом ограничения":
+      "Согласовать определение qₙ в модели с текстом ограничения",
+    "Согласованный график ввода мощностей с планом добычи":
+      "Согласовать график ввода мощностей с планом добычи",
+    "Сокращение вложений в WC и НЗП без удара по добыче":
+      "Сократить вложения в WC и НЗП без удара по добыче",
+    "Стресс‑задержки ввода объектов в денежном потоке":
+      "Заложить стресс‑задержки ввода объектов в денежном потоке",
+    "Сценарии по ставкам и льготам с явными допущениями по годам":
+      "Построить сценарии по ставкам и льготам с явными допущениями по годам",
+    "Усиление отбора и netback: ГТМ, режим скважин, переговоры по сбыту и логистике":
+      "Усилить отбор и netback: ГТМ, режим скважин, переговоры по сбыту и логистике",
+    "Ускорение оплат и отгрузок; снижение излишних запасов без остановки добычи":
+      "Ускорить оплаты и отгрузки; снизить излишние запасы без остановки добычи",
+    "Ускорение притоков или сдвиг тяжёлых оттоков на более поздние годы":
+      "Ускорить притоки или сдвинуть тяжёлые оттоки на более поздние годы",
+    "Утилизация ПНГ и снижение факела в рамках KPI":
+      "Утилизировать ПНГ и снизить факел в рамках KPI",
+    "Уточнение перечня объектов под запрет остановок":
+      "Уточнить перечень объектов под запрет остановок",
+    "Уточнение ставки дисконта и полного горизонта потоков в постановке NPV":
+      "Уточнить ставку дисконта и полный горизонт потоков в постановке NPV",
+    "Фазирование портфеля и сдвиг пиков CAPEX на менее загруженные годы":
+      "Провести фазирование портфеля и сдвиг пиков CAPEX на менее загруженные годы",
+    "Факторинг или ускорение оплат по сегментам контрагентов":
+      "Применить факторинг или ускорить оплаты по сегментам контрагентов",
+    "Хеджирование цены нефти и валютной выручки под допустимый профиль риска":
+      "Хеджировать цену нефти и валютную выручку под допустимый профиль риска",
+    "Энергоэффективные режимы УЭЦН и ДОФ при сохранении qₙ":
+      "Внедрить энергоэффективные режимы УЭЦН и ДОФ при сохранении qₙ",
+    "Явное разделение project IRR и equity IRR в постановке цели":
+      "Явно разделить project IRR и equity IRR в постановке цели",
+    "Явный резерв мощностей под аварийные простои":
+      "Заложить явный резерв мощностей под аварийные простои",
+  };
+
+  /** Резерв для неизвестных строк; все текущие influences заданы в HYPOTHESIS_EXACT_PHRASE. */
+  const HYPOTHESIS_PREFIX_RULES = [];
+
+  function hypothesisToActionPhrase(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return s;
+    if (HYPOTHESIS_EXACT_PHRASE[s]) return HYPOTHESIS_EXACT_PHRASE[s];
+    let t = s;
+    for (let iter = 0; iter < 6; iter++) {
+      let changed = false;
+      for (let r = 0; r < HYPOTHESIS_PREFIX_RULES.length; r++) {
+        const re = HYPOTHESIS_PREFIX_RULES[r][0];
+        const rep = HYPOTHESIS_PREFIX_RULES[r][1];
+        const n = t.replace(re, rep);
+        if (n !== t) {
+          t = n;
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) break;
+    }
+    return t;
+  }
+
+  /** Текст гипотезы в форме действия (инфинитивы), без префикса «Что сделать?». */
+  function formatHypothesisAsWhatToDo(raw) {
+    return hypothesisToActionPhrase(raw);
+  }
+
+  /** Строка причины для панели: при необходимости убирает префикс «В связи с …» (старые данные); актуальные причины в JSON уже в именительном. */
+  function displayCauseLineForUi(s) {
+    let t = String(s || "").trim();
+    t = t.replace(/^\s*В связи с(?:\s+тем,?\s*что)?\s+/i, "");
+    if (t.length && t[0] === t[0].toLowerCase() && /[а-яё]/i.test(t[0])) {
+      t = t.charAt(0).toUpperCase() + t.slice(1);
+    }
+    return t;
+  }
+
+  function renderCausesOnly() {
+    const host = $("causesPanel");
+    if (!K) return;
+    host.innerHTML = "";
+    const elements = collectPromptElementsForCausesPanel();
+    if (!elements.length) {
+      host.innerHTML =
+        "<p class=\"help\">Нет элементов для разбора. Загрузите знания и настройте конструктор на вкладке «Конструктор промпта».</p>";
+      return;
+    }
+    const titles = {
+      objective: "Цель",
+      constraint: "Ограничение",
+      lever: "Рычаг",
+    };
+    const ul = document.createElement("ul");
+    ul.className = "causes-prompt-list";
+    elements.forEach((el) => {
+      const bundle = resolveDeepCauseBundle(el);
+      const causes = bundle.causes || [];
+      const li = document.createElement("li");
+      li.className = "cause-deep-card";
+      const h = document.createElement("h3");
+      h.textContent = titles[el.kind] || el.kind;
+      li.appendChild(h);
+      const echo = document.createElement("div");
+      echo.className = "prompt-echo";
+      echo.textContent = el.labelExact;
+      li.appendChild(echo);
+      if (bundle.situation) {
+        const sitLbl = document.createElement("p");
+        sitLbl.className = "muted";
+        sitLbl.style.margin = "0.45rem 0 0.15rem";
+        sitLbl.textContent = "Ситуация";
+        li.appendChild(sitLbl);
+        const sit = document.createElement("p");
+        sit.className = "cause-intro";
+        sit.textContent = bundle.situation;
+        li.appendChild(sit);
+      }
+      if (bundle.introduction) {
+        const ctxLbl = document.createElement("p");
+        ctxLbl.className = "muted";
+        ctxLbl.style.margin = "0.35rem 0 0.15rem";
+        ctxLbl.textContent = "Контекст";
+        li.appendChild(ctxLbl);
+        const intro = document.createElement("p");
+        intro.className = "cause-intro";
+        intro.textContent = bundle.introduction;
+        li.appendChild(intro);
+      }
+      const causeLbl = document.createElement("p");
+      causeLbl.className = "muted";
+      causeLbl.style.margin = "0.35rem 0 0.2rem";
+      causeLbl.textContent = "Причины:";
+      li.appendChild(causeLbl);
+      const sub = document.createElement("ul");
+      causes.forEach((c) => {
+        const item = document.createElement("li");
+        item.textContent = displayCauseLineForUi(c);
+        sub.appendChild(item);
+      });
+      li.appendChild(sub);
+      ul.appendChild(li);
+    });
+    host.appendChild(ul);
+  }
+
+  function renderHypothesesPanel() {
+    const host = $("hypPanel");
+    if (!K) return;
+    host.innerHTML = "";
+    const elements = collectPromptElementsForCausesPanel();
+    if (!elements.length) {
+      host.innerHTML =
+        "<p class=\"help\">Нет элементов для гипотез. Загрузите знания и настройте конструктор на вкладке «Конструктор промпта».</p>";
+      buildMermaidFromPanel();
+      return;
+    }
+    const titles = {
+      objective: "Цель",
+      constraint: "Ограничение",
+      lever: "Рычаг",
+    };
+    const ul = document.createElement("ul");
+    ul.className = "causes-prompt-list";
+    elements.forEach((el) => {
+      const bundle = resolveHypothesisBundle(el);
+      const proposals = bundle.proposals || [];
+      const li = document.createElement("li");
+      li.className = "cause-deep-card";
+      const h = document.createElement("h3");
+      h.textContent = titles[el.kind] || el.kind;
+      li.appendChild(h);
+      const echo = document.createElement("div");
+      echo.className = "prompt-echo";
+      echo.textContent = el.labelExact;
+      li.appendChild(echo);
+      if (bundle.situation) {
+        const sitLbl = document.createElement("p");
+        sitLbl.className = "muted";
+        sitLbl.style.margin = "0.45rem 0 0.15rem";
+        sitLbl.textContent = "Специфика";
+        li.appendChild(sitLbl);
+        const sit = document.createElement("p");
+        sit.className = "cause-intro";
+        sit.textContent = bundle.situation;
+        li.appendChild(sit);
+      }
+      if (bundle.hypothesis_introduction) {
+        const intro = document.createElement("p");
+        intro.className = "cause-intro";
+        intro.textContent = bundle.hypothesis_introduction;
+        li.appendChild(intro);
+      }
+      const hpTitle = document.createElement("p");
+      hpTitle.className = "muted";
+      hpTitle.style.margin = "0.35rem 0 0.25rem";
+      hpTitle.textContent = "Гипотезы влияния";
+      li.appendChild(hpTitle);
+      const sub = document.createElement("ul");
+      proposals.forEach((p) => {
+        const item = document.createElement("li");
+        item.textContent = formatHypothesisAsWhatToDo(p);
+        sub.appendChild(item);
+      });
+      li.appendChild(sub);
+      ul.appendChild(li);
+    });
+    host.appendChild(ul);
+    buildMermaidFromPanel();
+  }
+
+  function sanitizeMermaidLabel(s, maxLen) {
+    let t = String(s || "")
+      .replace(/"/g, "'")
+      .replace(/#/g, " ")
+      .replace(/\[/g, "(")
+      .replace(/\]/g, ")")
+      .replace(/\r?\n/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (maxLen && t.length > maxLen) t = t.slice(0, maxLen - 1) + "…";
+    return t;
+  }
+
+  /** Длиннее текст → «тяжелее» вариант; при равной длине — больший индекс (второй как менее рискованный эвристически). */
+  function pickBestInfluenceIndex(proposals) {
+    if (!proposals || !proposals.length) return 0;
+    let best = 0;
+    let bestLen = (proposals[0] || "").length;
+    for (let i = 1; i < proposals.length; i++) {
+      const L = (proposals[i] || "").length;
+      if (L > bestLen) {
+        bestLen = L;
+        best = i;
+      } else if (L === bestLen) {
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  /** Индексы 1–2 самых «тяжёлых» строк по длине; второй — если ≥ 0,85 от максимума. */
+  function pickHeavyTextIndices(arr, maxPick) {
+    const maxN = maxPick == null ? 2 : maxPick;
+    if (!arr || !arr.length) return [];
+    const scored = arr.map((t, i) => ({ i, L: String(t || "").length }));
+    scored.sort((a, b) => (b.L !== a.L ? b.L - a.L : b.i - a.i));
+    const out = [scored[0].i];
+    if (maxN >= 2 && scored.length >= 2 && scored[1].L >= scored[0].L * 0.85) {
+      out.push(scored[1].i);
+    }
+    return out;
+  }
+
+  function n8nScenarioTotalAndRank(goalDims) {
+    if (!goalDims || !goalDims.length) return { total: 0, rank: 0 };
+    let total = 1;
+    let rank = 0;
+    for (let g = 0; g < goalDims.length; g++) {
+      const C = Math.max(1, goalDims[g].C);
+      const H = Math.max(1, goalDims[g].H);
+      total *= C * H;
+    }
+    for (let g = 0; g < goalDims.length; g++) {
+      const C = Math.max(1, goalDims[g].C);
+      const H = Math.max(1, goalDims[g].H);
+      const bc = Math.min(goalDims[g].bc, C - 1);
+      const bh = Math.min(goalDims[g].bh, H - 1);
+      const kg = bc * H + bh;
+      let w = 1;
+      for (let k = g + 1; k < goalDims.length; k++) {
+        const Ck = Math.max(1, goalDims[k].C);
+        const Hk = Math.max(1, goalDims[k].H);
+        w *= Ck * Hk;
+      }
+      rank += kg * w;
+    }
+    return { total: total, rank: rank + 1 };
+  }
+
+  function escapeHtmlLite(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function renderMermaidIntoHost(host, code) {
+    host.innerHTML = "";
+    const c = (code || "").trim();
+    if (!c) {
+      host.textContent = "(нет данных для схемы)";
+      return;
+    }
+    if (window.mermaid && (c.indexOf("-->") >= 0 || /^flowchart\s/i.test(c))) {
+      try {
+        mermaid.initialize({ startOnLoad: false, theme: "dark", securityLevel: "loose" });
+        const div = document.createElement("div");
+        div.className = "mermaid";
+        div.textContent = c;
+        host.appendChild(div);
+        mermaid.run({ nodes: [div] }).catch(() => {});
+      } catch (e) {
+        host.textContent = c;
+      }
+    } else {
+      host.textContent = c;
+    }
+  }
+
+  let n8nZoomScale = 1;
+
+  function applyN8nZoom(scale) {
+    n8nZoomScale = Math.max(0.25, Math.min(3, scale));
+    const inner = $("n8nInner");
+    const lbl = $("n8nZoomLabel");
+    if (inner) {
+      inner.style.transform = "scale(" + n8nZoomScale + ")";
+      inner.style.transformOrigin = "0 0";
+    }
+    if (lbl) lbl.textContent = Math.round(n8nZoomScale * 100) + "%";
+  }
+
+  function initN8nZoom() {
+    const zIn = $("n8nZoomIn");
+    const zOut = $("n8nZoomOut");
+    const zReset = $("n8nZoomReset");
+    const scroll = $("n8nScroll");
+    if (zIn && !zIn.dataset.n8nBound) {
+      zIn.dataset.n8nBound = "1";
+      zIn.addEventListener("click", () => applyN8nZoom(n8nZoomScale + 0.12));
+    }
+    if (zOut && !zOut.dataset.n8nBound) {
+      zOut.dataset.n8nBound = "1";
+      zOut.addEventListener("click", () => applyN8nZoom(n8nZoomScale - 0.12));
+    }
+    if (zReset && !zReset.dataset.n8nBound) {
+      zReset.dataset.n8nBound = "1";
+      zReset.addEventListener("click", () => applyN8nZoom(1));
+    }
+    if (scroll && !scroll.dataset.n8nBound) {
+      scroll.dataset.n8nBound = "1";
+      scroll.addEventListener(
+        "wheel",
+        (e) => {
+          if (!e.ctrlKey) return;
+          e.preventDefault();
+          applyN8nZoom(n8nZoomScale + (e.deltaY < 0 ? 0.09 : -0.09));
+        },
+        { passive: false }
+      );
+    }
+    applyN8nZoom(1);
+  }
+
+  function buildMermaidFromPanel() {
+    if (!promptConfirmed || !K) return;
+    const elements = collectPromptElementsForCausesPanel();
+    const goals = elements.filter((e) => e.kind === "objective");
+    const wrap = $("mermaidHost");
+    const pre = $("mermaidCode");
+    const statsEl = $("n8nStats");
+    const summaryEl = $("n8nBestSummary");
+    if (!wrap) return;
+
+    const infRegistry = new Map();
+    let infSeq = 0;
+    const nodeLines = [];
+    const edgeLines = [];
+    const edgeBest = [];
+
+    function ensureInfNode(raw) {
+      const k = normalizeInfluenceKey(raw);
+      if (!k) return null;
+      if (!infRegistry.has(k)) {
+        const id = "I" + infSeq++;
+        const label = sanitizeMermaidLabel(formatHypothesisAsWhatToDo(String(raw).trim()), 140);
+        infRegistry.set(k, { id: id, label: label });
+        nodeLines.push('  ' + id + '["' + label + '"]');
+      }
+      return infRegistry.get(k);
+    }
+
+    function pushEdge(from, to, best) {
+      edgeLines.push("  " + from + " --> " + to);
+      edgeBest.push(!!best);
+    }
+
+    function appendLinkStyles(out) {
+      for (let ei = 0; ei < edgeBest.length; ei++) {
+        if (edgeBest[ei]) {
+          out.push("  linkStyle " + ei + " stroke:#5fd88a,stroke-width:2.5px");
+        }
+      }
+    }
+
+    const head = [
+      "flowchart LR",
+      "  classDef bestRoot fill:#0f2418,stroke:#5fd88a,stroke-width:3px,color:#e8f5e9",
+      "  classDef bestChain fill:#153d25,stroke:#5fd88a,stroke-width:2px,color:#e8f5e9",
+      '  N0["' + sanitizeMermaidLabel("Анализ пользовательского промпта", 88) + '"]',
+      '  N1["' + sanitizeMermaidLabel("Формирование целей", 64) + '"]',
+    ];
+
+    pushEdge("N0", "N1", true);
+
+    if (!elements.length) {
+      nodeLines.push(
+        '  NEMP["' + sanitizeMermaidLabel("Нет элементов в конструкторе", 80) + '"]'
+      );
+      pushEdge("N1", "NEMP", false);
+      const out = head.concat(nodeLines, edgeLines);
+      out.push("  class N0,N1 bestRoot");
+      appendLinkStyles(out);
+      const codeEmpty = out.join("\n");
+      if (pre) pre.textContent = codeEmpty;
+      if (statsEl) statsEl.textContent = "Возможных сценариев: 0";
+      if (summaryEl) summaryEl.innerHTML = "";
+      renderMermaidIntoHost(wrap, codeEmpty);
+      initN8nZoom();
+      return;
+    }
+
+    if (!goals.length) {
+      nodeLines.push(
+        '  NEMP["' +
+          sanitizeMermaidLabel("Отметьте цели в конструкторе промпта", 88) +
+          '"]'
+      );
+      pushEdge("N1", "NEMP", false);
+      const out = head.concat(nodeLines, edgeLines);
+      out.push("  class N0,N1 bestRoot");
+      appendLinkStyles(out);
+      const codeNg = out.join("\n");
+      if (pre) pre.textContent = codeNg;
+      if (statsEl) statsEl.textContent = "Возможных сценариев: 0";
+      if (summaryEl) summaryEl.innerHTML = "";
+      renderMermaidIntoHost(wrap, codeNg);
+      initN8nZoom();
+      return;
+    }
+
+    const goalDims = [];
+    const classRoot = ["N0", "N1"];
+    const classChain = [];
+    let causeOrdinal = 0;
+
+    goals.forEach((el, gi) => {
+      const deep = resolveDeepCauseBundle(el);
+      const causes = (deep.causes || []).map((c) => String(c || "").trim()).filter(Boolean);
+      const causeList = causes.length ? causes : ["(нет формулировок причин)"];
+      const bundle = resolveHypothesisBundle(el);
+      const proposals = (bundle.proposals || []).slice(0, 10).map((x) => String(x || "").trim());
+      const hyps = proposals.length ? proposals : ["(нет гипотез)"];
+
+      const C = causeList.length;
+      const H = hyps.length;
+      const bestCauseIdx = pickBestInfluenceIndex(causeList);
+      const bestHypIdx = pickBestInfluenceIndex(hyps);
+      goalDims.push({ C: C, H: H, bc: bestCauseIdx, bh: bestHypIdx });
+
+      const heavyCauseIdx = pickHeavyTextIndices(causeList, 2);
+      const heavyHypIdx = pickHeavyTextIndices(hyps, 2);
+
+      const nG = "G" + gi;
+      const nAC = "AC" + gi;
+      nodeLines.push(
+        '  ' +
+          nG +
+          '["' +
+          sanitizeMermaidLabel("Цель " + (gi + 1) + ": " + el.labelExact, 96) +
+          '"]'
+      );
+      nodeLines.push(
+        '  ' +
+          nAC +
+          '["' +
+          sanitizeMermaidLabel("Анализ причин для цели " + (gi + 1), 72) +
+          '"]'
+      );
+      const goalHasHighlight = heavyCauseIdx.length > 0;
+      pushEdge("N1", nG, goalHasHighlight);
+      pushEdge(nG, nAC, goalHasHighlight);
+      if (goalHasHighlight) {
+        classChain.push(nG, nAC);
+      }
+
+      causeList.forEach((causeText, cj) => {
+        causeOrdinal += 1;
+        const nC = "C" + gi + "_" + cj;
+        const nHF = "HF" + gi + "_" + cj;
+        nodeLines.push('  ' + nC + '["' + sanitizeMermaidLabel(causeText, 100) + '"]');
+        nodeLines.push(
+          '  ' +
+            nHF +
+            '["' +
+            sanitizeMermaidLabel("Формирование гипотез причины " + causeOrdinal, 80) +
+            '"]'
+        );
+        const causeHeavy = heavyCauseIdx.indexOf(cj) >= 0;
+        pushEdge(nAC, nC, causeHeavy && goalHasHighlight);
+        pushEdge(nC, nHF, causeHeavy);
+
+        hyps.forEach((hp, hk) => {
+          const node = ensureInfNode(hp);
+          if (!node) return;
+          const hypHeavy = heavyHypIdx.indexOf(hk) >= 0;
+          const onHeavyPath = causeHeavy && hypHeavy;
+          pushEdge(nHF, node.id, onHeavyPath);
+          if (onHeavyPath) {
+            classChain.push(node.id);
+          }
+        });
+
+        if (causeHeavy) {
+          classChain.push(nC, nHF);
+        }
+      });
+    });
+
+    const out = head.concat(nodeLines, edgeLines);
+    out.push("  class " + classRoot.join(",") + " bestRoot");
+    if (classChain.length) {
+      out.push("  class " + [...new Set(classChain)].join(",") + " bestChain");
+    }
+
+    const { total, rank } = n8nScenarioTotalAndRank(goalDims);
+    appendLinkStyles(out);
+
+    const code = out.join("\n");
+    if (pre) pre.textContent = code;
+    if (statsEl) {
+      statsEl.textContent =
+        total > 0
+          ? "Лучший сценарий (зелёные блоки и связи): комбинация №" +
+            rank +
+            " из " +
+            total +
+            " возможных полных сочетаний веток (произведение числа вариантов причин и гипотез по каждой цели при любом выборе)."
+          : "Возможных сценариев: 0";
+    }
+    if (summaryEl) {
+      let html =
+        '<p class="muted" style="margin:0 0 0.45rem;line-height:1.45"><strong style="color:var(--ok)">Лучший сценарий</strong> — совокупность зелёных узлов и рёбер: от анализа промпта и формирования целей к самым «тяжёлым» причинам и гипотезам по длине текста (при равенстве — вариант с большим номером).</p>';
+      html += '<ul style="margin:0;padding-left:1.15rem;font-size:0.86rem;line-height:1.45">';
+      goals.forEach((el, gi) => {
+        const deep = resolveDeepCauseBundle(el);
+        const causes = (deep.causes || []).map((c) => String(c || "").trim()).filter(Boolean);
+        const causeList = causes.length ? causes : ["(нет формулировок причин)"];
+        const bundle = resolveHypothesisBundle(el);
+        const hyps = (bundle.proposals || []).slice(0, 10);
+        const bci = pickBestInfluenceIndex(causeList);
+        const bhi = pickBestInfluenceIndex(hyps);
+        html +=
+          "<li><strong>Цель " +
+          (gi + 1) +
+          "</strong> — причина " +
+          (bci + 1) +
+          ", гипотеза " +
+          (bhi + 1) +
+          ": " +
+          escapeHtmlLite(sanitizeMermaidLabel(formatHypothesisAsWhatToDo(hyps[bhi] || ""), 220)) +
+          "</li>";
+      });
+      html += "</ul>";
+      summaryEl.innerHTML = html;
+    }
+
+    renderMermaidIntoHost(wrap, code);
+    initN8nZoom();
+  }
+
+  function renderPresets() {
+    const row = $("presetRow");
+    row.innerHTML = "";
+    const presets = PRE && PRE.presets ? PRE.presets : [];
+    presets.forEach((p) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "preset";
+      b.textContent = p.label;
+      b.addEventListener("click", () => applyPreset(p.id));
+      row.appendChild(b);
+    });
+    const top = presets.slice(0, 3);
+    for (let i = 1; i <= 3; i++) {
+      const btn = $("aiPreset" + i);
+      if (!btn) continue;
+      const p = top[i - 1];
+      if (p) {
+        btn.textContent = "★ " + p.label;
+        btn.disabled = false;
+        btn.onclick = () => {
+          aiApplyPresetState(p);
+          aiRefreshProgressivePrompt();
+        };
+      } else {
+        btn.textContent = "★ Нет пресета";
+        btn.disabled = true;
+      }
+    }
+  }
+
+  function applyPreset(id, silent) {
+    const p = (PRE.presets || []).find((x) => x.id === id);
+    if (!p || !p.sets) return;
+    const s = p.sets;
+    setChecks("bases", normArr(s.bases));
+    setChecks("horizons", normArr(s.horizons));
+    setChecks("horizon_phases", normArr(s.horizon_phases));
+    setChecks("objectives", normArr(s.objectives));
+    document.querySelectorAll('input[name="objectives"]').forEach((cb) => updateObjectiveRowVisibility(cb));
+    ensureOilProductionObjectiveChecked();
+    setChecks("constraints", normArr(s.constraints));
+    setChecks("levers", normArr(s.levers));
+    document.querySelectorAll('input[name="constraints"]').forEach((cb) => updateConstraintParamRow(cb));
+    syncConstraintLeverMutualExclusion();
+    refreshBaseCompareHint();
+    syncHorizonPhasesRow();
+    if (!silent) {
+      $("presetHint").textContent = "Пресет: «" + p.label + "». Текст промпта обновите кнопкой или он обновится при загрузке.";
+      renderHumanPrompt();
+    }
+    if (promptConfirmed) refreshAnalysis();
+  }
+
+  const aiWizard = {
+    steps: [
+      { key: "base", title: "Шаг 1: База сравнения" },
+      { key: "horizon", title: "Шаг 2: Горизонт" },
+      { key: "goals", title: "Шаг 3: Цели" },
+      { key: "constraints", title: "Шаг 4: Ограничения" },
+      { key: "levers", title: "Шаг 5: Рычаги" },
+    ],
+    current: 0,
+    done: {},
+    state: { base: "", horizon: "", goals: [], constraints: [], levers: [], objectiveTargets: {}, constraintParams: {} },
+  };
+  let aiSuppressPromptInput = false;
+  /** Задержка перед повторным преобразованием при редактировании промпта (мс). */
+  const AI_PROMPT_INPUT_DEBOUNCE_MS = 5000;
+  let aiTransformDebounce = null;
+  let aiTransformProgressTimer = null;
+  let aiTransformFinishTimer = null;
+  let aiTransformSeq = 0;
+  let aiSpeechRec = null;
+  let aiSpeechRecording = false;
+  let aiSpeechManualStop = false;
+  let aiSpeechTranscript = "";
+  /** Срабатывание onstart у Web Speech API (без него onend часто ложный сразу после второго start). */
+  let aiSpeechListenStarted = false;
+  let aiSpeechBogusEndRetries = 0;
+  let aiSpeechSid = 0;
+  let aiClauseCorpusCache = null;
+
+  function aiCheckedValues(name) {
+    return Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map((x) => x.value);
+  }
+
+  function aiConfirmedStepCount() {
+    let n = 0;
+    for (let i = 0; i < aiWizard.steps.length; i++) {
+      if (!aiWizard.done[aiWizard.steps[i].key]) break;
+      n++;
+    }
+    return n;
+  }
+
+  function aiSyncDefaultsAndRefresh() {
+    const d = (K && K.dimensions) || {};
+    const bases = d.bases || [];
+    const horizons = d.horizons || [];
+    if ((!aiWizard.state.base || !bases.some((b) => b.id === aiWizard.state.base)) && bases[0]) {
+      aiWizard.state.base = bases[0].id;
+    }
+    if ((!aiWizard.state.horizon || !horizons.some((h) => h.id === aiWizard.state.horizon)) && horizons[0]) {
+      aiWizard.state.horizon = horizons[0].id;
+    }
+    aiGotoStep(aiWizard.current);
+    aiRefreshProgressivePrompt();
+  }
+
+  function aiBuildStepBase() {
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = "<legend>База сравнения</legend>";
+    const list = ((K && K.dimensions && K.dimensions.bases) || []);
+    ((K && K.dimensions && K.dimensions.bases) || []).forEach((b, i) => {
+      const checked = aiWizard.state.base ? aiWizard.state.base === b.id : i === 0;
+      const lab = document.createElement("label");
+      lab.className = "block";
+      lab.innerHTML = '<input type="radio" name="ai_bases" value="' + b.id + '"' + (checked ? " checked" : "") + "> " + b.name;
+      fs.appendChild(lab);
+    });
+    if (!aiWizard.state.base && list[0]) aiWizard.state.base = list[0].id;
+    fs.addEventListener("change", () => {
+      const el = document.querySelector('input[name="ai_bases"]:checked');
+      aiWizard.state.base = el ? el.value : "";
+      aiRefreshProgressivePrompt();
+    });
+    return fs;
+  }
+
+  function aiBuildStepHorizon() {
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = "<legend>Горизонт</legend>";
+    const list = ((K && K.dimensions && K.dimensions.horizons) || []);
+    ((K && K.dimensions && K.dimensions.horizons) || []).forEach((h, i) => {
+      const checked = aiWizard.state.horizon ? aiWizard.state.horizon === h.id : i === 0;
+      const lab = document.createElement("label");
+      lab.className = "block";
+      lab.innerHTML = '<input type="radio" name="ai_horizons" value="' + h.id + '"' + (checked ? " checked" : "") + "> " + h.name;
+      fs.appendChild(lab);
+    });
+    if (!aiWizard.state.horizon && list[0]) aiWizard.state.horizon = list[0].id;
+    fs.addEventListener("change", () => {
+      const el = document.querySelector('input[name="ai_horizons"]:checked');
+      aiWizard.state.horizon = el ? el.value : "";
+      aiRefreshProgressivePrompt();
+    });
+    return fs;
+  }
+
+  function aiBuildStepGoals() {
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = "<legend>Цели</legend>";
+    const help = document.createElement("p");
+    help.className = "help";
+    help.textContent = "Отметьте цель и, при необходимости, задайте порог: число + единица + база.";
+    fs.appendChild(help);
+    ((K && K.dimensions && K.dimensions.objectives) || []).forEach((o) => {
+      const row = document.createElement("div");
+      row.className = "ai-objective-row";
+      row.dataset.objId = o.id;
+
+      const main = document.createElement("div");
+      main.className = "objective-main";
+      const lab = document.createElement("label");
+      lab.className = "block";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.name = "ai_objectives";
+      cb.value = o.id;
+      cb.checked = aiWizard.state.goals.indexOf(o.id) >= 0;
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(" " + o.name));
+      main.appendChild(lab);
+      row.appendChild(main);
+
+      const profile = getObjectiveProfile(o);
+      const target = aiEnsureObjectiveTarget(o.id, (K && K.dimensions) || {});
+      const controls = document.createElement("div");
+      controls.className = "objective-target-controls";
+      controls.classList.toggle("visible", cb.checked);
+
+      const modeRow = document.createElement("div");
+      modeRow.className = "obj-mode-row";
+      const labMax = document.createElement("label");
+      labMax.className = "obj-mode-opt";
+      const rMax = document.createElement("input");
+      rMax.type = "radio";
+      rMax.name = "ai_obj_" + o.id + "_mode";
+      rMax.value = "max";
+      rMax.checked = target.mode !== "threshold";
+      labMax.appendChild(rMax);
+      labMax.appendChild(document.createTextNode(" " + profile.modeLabel + " " + profile.arrow));
+
+      const labThr = document.createElement("label");
+      labThr.className = "obj-mode-opt";
+      const rThr = document.createElement("input");
+      rThr.type = "radio";
+      rThr.name = "ai_obj_" + o.id + "_mode";
+      rThr.value = "threshold";
+      rThr.checked = target.mode === "threshold";
+      labThr.appendChild(rThr);
+      labThr.appendChild(document.createTextNode(" Порог"));
+      modeRow.appendChild(labMax);
+      modeRow.appendChild(labThr);
+      controls.appendChild(modeRow);
+
+      const thr = document.createElement("div");
+      thr.className = "obj-threshold-fields";
+      thr.classList.toggle("visible", target.mode === "threshold");
+      const num = document.createElement("input");
+      num.type = "number";
+      num.name = "ai_obj_" + o.id + "_value";
+      num.min = "0";
+      num.step = unitStepForSemantics(semanticsFromObjective(o), o.id);
+      num.value = target.value;
+      thr.appendChild(num);
+      const unit = document.createElement("select");
+      unit.name = "ai_obj_" + o.id + "_unit";
+      (profile.unitOptions || []).forEach((uo) => {
+        const opt = document.createElement("option");
+        opt.value = uo.value;
+        opt.textContent = uo.label;
+        opt.selected = target.unit === uo.value;
+        unit.appendChild(opt);
+      });
+      thr.appendChild(unit);
+      const baseSel = document.createElement("select");
+      baseSel.name = "ai_obj_" + o.id + "_base";
+      fillBaseSelectOptions(baseSel, true);
+      if (target.base) baseSel.value = target.base;
+      thr.appendChild(baseSel);
+      controls.appendChild(thr);
+      row.appendChild(controls);
+      fs.appendChild(row);
+    });
+    fs.addEventListener("change", (ev) => {
+      const t = ev.target;
+      aiWizard.state.goals = aiCheckedValues("ai_objectives");
+      if (t && t.name === "ai_objectives") {
+        const row = t.closest(".ai-objective-row");
+        const ctrl = row && row.querySelector(".objective-target-controls");
+        if (ctrl) ctrl.classList.toggle("visible", t.checked);
+      }
+      const modeMatch = t && t.name ? t.name.match(/^ai_obj_(.+)_mode$/) : null;
+      if (modeMatch) {
+        const gid = modeMatch[1];
+        const tr = aiEnsureObjectiveTarget(gid, (K && K.dimensions) || {});
+        tr.mode = t.value === "threshold" ? "threshold" : "max";
+        const row = document.querySelector('.ai-objective-row[data-obj-id="' + gid + '"]');
+        const thr = row && row.querySelector(".obj-threshold-fields");
+        if (thr) thr.classList.toggle("visible", tr.mode === "threshold");
+      }
+      const valMatch = t && t.name ? t.name.match(/^ai_obj_(.+)_(value|unit|base)$/) : null;
+      if (valMatch) {
+        const gid = valMatch[1];
+        const fld = valMatch[2];
+        const tr = aiEnsureObjectiveTarget(gid, (K && K.dimensions) || {});
+        tr[fld] = t.value;
+      }
+      aiRefreshProgressivePrompt();
+    });
+    return fs;
+  }
+
+  function aiBuildStepConstraints() {
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = "<legend>Ограничения</legend>";
+    const d = (K && K.dimensions) || {};
+    const cParams = d.constraint_params || {};
+    (d.constraints || []).forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "constraint-row";
+      const lab = document.createElement("label");
+      lab.className = "block";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.name = "ai_constraints";
+      cb.value = c.id;
+      cb.checked = aiWizard.state.constraints.indexOf(c.id) >= 0;
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(" " + c.name));
+      row.appendChild(lab);
+      const pdef = cParams[c.id];
+      if (pdef) {
+        const wrap = document.createElement("div");
+        wrap.className = "constraint-param-wrap";
+        wrap.style.display = cb.checked ? "block" : "none";
+        const inLab = document.createElement("label");
+        if (pdef.label) inLab.textContent = pdef.label;
+        const inp = document.createElement("input");
+        inp.name = "ai_constraint_param_" + c.id;
+        inp.value = aiWizard.state.constraintParams[c.id] != null ? String(aiWizard.state.constraintParams[c.id]) : (pdef.default != null ? String(pdef.default) : "");
+        if (pdef.kind === "text") {
+          inp.type = "text";
+          inp.placeholder = pdef.placeholder || "";
+        } else {
+          inp.type = "number";
+          if (pdef.min != null) inp.min = String(pdef.min);
+          if (pdef.max != null) inp.max = String(pdef.max);
+          inp.step = pdef.step != null ? String(pdef.step) : pdef.kind === "money_rub" ? "1000000" : "1";
+          if (pdef.placeholder) inp.placeholder = pdef.placeholder;
+        }
+        wrap.appendChild(inLab);
+        wrap.appendChild(inp);
+        row.appendChild(wrap);
+      }
+      fs.appendChild(row);
+    });
+    fs.addEventListener("change", (ev) => {
+      const t = ev.target;
+      aiWizard.state.constraints = aiCheckedValues("ai_constraints");
+      if (t && t.name === "ai_constraints") {
+        const row = t.closest(".constraint-row");
+        const wrap = row && row.querySelector(".constraint-param-wrap");
+        if (wrap) wrap.style.display = t.checked ? "block" : "none";
+      }
+      const m = t && t.name ? t.name.match(/^ai_constraint_param_(.+)$/) : null;
+      if (m) aiWizard.state.constraintParams[m[1]] = t.value;
+      aiRefreshProgressivePrompt();
+    });
+    fs.addEventListener("input", (ev) => {
+      const t = ev.target;
+      const m = t && t.name ? t.name.match(/^ai_constraint_param_(.+)$/) : null;
+      if (m) {
+        aiWizard.state.constraintParams[m[1]] = t.value;
+        aiRefreshProgressivePrompt();
+      }
+    });
+    return fs;
+  }
+
+  function aiBuildStepLevers() {
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = "<legend>Рычаги</legend>";
+    ((K && K.dimensions && K.dimensions.levers) || []).forEach((l) => {
+      const lab = document.createElement("label");
+      lab.className = "block";
+      const checked = aiWizard.state.levers.indexOf(l.id) >= 0 ? ' checked' : "";
+      lab.innerHTML = '<input type="checkbox" name="ai_levers" value="' + l.id + '"' + checked + "> " + l.name;
+      fs.appendChild(lab);
+    });
+    fs.addEventListener("change", () => {
+      aiWizard.state.levers = aiCheckedValues("ai_levers");
+      aiRefreshProgressivePrompt();
+    });
+    return fs;
+  }
+
+  function aiRenderStepChips() {
+    const box = $("aiSteps");
+    if (!box) return;
+    box.innerHTML = "";
+    const unlockedMax = aiConfirmedStepCount();
+    aiWizard.steps.forEach((s, idx) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ai-step-chip";
+      const locked = idx > unlockedMax;
+      if (locked) {
+        b.classList.add("locked");
+        b.disabled = true;
+      }
+      if (idx === aiWizard.current) b.classList.add("active");
+      if (aiWizard.done[s.key]) b.classList.add("done");
+      b.textContent = s.title;
+      b.addEventListener("click", () => {
+        if (!locked) aiGotoStep(idx);
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function aiGotoStep(idx) {
+    if (idx < 0 || idx >= aiWizard.steps.length) return;
+    if (idx > aiConfirmedStepCount()) return;
+    aiWizard.current = idx;
+    aiRenderStepChips();
+    const stage = $("aiStage");
+    if (!stage) return;
+    stage.innerHTML = "";
+    if (idx === 0) stage.appendChild(aiBuildStepBase());
+    if (idx === 1) stage.appendChild(aiBuildStepHorizon());
+    if (idx === 2) stage.appendChild(aiBuildStepGoals());
+    if (idx === 3) stage.appendChild(aiBuildStepConstraints());
+    if (idx === 4) stage.appendChild(aiBuildStepLevers());
+    aiRefreshProgressivePrompt();
+  }
+
+  function aiMarkStepDone(idx) {
+    const s = aiWizard.steps[idx];
+    if (!s) return;
+    aiWizard.done[s.key] = true;
+    aiRenderStepChips();
+  }
+
+  function aiRefreshProgressivePrompt() {
+    const out = $("aiPromptOut");
+    if (!out) return;
+    try {
+      aiSuppressPromptInput = true;
+      out.innerHTML = buildHumanPromptHtmlAi();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      aiSuppressPromptInput = false;
+    }
+  }
+
+  function aiFindClosestPresetByText(text) {
+    const t = String(text || "").toLowerCase().trim();
+    if (!t || !PRE || !PRE.presets || !PRE.presets.length) return null;
+    const words = t.split(/[^a-zа-яё0-9]+/i).filter((x) => x.length > 2);
+    let best = null;
+    let bestScore = -1;
+    PRE.presets.forEach((p) => {
+      const label = String(p.label || "").toLowerCase();
+      let score = 0;
+      words.forEach((w) => { if (label.indexOf(w) >= 0) score++; });
+      if (score > bestScore) { bestScore = score; best = p; }
+    });
+    return best;
+  }
+
+  function aiSentenceCase(text) {
+    const s = String(text || "").trim();
+    if (!s) return "";
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  /**
+   * Речь: OPEX часто попадает латиницей; CAPEX — как «капикс», «капекс», «кейпекс», «капец».
+   * «капец» → capex только если в тексте уже есть доменные маркеры (чтобы не трогать разговорное «капец»).
+   */
+  function aiNormalizeCapexOpexFromSpeech(raw) {
+    let s = String(raw || "");
+    s = s.replace(/капикс[а-яё]*/gi, "capex");
+    s = s.replace(/капекс[а-яё]*/gi, "capex");
+    s = s.replace(/кейпекс[а-яё]*/gi, "capex");
+    s = s.replace(/капэкс[а-яё]*/gi, "capex");
+    s = s.replace(/\bopex\b/gi, "opex");
+    s = s.replace(/опекс[а-яё]*/gi, "opex");
+    const domainHint =
+      /(opex|capex|затрат|добыч|сценар|ребаланс|капитал|инвест|fcf|нефт|капк|модел|промпт|сниж|минимиз|оптимиз|уменьш|повыш|газпром|npv|нпв|эконом|ресурс|кейс|скваж|бурен|лимит|огранич)/i;
+    if (domainHint.test(s)) {
+      s = s.replace(/(^|[\s,.;:])(капец)(?=[\s,.;:!?]|$)/gi, "$1capex");
+    }
+    return s;
+  }
+
+  /** Запятые в диктовке без знаков препинания (латиница и типичная кириллица от ASR: капекс/опекс). */
+  function aiPrettifyCommasInRequest(text) {
+    let s = String(text || "").trim();
+    if (!s) return s;
+    const cap = "(?:capex|opex|капекс|опекс|капикс|капэкс)";
+    s = s.replace(/(нефти)\s+(снижение)/gi, "$1, $2");
+    s = s.replace(new RegExp("(снижение\\s+" + cap + ")\\s+(снижение)", "gi"), "$1, $2");
+    s = s.replace(new RegExp("(" + cap + ")\\s+(снижение)", "gi"), "$1, $2");
+    s = s.replace(new RegExp("(" + cap + ")\\s+и\\s+(ребалансировк[а-яё]*)", "gi"), "$1, и $2");
+    return s;
+  }
+
+  function aiNormalizeTextRu(text) {
+    const typoMap = {
+      "ресурса": "ресурсы",
+      "економ": "эконом",
+      "газпромнефтьхантос": "газпромнефть-хантос",
+      "ноябрьскнефтегаз": "ннг",
+      "защет": "за счет",
+    };
+    let raw = String(text || "").toLowerCase().replace(/ё/g, "е");
+    Object.keys(typoMap).forEach((k) => {
+      raw = raw.replace(new RegExp(k, "g"), typoMap[k]);
+    });
+    raw = aiNormalizeCapexOpexFromSpeech(raw);
+    const stop = (((SRULES || {}).normalization || {}).stop_words) || [];
+    const stopSet = new Set(stop);
+    const minLen = (((SRULES || {}).normalization || {}).min_token_len) || 2;
+    const tokens = raw.split(/[^a-zа-я0-9]+/i).map((x) => x.trim()).filter(Boolean);
+    const stems = tokens
+      .map((w) => w.replace(/(ыми|ими|ого|ему|ому|иях|ах|ях|ами|ями|ов|ев|ей|ий|ый|ой|ая|ое|ые|ую|юю|ам|ям|ом|ем|ою|ею|ость|ести|ение|ения|ировать|ироватья|ится|ться|ить|ать|ять|ти|чь|у|ю|а|я|о|е|ы|и)$/i, ""))
+      .filter((w) => w.length >= minLen && !stopSet.has(w));
+    return { raw, tokens, stems, stemSet: new Set(stems) };
+  }
+
+  function aiExtractIntents(norm) {
+    const defs = ((SRULES || {}).intents) || {};
+    const intentHits = {};
+    Object.keys(defs).forEach((k) => {
+      const tr = defs[k].triggers || [];
+      const matched = tr.filter((x) => norm.raw.indexOf(String(x).toLowerCase().replace(/ё/g, "е")) >= 0);
+      if (matched.length) intentHits[k] = matched;
+    });
+    return intentHits;
+  }
+
+  function aiScoreCandidates(norm, intents) {
+    const d = (K && K.dimensions) || {};
+    const dh = (K && K.dimension_help) || {};
+    const lex = LEX || {};
+    const defs = ((SRULES || {}).intents) || {};
+    const policy = ((SRULES || {}).policy) || {};
+    const nameW = Number(policy.name_weight || 1);
+    const helpW = Number(policy.dimension_help_weight || 0.35);
+    const intentMult = Number(policy.intent_weight_multiplier || 1);
+    const tokenScore = (srcText) => {
+      const s = String(srcText || "").toLowerCase().replace(/ё/g, "е");
+      let score = 0;
+      norm.stems.forEach((w) => { if (w.length > 1 && s.indexOf(w) >= 0) score += 1; });
+      return score;
+    };
+
+    const goalWeights = {};
+    const addGoal = (id, w) => { goalWeights[id] = (goalWeights[id] || 0) + w; };
+    Object.keys(intents).forEach((ik) => {
+      const ow = (defs[ik] && defs[ik].objective_weights) || {};
+      Object.keys(ow).forEach((gid) => addGoal(gid, (Number(ow[gid]) || 0) * intentMult));
+    });
+
+    (d.objectives || []).forEach((o) => {
+      const score = tokenScore(o.name) * nameW + tokenScore((dh.objectives || {})[o.id]) * helpW;
+      if (score > 0) addGoal(o.id, score);
+    });
+    if (norm.raw.indexOf("расход") >= 0 || norm.raw.indexOf("затрат") >= 0) {
+      addGoal("G05", 5);
+    }
+    if (norm.raw.indexOf("opex") >= 0) {
+      addGoal("G05", 8);
+    }
+    if (norm.raw.indexOf("добыч") >= 0 || norm.raw.indexOf("нефт") >= 0) {
+      addGoal("G03", 10);
+    }
+    if (norm.raw.indexOf("capex") >= 0) {
+      addGoal("G06", 12);
+    }
+
+    const constraintWeights = {};
+    (d.constraints || []).forEach((c) => {
+      const score = tokenScore(c.name) * nameW + tokenScore((dh.constraints || {})[c.id]) * helpW;
+      if (score > 0) constraintWeights[c.id] = score;
+    });
+
+    const leverWeights = {};
+    const lkw = (lex && lex.lever_keywords) || {};
+    (d.levers || []).forEach((l) => {
+      let score = tokenScore(l.name) * nameW + tokenScore((dh.levers || {})[l.id]) * helpW;
+      ((lkw[l.id] || [])).forEach((kw) => { if (norm.raw.indexOf(String(kw).toLowerCase().replace(/ё/g, "е")) >= 0) score += 3; });
+      if (score > 0) leverWeights[l.id] = score;
+    });
+
+    return { goalWeights, constraintWeights, leverWeights };
+  }
+
+  function aiApplyPolicies(scored, intents) {
+    const d = (K && K.dimensions) || {};
+    const policy = ((SRULES || {}).policy) || {};
+    const intentKeys = Object.keys(intents || {});
+
+    const maxObjectives = policy.max_objectives || 3;
+    const maxConstraints = policy.max_constraints || 3;
+    const maxLevers = policy.max_levers || 4;
+    const objectiveThreshold = policy.objective_score_threshold || 2;
+    const constraintThreshold = policy.constraint_score_threshold || 2;
+    const leverThreshold = policy.lever_score_threshold || 3;
+    const marginToNext = policy.min_margin_to_next_objective || 2;
+
+    const pickTop = (mapObj, threshold, maxN) =>
+      Object.keys(mapObj || {})
+        .map((id) => ({ id, score: mapObj[id] }))
+        .sort((a, b) => b.score - a.score)
+        .filter((x) => x.score >= threshold)
+        .slice(0, maxN)
+        .map((x) => ({ id: x.id, score: x.score }));
+
+    let rankedGoals = pickTop(scored.goalWeights, objectiveThreshold, maxObjectives);
+    const allowFromIntents = new Set();
+    const defs = ((SRULES || {}).intents) || {};
+    intentKeys.forEach((ik) => ((defs[ik] && defs[ik].allow_objectives) || []).forEach((id) => allowFromIntents.add(id)));
+    if (allowFromIntents.size) {
+      rankedGoals = rankedGoals.filter((g) => allowFromIntents.has(g.id));
+    }
+    const forbidMap = policy.forbid_objectives_without_intents || {};
+    rankedGoals = rankedGoals.filter((g) => {
+      const needs = forbidMap[g.id] || [];
+      return !needs.length || needs.some((it) => intentKeys.indexOf(it) >= 0);
+    });
+    if (rankedGoals.length > 1) {
+      const top = rankedGoals[0].score;
+      rankedGoals = rankedGoals.filter((g, idx) => idx === 0 || top - g.score <= marginToNext);
+    }
+    let goals = rankedGoals.map((x) => x.id);
+    if (!goals.length) goals = ["G03"];
+
+    const constraintsRequested = intentKeys.indexOf("constraints_requested") >= 0;
+    const constraintsOnlyIfIntent = policy.constraints_only_if_intent !== false;
+    let constraints = [];
+    let constraintsReason = "";
+    if (!constraintsOnlyIfIntent || constraintsRequested) {
+      constraints = pickTop(scored.constraintWeights, constraintsRequested ? 1 : constraintThreshold, maxConstraints).map((x) => x.id);
+      if (!constraints.length) constraintsReason = "no_constraint_candidates";
+    } else {
+      constraints = [];
+      constraintsReason = "constraints_only_if_intent";
+    }
+
+    const methodRequested = intentKeys.indexOf("method_requested") >= 0;
+    let levers = pickTop(scored.leverWeights, methodRequested ? 1 : leverThreshold, maxLevers).map((x) => x.id);
+    if (!methodRequested) {
+      const strong = Object.keys(scored.leverWeights || {}).filter((id) => (scored.leverWeights[id] || 0) >= leverThreshold + 2);
+      levers = strong.slice(0, maxLevers);
+    }
+
+    const gates = (policy.lever_gates) || {};
+    levers = levers.filter((lid) => {
+      const g = gates[lid];
+      if (!g) return true;
+      const mustHave = g.must_have_intents || [];
+      return mustHave.every((it) => intentKeys.indexOf(it) >= 0);
+    });
+
+    let horizon = aiWizard.state.horizon || ((d.horizons || [])[1] && d.horizons[1].id) || ((d.horizons || [])[0] && d.horizons[0].id) || "T02";
+    if (intentKeys.indexOf("horizon_short") >= 0) horizon = defs.horizon_short && defs.horizon_short.horizon ? defs.horizon_short.horizon : "T05";
+    if (intentKeys.indexOf("horizon_long") >= 0) horizon = defs.horizon_long && defs.horizon_long.horizon ? defs.horizon_long.horizon : "T02";
+
+    const base = aiWizard.state.base || ((d.bases || [])[0] && d.bases[0].id) || "B01";
+    const totalScore = Object.values(scored.goalWeights || {}).reduce((a, b) => a + b, 0) + Object.keys(intents || {}).length * 2;
+    const confidence = Math.max(0, Math.min(1, totalScore / 20));
+    return { base, horizon, goals, constraints, levers, confidence, rankedGoals, constraintsReason };
+  }
+
+  function aiPolicyFilterState(candidateState, intents) {
+    const policy = ((SRULES || {}).policy) || {};
+    const intentKeys = Object.keys(intents || {});
+    const out = {
+      base: candidateState.base,
+      horizon: candidateState.horizon,
+      goals: normArr(candidateState.goals),
+      constraints: normArr(candidateState.constraints),
+      levers: normArr(candidateState.levers),
+      confidence: candidateState.confidence,
+    };
+    const forbidMap = policy.forbid_objectives_without_intents || {};
+    out.goals = out.goals.filter((gid) => {
+      const needs = forbidMap[gid] || [];
+      return !needs.length || needs.some((it) => intentKeys.indexOf(it) >= 0);
+    });
+    if (!out.goals.length) out.goals = ["G03"];
+    if (policy.constraints_only_if_intent !== false && intentKeys.indexOf("constraints_requested") < 0) {
+      out.constraints = [];
+      out.constraintsReason = "constraints_only_if_intent";
+    }
+    const gates = policy.lever_gates || {};
+    out.levers = out.levers.filter((lid) => {
+      const g = gates[lid];
+      if (!g) return true;
+      const mustHave = g.must_have_intents || [];
+      return mustHave.every((it) => intentKeys.indexOf(it) >= 0);
+    });
+    return out;
+  }
+
+  async function aiMaybeGroqFallback(norm, localState) {
+    const flags = ((SRULES || {}).feature_flags) || {};
+    const enabled = !!flags.use_groq_fallback;
+    if (!enabled) return null;
+    const threshold = Number(flags.min_confidence_for_local_only || 0.62);
+    if ((localState && localState.confidence != null ? localState.confidence : 1) >= threshold) return null;
+    // Browser-safe placeholder: real key must be injected intentionally by integrator.
+    const key = window && window.__GROQ_API_KEY ? String(window.__GROQ_API_KEY) : "";
+    if (!key) return null;
+    try {
+      const payload = {
+        model: "llama-3.1-8b-instant",
+        temperature: 0,
+        messages: [
+          { role: "system", content: "Return JSON only: {goals:[],constraints:[],levers:[],horizon:\"Txx\"} using provided ids." },
+          { role: "user", content: "Input: " + norm.raw },
+        ],
+      };
+      const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) return null;
+      const j = await r.json();
+      const txt = (((j || {}).choices || [])[0] || {}).message ? (((j || {}).choices || [])[0] || {}).message.content : "";
+      const parsed = JSON.parse(txt || "{}");
+      if (!parsed || typeof parsed !== "object") return null;
+      return {
+        goals: normArr(parsed.goals),
+        constraints: normArr(parsed.constraints),
+        levers: normArr(parsed.levers),
+        horizon: parsed.horizon || localState.horizon,
+      };
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function aiBuildSemanticStateFromText(text) {
+    const norm = aiNormalizeTextRu(text);
+    const intents = aiExtractIntents(norm);
+    const scored = aiScoreCandidates(norm, intents);
+    const state = aiApplyPolicies(scored, intents);
+    return { norm, intents, scored, state };
+  }
+
+  function aiDetectDoFromText(text) {
+    if (!A || !A.actives) return null;
+    const raw = String(text || "").toLowerCase().replace(/ё/g, "е");
+    const norm = raw.replace(/[^a-zа-я0-9]+/gi, "");
+    const aliases = {
+      "газпромнефтьннг": ["ннг", "ноябрьскнефтегаз", "газпромнефтьннг"],
+      "газпромнефтьхантос": ["хантос", "газпромнефтьхантос"],
+    };
+    let best = null;
+    let bestScore = -1;
+    (A.actives || []).forEach((act) => {
+      const nm = String(act.name || "").toLowerCase().replace(/ё/g, "е");
+      const compact = nm.replace(/[^a-zа-я0-9]+/gi, "");
+      let score = 0;
+      if (raw.indexOf(nm) >= 0 || norm.indexOf(compact) >= 0) score += 8;
+      Object.keys(aliases).forEach((k) => {
+        if (compact.indexOf(k) >= 0) {
+          aliases[k].forEach((al) => {
+            if (raw.indexOf(al) >= 0 || norm.indexOf(al.replace(/[^a-zа-я0-9]+/gi, "")) >= 0) score += 4;
+          });
+        }
+      });
+      if (score > bestScore) { bestScore = score; best = act; }
+    });
+    return bestScore > 0 ? best : null;
+  }
+
+  function aiApplyDoSelectionFromText(text) {
+    const target = aiDetectDoFromText(text);
+    if (!target) return null;
+    const picker = $("entityPicker");
+    if (!picker) return target;
+    picker.querySelectorAll(".pick-whole").forEach((cb) => { cb.checked = false; });
+    picker.querySelectorAll(".pick-field").forEach((cb) => { cb.checked = false; });
+    const wrap = picker.querySelector('.entity-do[data-aid="' + target.id + '"]');
+    if (!wrap) return target;
+    const whole = wrap.querySelector(".pick-whole");
+    if (whole) whole.checked = true;
+    wrap.querySelectorAll(".pick-field").forEach((cb) => { cb.checked = true; });
+    return target;
+  }
+
+  function aiRenderSemanticExplain(_meta) {}
+
+  function aiRunSemanticRegression() {
+    const cases = (SREG && SREG.cases) || [];
+    const out = [];
+    cases.forEach((c, i) => {
+      const meta = aiBuildSemanticStateFromText(c.input || "");
+      const st = meta.state || {};
+      const exp = c.expect || {};
+      const ent = aiDetectDoFromText(c.input || "");
+      const okGoalsAny = !exp.goals_include_any || exp.goals_include_any.some((id) => (st.goals || []).indexOf(id) >= 0);
+      const okGoalsOneOf = !exp.goals_include_one_of || exp.goals_include_one_of.some((id) => (st.goals || []).indexOf(id) >= 0);
+      const okGoalsExclude = !exp.goals_exclude || exp.goals_exclude.every((id) => (st.goals || []).indexOf(id) < 0);
+      const okConsAny = !exp.constraints_include_any || exp.constraints_include_any.some((id) => (st.constraints || []).indexOf(id) >= 0);
+      const okConsExclude = !exp.constraints_exclude || exp.constraints_exclude.every((id) => (st.constraints || []).indexOf(id) < 0);
+      const okLevAny = !exp.levers_include_any || exp.levers_include_any.some((id) => (st.levers || []).indexOf(id) >= 0);
+      const okLevExclude = !exp.levers_exclude || exp.levers_exclude.every((id) => (st.levers || []).indexOf(id) < 0);
+      const okHor = !exp.horizon_prefer || st.horizon === exp.horizon_prefer;
+      const okEntity = !exp.entity_contains || (ent && String(ent.name || "").toUpperCase().indexOf(String(exp.entity_contains).toUpperCase()) >= 0);
+      const ok = okGoalsAny && okGoalsOneOf && okGoalsExclude && okConsAny && okConsExclude && okLevAny && okLevExclude && okHor && okEntity;
+      out.push({
+        idx: i + 1,
+        ok,
+        input: c.input,
+        goals: (st.goals || []).join(","),
+        constraints: (st.constraints || []).join(","),
+        levers: (st.levers || []).join(","),
+        horizon: st.horizon || "",
+        entity: ent ? ent.name : "",
+      });
+    });
+    const passed = out.filter((x) => x.ok).length;
+    console.table(out);
+    console.log("Semantic regression:", passed + "/" + out.length + " passed");
+    return out;
+  }
+
+  function aiIsDomainRelevant(text) {
+    const t = String(text || "").toLowerCase().replace(/ё/g, "е");
+    if (!t) return false;
+    const markers = [
+      "нефт", "добыч", "скваж", "fcf", "денеж", "прибыл", "opex", "capex", "затрат", "расход",
+      "сниж", "сниз",
+      "газпромнефт", "долг", "сценар", "месторож", "до ", "рычаг", "огранич",
+    ];
+    return markers.some((m) => t.indexOf(m) >= 0);
+  }
+
+  function aiClauseDomainCorpus() {
+    if (aiClauseCorpusCache) return aiClauseCorpusCache;
+    const d = (K && K.dimensions) || {};
+    const dh = (K && K.dimension_help) || {};
+    const parts = [];
+    (d.objectives || []).forEach((o) => {
+      parts.push(o.name || "");
+      if (dh.objectives && dh.objectives[o.id]) parts.push(dh.objectives[o.id]);
+    });
+    (d.constraints || []).forEach((c) => {
+      parts.push(c.name || "");
+      if (dh.constraints && dh.constraints[c.id]) parts.push(dh.constraints[c.id]);
+    });
+    (d.levers || []).forEach((l) => {
+      parts.push(l.name || "");
+      if (dh.levers && dh.levers[l.id]) parts.push(dh.levers[l.id]);
+    });
+    aiClauseCorpusCache = parts.join(" ").toLowerCase().replace(/ё/g, "е");
+    return aiClauseCorpusCache;
+  }
+
+  function aiSplitPromptPrimary(s) {
+    const out = [];
+    let cur = "";
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (c === ";" || c === "\n") {
+        if (cur.trim()) out.push(cur.trim());
+        cur = "";
+        continue;
+      }
+      if (c === ",") {
+        const prev = i > 0 ? s[i - 1] : "";
+        const next = i + 1 < s.length ? s[i + 1] : "";
+        if (/\d/.test(prev) && /\d/.test(next)) {
+          cur += c;
+          continue;
+        }
+        if (cur.trim()) out.push(cur.trim());
+        cur = "";
+        continue;
+      }
+      cur += c;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out.filter(Boolean);
+  }
+
+  function aiSplitByConjunctionI(s) {
+    return s.split(/\s+и\s+/i).map((x) => x.trim()).filter(Boolean);
+  }
+
+  function aiFragmentKeepable(frag) {
+    const f = String(frag || "").trim();
+    if (!f) return false;
+    if (aiIsDomainRelevant(f)) return true;
+    const norm = aiNormalizeTextRu(f);
+    if (!norm.stems.length) return false;
+    const corpus = aiClauseDomainCorpus();
+    let hits = 0;
+    norm.stems.forEach((w) => {
+      if (w.length >= 4 && corpus.indexOf(w) >= 0) hits++;
+    });
+    if (hits >= 2) return true;
+    const raw = norm.raw;
+    const lkw = (LEX && LEX.lever_keywords) || {};
+    const keys = Object.keys(lkw);
+    for (let i = 0; i < keys.length; i++) {
+      const kws = lkw[keys[i]] || [];
+      for (let j = 0; j < kws.length; j++) {
+        const kw = String(kws[j]).toLowerCase().replace(/ё/g, "е");
+        if (kw && raw.indexOf(kw) >= 0) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Убирает фрагменты без доменных маркеров (шум после запятой / в перечислениях через «и»). */
+  function aiFilterPromptClauses(text) {
+    const raw = String(text || "").trim();
+    if (!raw) return raw;
+    const primary = aiSplitPromptPrimary(raw);
+    if (!primary.length) return raw;
+    if (primary.length === 1) {
+      const subs = aiSplitByConjunctionI(primary[0]);
+      if (subs.length <= 1) return raw;
+      const kept = [subs[0]];
+      for (let i = 1; i < subs.length; i++) {
+        if (aiFragmentKeepable(subs[i])) kept.push(subs[i]);
+      }
+      const merged = kept.join(" и ");
+      if (merged.length < 12 && raw.length > 24) return raw;
+      if (kept.length === subs.length) return raw;
+      return merged;
+    }
+    const keptParts = [primary[0]];
+    for (let i = 1; i < primary.length; i++) {
+      const subs = aiSplitByConjunctionI(primary[i]);
+      const subKept = [];
+      for (let j = 0; j < subs.length; j++) {
+        if (aiFragmentKeepable(subs[j])) subKept.push(subs[j]);
+      }
+      if (subKept.length) keptParts.push(subKept.join(" и "));
+    }
+    const out = keptParts.join(", ");
+    if (out.length < 12 && raw.length > 24) return raw;
+    return out;
+  }
+
+  function aiApplyPresetState(preset) {
+    if (!preset) return;
+    const s = preset.sets || {};
+    aiWizard.state.base = normArr(s.bases)[0] || aiWizard.state.base;
+    aiWizard.state.horizon = normArr(s.horizons)[0] || aiWizard.state.horizon;
+    aiWizard.state.goals = normArr(s.objectives);
+    aiWizard.state.constraints = normArr(s.constraints);
+    aiWizard.state.levers = normArr(s.levers);
+    aiWizard.state.objectiveTargets = {};
+    aiWizard.state.constraintParams = {};
+    aiWizard.done = { base: true, horizon: true, goals: true, constraints: true, levers: true };
+    aiGotoStep(aiWizard.current);
+    aiRenderStepChips();
+  }
+
+  function aiApplySemanticState(st) {
+    if (!st) return;
+    aiWizard.state.base = st.base || aiWizard.state.base;
+    aiWizard.state.horizon = st.horizon || aiWizard.state.horizon;
+    aiWizard.state.goals = st.goals || [];
+    aiWizard.state.constraints = st.constraints || [];
+    aiWizard.state.levers = st.levers || [];
+    aiWizard.state.objectiveTargets = {};
+    aiWizard.state.constraintParams = {};
+    aiWizard.done = { base: true, horizon: true, goals: true, constraints: true, levers: true };
+    aiGotoStep(aiWizard.current);
+    aiRenderStepChips();
+  }
+
+  function aiStartPromptTransform(userText) {
+    const out = $("aiPromptOut");
+    if (!out) return;
+    const clean = aiSentenceCase(userText);
+    if (!clean) return;
+    const low = String(clean).toLowerCase().replace(/ё/g, "е");
+    const afterSpeech = aiNormalizeCapexOpexFromSpeech(low);
+    const prettyClean = aiPrettifyCommasInRequest(afterSpeech);
+    const pipelineText = aiFilterPromptClauses(prettyClean);
+    const displayLine = aiSentenceCase(prettyClean);
+    aiTransformSeq += 1;
+    const seq = aiTransformSeq;
+    if (aiTransformProgressTimer) clearInterval(aiTransformProgressTimer);
+    if (aiTransformFinishTimer) clearTimeout(aiTransformFinishTimer);
+    let pct = 0;
+    const render = (done, transformedHtml) => {
+      aiSuppressPromptInput = true;
+      out.innerHTML =
+        '<span class="prompt-item">' + escapeHtml(displayLine) + "</span>" +
+        '<br><span class="ai-transforming' + (done ? " done" : "") + '">Преобразование промпта (' + pct + "%):</span>" +
+        (transformedHtml ? "<br>" + transformedHtml : "");
+      aiSuppressPromptInput = false;
+    };
+    render(false, "");
+
+    aiTransformProgressTimer = setInterval(() => {
+      if (seq !== aiTransformSeq) return;
+      if (pct < 96) pct = Math.min(96, pct + Math.floor(Math.random() * 9) + 3);
+      render(false, "");
+    }, 110);
+
+    const randomDelay = 850 + Math.floor(Math.random() * 700);
+    aiTransformFinishTimer = setTimeout(async () => {
+      if (seq !== aiTransformSeq) return;
+      if (!aiIsDomainRelevant(pipelineText)) {
+        if (aiTransformProgressTimer) clearInterval(aiTransformProgressTimer);
+        pct = 100;
+        render(true, '<span class="ai-out-of-domain-title">Ваш запрос вне предметной области оркестратора актива.</span><br><span class="prompt-item">Выберите один из пресетов выше/соберите запрос через конструктор или <span class="ai-out-of-domain-voice-hint">перезапишите голосовое сообщение с упором на нефтегазовый инжиниринг</span> (добыча нефти, увеличение прибыли, снижение затрат)</span>');
+        aiRenderSemanticExplain({
+          intents: {},
+          scored: { goalWeights: {}, leverWeights: {} },
+          state: { goals: [], constraints: [], levers: [], confidence: 0, constraintsReason: "out_of_domain" },
+          entity: null,
+        });
+        return;
+      }
+      const semanticMeta = aiBuildSemanticStateFromText(pipelineText);
+      const entity = aiApplyDoSelectionFromText(pipelineText);
+      let finalState = semanticMeta.state;
+      const groqState = await aiMaybeGroqFallback(semanticMeta.norm, semanticMeta.state);
+      if (groqState) {
+        finalState = aiPolicyFilterState({
+          base: semanticMeta.state.base,
+          horizon: groqState.horizon || semanticMeta.state.horizon,
+          goals: groqState.goals && groqState.goals.length ? groqState.goals : semanticMeta.state.goals,
+          constraints: groqState.constraints || semanticMeta.state.constraints,
+          levers: groqState.levers || semanticMeta.state.levers,
+          confidence: semanticMeta.state.confidence,
+        }, semanticMeta.intents);
+      }
+      aiApplySemanticState(finalState);
+      aiRenderSemanticExplain({ intents: semanticMeta.intents, scored: semanticMeta.scored, state: finalState, entity });
+      const transformed = buildHumanPromptHtmlAi();
+      if (aiTransformProgressTimer) clearInterval(aiTransformProgressTimer);
+      pct = 100;
+      render(true, transformed);
+    }, randomDelay);
+  }
+
+  function initAiAssistant() {
+    aiRenderStepChips();
+    aiGotoStep(0);
+
+    const next = $("aiNextStep");
+    const prev = $("aiPrevStep");
+    const confirm = $("aiConfirmStep");
+    if (next) next.addEventListener("click", () => aiGotoStep(Math.min(aiWizard.current + 1, aiConfirmedStepCount())));
+    if (prev) prev.addEventListener("click", () => aiGotoStep(Math.max(aiWizard.current - 1, 0)));
+    if (confirm) {
+      confirm.addEventListener("click", () => {
+        aiMarkStepDone(aiWizard.current);
+        aiGotoStep(Math.min(aiWizard.current + 1, aiWizard.steps.length - 1));
+      });
+    }
+
+    const mic = $("aiMicBtn");
+    const aiOut = $("aiPromptOut");
+    if (mic && aiOut) {
+      const aiMicResetIdle = () => {
+        aiSpeechSid++;
+        aiSpeechRecording = false;
+        mic.classList.remove("ai-mic-recording");
+        mic.classList.remove("ai-mic-recorded");
+        mic.title = "Голосовой ввод";
+      };
+      mic.addEventListener("click", () => {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+          setStatus("Голосовой ввод не поддерживается в этом браузере.", false);
+          return;
+        }
+        if (aiSpeechRecording && aiSpeechRec) {
+          aiSpeechManualStop = true;
+          aiSpeechRecording = false;
+          aiSpeechRec.stop();
+          return;
+        }
+        aiSpeechManualStop = false;
+        aiSpeechTranscript = "";
+        aiSpeechListenStarted = false;
+        aiSpeechBogusEndRetries = 0;
+        const sid = ++aiSpeechSid;
+        aiSpeechRec = new SR();
+        aiSpeechRec.lang = "ru-RU";
+        aiSpeechRec.interimResults = true;
+        aiSpeechRec.continuous = true;
+        aiSpeechRec.maxAlternatives = 1;
+        aiSpeechRec.onresult = (ev) => {
+          if (sid !== aiSpeechSid) return;
+          const parts = [];
+          for (let i = 0; i < ev.results.length; i++) {
+            const r = ev.results[i];
+            if (r && r[0] && r[0].transcript) parts.push(r[0].transcript);
+          }
+          aiSpeechTranscript = parts.join(" ").replace(/\s+/g, " ").trim();
+        };
+        aiSpeechRec.onstart = () => {
+          if (sid !== aiSpeechSid) return;
+          aiSpeechListenStarted = true;
+        };
+        aiSpeechRec.onerror = () => {
+          if (sid !== aiSpeechSid) return;
+          if (aiSpeechListenStarted) return;
+          aiMicResetIdle();
+        };
+        aiSpeechRec.onend = () => {
+          if (sid !== aiSpeechSid) return;
+          if (!aiSpeechListenStarted && aiSpeechBogusEndRetries < 5) {
+            aiSpeechBogusEndRetries++;
+            setTimeout(() => {
+              if (sid !== aiSpeechSid || !aiSpeechRec) return;
+              try {
+                aiSpeechRec.start();
+              } catch (_e) {
+                aiMicResetIdle();
+              }
+            }, 140);
+            return;
+          }
+          if (!aiSpeechListenStarted) {
+            aiMicResetIdle();
+            return;
+          }
+          aiSpeechRecording = false;
+          mic.classList.remove("ai-mic-recording");
+          mic.classList.add("ai-mic-recorded");
+          mic.title = "Записано";
+          aiSpeechSid++;
+          if (aiSpeechTranscript.trim()) aiStartPromptTransform(aiSpeechTranscript.trim());
+        };
+        aiSpeechRecording = true;
+        mic.classList.remove("ai-mic-recorded");
+        mic.classList.add("ai-mic-recording");
+        mic.title = "Идёт запись. Нажмите ещё раз, чтобы остановить";
+        try {
+          aiSpeechRec.start();
+        } catch (_e) {
+          aiMicResetIdle();
+        }
+      });
+      aiOut.addEventListener("input", () => {
+        if (aiSuppressPromptInput) return;
+        const txt = ((aiOut.innerText || "").split(/\r?\n/)[0] || "").trim();
+        if (!txt) return;
+        if (aiTransformDebounce) clearTimeout(aiTransformDebounce);
+        aiTransformDebounce = setTimeout(() => aiStartPromptTransform(txt), AI_PROMPT_INPUT_DEBOUNCE_MS);
+      });
+    }
+
+    const rnd = $("aiRandomPrompt");
+    if (rnd) rnd.addEventListener("click", () => {
+      const d = (K && K.dimensions) || {};
+      const pick = (arr) => (arr && arr.length ? arr[Math.floor(Math.random() * arr.length)] : null);
+      const base = pick(d.bases || []);
+      const hor = pick(d.horizons || []);
+      aiWizard.state.base = base ? base.id : "";
+      aiWizard.state.horizon = hor ? hor.id : "";
+      aiWizard.state.goals = (d.objectives || []).filter(() => Math.random() < 0.25).map((x) => x.id).slice(0, 3);
+      aiWizard.state.constraints = (d.constraints || []).filter(() => Math.random() < 0.2).map((x) => x.id).slice(0, 3);
+      aiWizard.state.levers = (d.levers || []).filter(() => Math.random() < 0.2).map((x) => x.id).slice(0, 3);
+      aiWizard.state.objectiveTargets = {};
+      aiWizard.state.constraintParams = {};
+      aiWizard.done = { base: true, horizon: true, goals: true, constraints: true, levers: true };
+      aiGotoStep(aiWizard.current);
+      aiRefreshProgressivePrompt();
+      aiRenderStepChips();
+    });
+
+    const resetBtn = $("aiResetBtn");
+    if (resetBtn) resetBtn.addEventListener("click", () => {
+      aiWizard.done = {};
+      aiWizard.state = { base: "", horizon: "", goals: [], constraints: [], levers: [], objectiveTargets: {}, constraintParams: {} };
+      aiGotoStep(0);
+      aiRenderStepChips();
+      aiRefreshProgressivePrompt();
+    });
+
+    const approve = $("aiApproveBtn");
+    if (approve) approve.addEventListener("click", () => {
+      setStatus("Промпт согласован.", true);
+    });
+  }
+
+  /** По каждому ДО: null | { mode: 'whole'|'partial', fieldNames: string[] } */
+  function getPickerStatePerDo() {
+    const out = {};
+    (A.actives || []).forEach((act) => {
+      const aid = act.id;
+      const fields = act.fields || [];
+      const wholeEl = document.querySelector('#entityPicker .pick-whole[data-aid="' + aid + '"]');
+      const wholeOn = !!(wholeEl && wholeEl.checked);
+      const checkedFields = Array.from(
+        document.querySelectorAll('#entityPicker .pick-field[data-aid="' + aid + '"]:checked')
+      ).map((cb) => ({
+        fid: cb.getAttribute("data-fid"),
+        fname: (cb.getAttribute("data-fname") || "").trim(),
+      }));
+      if (!wholeOn && checkedFields.length === 0) {
+        out[aid] = null;
+        return;
+      }
+      const checkedIds = new Set(checkedFields.map((c) => c.fid));
+      const isWhole =
+        wholeOn &&
+        (fields.length === 0 ||
+          (checkedFields.length === fields.length &&
+            fields.length > 0 &&
+            fields.every((f) => checkedIds.has(f.id))));
+      const fieldNames =
+        isWhole ? fields.map((f) => f.name) : checkedFields.map((c) => c.fname).filter(Boolean);
+      out[aid] = { mode: isWhole ? "whole" : "partial", fieldNames };
+    });
+    return out;
+  }
+
+  /** Первая фраза промпта про объект (без «.» в конце), варианты по числу ДО и режиму. */
+  function buildEntityOpeningSentence() {
+    if (!A || !A.actives) return "Сформируй сценарий (загрузите активы)";
+    const per = getPickerStatePerDo();
+    const active = A.actives.filter((act) => per[act.id]);
+    if (!active.length) return "Сформируй сценарий (отметьте «Весь ДО» или месторождения)";
+
+    if (active.length === 1) {
+      const act = active[0];
+      const st = per[act.id];
+      if (st.mode === "whole") {
+        return "Сформируй сценарий для ДО «" + act.name + "»";
+      }
+      const names = st.fieldNames;
+      if (names.length === 1) {
+        return "Сформируй сценарий для месторождения «" + names[0] + "» ДО «" + act.name + "»";
+      }
+      return (
+        "Сформируй сценарий для месторождений " +
+        names.map((n) => "«" + n + "»").join(", ") +
+        " ДО «" +
+        act.name +
+        "»"
+      );
+    }
+
+    const doQuoted = active.map((a) => "«" + a.name + "»").join(", ");
+    const allFields = [];
+    active.forEach((act) => {
+      (per[act.id].fieldNames || []).forEach((n) => {
+        if (n && allFields.indexOf(n) === -1) allFields.push(n);
+      });
+    });
+    const fieldPart =
+      allFields.length === 0
+        ? "без явного перечня месторождений"
+        : allFields.map((n) => "«" + n + "»").join(", ");
+    return (
+      "Сформируй сценарий для объектов (месторождения: " +
+      fieldPart +
+      "), принадлежащих совместному предприятию следующих ДО: " +
+      doQuoted
+    );
+  }
+
+  function buildHumanPrompt() {
+    return promptPlainFromHtml(buildHumanPromptHtml());
+  }
+
+  function entityNaturalForCase() {
+    if (!A || !A.actives) return "выбранного актива";
+    const s = buildEntityOpeningSentence();
+    const m = s.match(/^Сформируй сценарий для\s+(.+)$/);
+    return m ? m[1] : s.replace(/^Сформируй сценарий\s*/i, "").trim() || "выбранного актива";
+  }
+
+  initAiAssistant();
+  if (typeof window !== "undefined") window.aiRunSemanticRegression = aiRunSemanticRegression;
+
+  $("btnCopyHuman").addEventListener("click", () => {
+    navigator.clipboard.writeText(getPromptText() || buildHumanPrompt()).catch(() => {});
+  });
+
+  $("btnCopyMermaid").addEventListener("click", () => {
+    const t = $("mermaidCode");
+    navigator.clipboard.writeText(t ? t.textContent || "" : "").catch(() => {});
+  });
+})();
+  </script>
+</body>
+</html>

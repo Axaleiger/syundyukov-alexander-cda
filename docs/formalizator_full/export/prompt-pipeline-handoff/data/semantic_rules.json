@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "version": 1,
+    "description": "Declarative semantic intents and policy gates for AI prompt conversion."
+  },
+  "feature_flags": {
+    "use_groq_fallback": false,
+    "min_confidence_for_local_only": 0.62
+  },
+  "normalization": {
+    "min_token_len": 2,
+    "stop_words": ["с", "и", "или", "по", "для", "который", "будет", "надо", "чтобы", "как", "на", "в", "из", "а", "но", "то", "это"]
+  },
+  "intents": {
+    "production_growth": {
+      "triggers": ["добыч", "дебит", "нефт", "фонд скваж", "увелич", "повыш"],
+      "objective_weights": { "G03": 9 },
+      "default_levers": ["L01", "L02"]
+    },
+    "reserves_extraction_focus": {
+      "triggers": ["запас", "извлеч", "темп отбора"],
+      "objective_weights": { "G04": 8 }
+    },
+    "resource_efficiency": {
+      "triggers": ["эконом", "ресурс", "бережлив", "эффектив", "сниз", "сниж", "расход", "затрат", "себестоим", "opex", "опекс"],
+      "objective_weights": { "G05": 8, "G06": 5, "G09": 4 },
+      "default_levers": ["L07", "L20"]
+    },
+    "cashflow_focus": {
+      "triggers": ["fcf", "денеж", "кэш", "cash", "поток"],
+      "objective_weights": { "G01": 10, "G10": 2 },
+      "allow_objectives": ["G01", "G10", "G02"]
+    },
+    "capex_focus": {
+      "triggers": ["capex", "капекс", "капикс", "инвест", "капитал", "ребаланс"],
+      "objective_weights": { "G06": 9, "G02": 3 }
+    },
+    "risk_resilience": {
+      "triggers": ["устойчив", "шок", "санкц", "неопредел", "риск", "волатиль"],
+      "objective_weights": { "G07": 8, "G17": 6, "G20": 5, "G21": 4, "G22": 4 }
+    },
+    "constraints_requested": {
+      "triggers": [
+        "огранич",
+        "лимит",
+        "потолок",
+        "не более",
+        "не выше",
+        "не ниже",
+        "без нового",
+        "без бурен",
+        "без новых скважин",
+        "новых скважин",
+        "не бурить"
+      ]
+    },
+    "method_requested": {
+      "triggers": ["рычаг", "через", "за счет", "мероприят", "инструмент", "за счёт"]
+    },
+    "price_currency": {
+      "triggers": ["цена", "курс", "валют", "брент", "usd", "eur", "спред", "хедж"]
+    },
+    "horizon_short": {
+      "triggers": ["квартал", "кварталь", "недел", "месяц", "оператив"],
+      "horizon": "T05"
+    },
+    "horizon_long": {
+      "triggers": ["долгосроч", "стратег", "3-5", "3–5", "5 лет"],
+      "horizon": "T02"
+    }
+  },
+  "policy": {
+    "max_objectives": 3,
+    "max_constraints": 3,
+    "max_levers": 4,
+    "objective_score_threshold": 4,
+    "constraint_score_threshold": 5,
+    "lever_score_threshold": 3,
+    "min_margin_to_next_objective": 12,
+    "constraints_only_if_intent": true,
+    "dimension_help_weight": 0.35,
+    "name_weight": 1.0,
+    "intent_weight_multiplier": 1.0,
+    "forbid_objectives_without_intents": {
+      "G03": ["production_growth"],
+      "G04": ["reserves_extraction_focus"]
+    },
+    "constraint_whitelist_without_intent": [],
+    "lever_gates": {
+      "L11": {
+        "must_have_intents": ["price_currency"],
+        "reason": "Price hedge requires explicit price/currency intent."
+      },
+      "L13": {
+        "must_have_intents": ["tax"],
+        "reason": "Tax planning only for tax intent."
+      },
+      "L15": {
+        "must_have_intents": ["cashflow_focus", "constraints_requested"],
+        "reason": "Debt structure should be explicit in request."
+      }
+    }
+  }
+}
