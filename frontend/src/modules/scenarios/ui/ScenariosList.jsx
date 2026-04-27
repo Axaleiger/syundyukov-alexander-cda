@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { useRepositories } from '../../../app/providers/DataRepositoriesProvider'
 import { useScenariosData } from '../model/useScenariosData'
 import { API_V1_PREFIX, apiFetch } from "../../../core/data/repositories/http/httpClient.js"
