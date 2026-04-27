@@ -170,11 +170,6 @@ def create_scenario(body: ScenarioCreate, db: Session = Depends(get_db)):
             raise HTTPException(400, "production stage list is empty")
         stage_id = first_stage.id
     asset_id = body.asset_id
-    if not asset_id and not (body.field_name or "").strip():
-        first_asset = db.query(Asset).order_by(Asset.display_name).first()
-        if not first_asset:
-            raise HTTPException(400, "asset list is empty")
-        asset_id = first_asset.id
     asset_id = _upsert_asset_for_scenario(
         db,
         asset_id=asset_id,

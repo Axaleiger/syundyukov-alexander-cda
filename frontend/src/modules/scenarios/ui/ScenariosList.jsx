@@ -104,7 +104,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
       name: row.name || "",
       authorName: row.author || "",
       fieldName: row.field === "—" ? "" : row.field || "",
-      doLabel: row.do || "",
+      doLabel: row.do === "—" ? "" : row.do || "",
     })
   }
 

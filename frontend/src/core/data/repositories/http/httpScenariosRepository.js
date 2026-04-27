@@ -5,13 +5,6 @@ import {
 } from "../../static/scenariosData.js"
 import { API_V1_PREFIX, apiFetch } from "./httpClient.js"
 
-/** Соответствие месторождения → ДО (как во фронтовых демо-данных). */
-const FIELD_TO_DO = {
-	Зимнее: "Газпромнефть-Хантос",
-	Новогоднее: "Газпромнефть-ННГ",
-	Аганское: "Газпромнефть-Мегион",
-}
-
 /**
  * @param {string} iso
  * @returns {string}
@@ -39,7 +32,7 @@ function mapScenarioRow(raw, stageIdToLabel, assetIdToAsset) {
 		? assetIdToAsset.get(String(raw.assetId))
 		: null
 	const field = asset?.displayName || "—"
-	const doLabel = asset?.doLabel || FIELD_TO_DO[field] || "—"
+	const doLabel = asset?.doLabel || "—"
 	const id = raw.externalCode || String(raw.id)
 
 	return {
