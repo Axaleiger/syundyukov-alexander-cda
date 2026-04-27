@@ -114,6 +114,19 @@
   color: var(--bpm-control-ghost-typo);
 }
 
+.bpm-header-save-btn {
+  margin-left: 6px;
+}
+
+.bpm-header-save-hint {
+  font-size: 11px;
+  color: var(--bpm-text-secondary);
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bpm-btn-back {
   width: 32px;
   height: 32px;

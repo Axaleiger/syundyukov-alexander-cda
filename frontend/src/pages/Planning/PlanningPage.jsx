@@ -504,27 +504,6 @@ export function PlanningPage() {
 					выберите другой сценарий.
 				</div>
 			)}
-			{showPlanningBoard && (
-				<div className={appLayoutStyles["bpm-save-bar"]}>
-					<button
-						type="button"
-						className={appLayoutStyles["bpm-save-button"]}
-						disabled={!canManualSave || boardSavePending || !boardDirty}
-						onClick={() => {
-							void flushBoardSaveRef.current()
-						}}
-					>
-						{boardSavePending ? "Сохранение..." : "СОХРАНИТЬ"}
-					</button>
-					<span className={appLayoutStyles["bpm-save-hint"]}>
-						{boardSaveError
-							? `Ошибка сохранения: ${boardSaveError}`
-							: boardDirty
-								? "Есть несохранённые изменения"
-								: "Все изменения сохранены"}
-					</span>
-				</div>
-			)}
 			{aiFromThinking && presetFromUrl && AI_PLANNING_BOARD_PRESETS[presetFromUrl] ? (
 				<div
 					className={appLayoutStyles["bpm-ai-agree-bar"]}
@@ -578,6 +557,18 @@ export function PlanningPage() {
 						onOpenPlanningWithScenario={handleOpenPlanningWithScenario}
 						bpmCommand={bpmCommand}
 						onBpmCommandConsumed={onBpmCommandConsumed}
+						onManualSave={() => {
+							void flushBoardSaveRef.current()
+						}}
+						manualSaveDisabled={!canManualSave || boardSavePending || !boardDirty}
+						manualSavePending={boardSavePending}
+						manualSaveHint={
+							boardSaveError
+								? `Ошибка сохранения: ${boardSaveError}`
+								: boardDirty
+									? "Есть несохранённые изменения"
+									: "Все изменения сохранены"
+						}
 						animateAiBoardReveal={Boolean(
 							aiFromThinking &&
 								presetFromUrl &&

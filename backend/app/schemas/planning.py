@@ -17,13 +17,13 @@ class PlanningBoardUpdateBody(BaseModel):
 
 
 class PlanningCaseCreateBody(BaseModel):
-    scenario_id: Optional[uuid.UUID] = Field(None, serialization_alias="scenarioId")
-    asset_id: uuid.UUID = Field(..., serialization_alias="assetId")
+    scenario_id: Optional[uuid.UUID] = Field(None, validation_alias="scenarioId")
+    asset_id: Optional[uuid.UUID] = Field(None, validation_alias="assetId")
     created_by_user_id: Optional[uuid.UUID] = Field(
-        None, serialization_alias="createdByUserId"
+        None, validation_alias="createdByUserId"
     )
     updated_by_user_id: Optional[uuid.UUID] = Field(
-        None, serialization_alias="updatedByUserId"
+        None, validation_alias="updatedByUserId"
     )
 
     model_config = {"populate_by_name": True}

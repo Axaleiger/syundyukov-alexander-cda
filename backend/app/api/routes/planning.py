@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.models.tables import PlanningCase, Scenario
+from app.models.tables import Asset, PlanningCase, Scenario
 from app.schemas.planning import (
     PlanningBoardUpdateBody,
     PlanningCaseCreateBody,
@@ -44,11 +44,21 @@ def list_cases(
 
 @router.post("/cases", response_model=PlanningCaseOut)
 def create_case(body: PlanningCaseCreateBody, db: Session = Depends(get_db)):
+    asset_id = body.asset_id
+    if not asset_id and body.scenario_id:
+        scenario = db.get(Scenario, body.scenario_id)
+        if scenario and scenario.asset_id:
+            asset_id = scenario.asset_id
+    if not asset_id:
+        first_asset = db.query(Asset).order_by(Asset.display_name).first()
+        if not first_asset:
+            raise HTTPException(400, "asset list is empty")
+        asset_id = first_asset.id
     now = datetime.now(timezone.utc)
     c = PlanningCase(
         id=uuid.uuid4(),
         scenario_id=body.scenario_id,
-        asset_id=body.asset_id,
+        asset_id=asset_id,
         created_by_user_id=body.created_by_user_id,
         updated_by_user_id=body.updated_by_user_id or body.created_by_user_id,
         data_source="api",

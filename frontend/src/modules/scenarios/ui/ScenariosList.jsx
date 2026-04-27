@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useMemo, useState } from "react"
 import { useRepositories } from '../../../app/providers/DataRepositoriesProvider'
 import { useScenariosData } from '../model/useScenariosData'
 import { API_V1_PREFIX, apiFetch } from "../../../core/data/repositories/http/httpClient.js"
@@ -28,19 +28,9 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const [scenarioSaveError, setScenarioSaveError] = useState(null)
   const [formMode, setFormMode] = useState(null) // 'create' | 'edit' | null
   const [editingRow, setEditingRow] = useState(null)
-  const [users, setUsers] = useState([])
-  const [assets, setAssets] = useState([])
-  const [stageOptions, setStageOptions] = useState([])
-  const [directionOptions, setDirectionOptions] = useState([])
-  const [lookupsLoading, setLookupsLoading] = useState(false)
-  const [lookupsError, setLookupsError] = useState(null)
   const [formData, setFormData] = useState({
     name: "",
-    status: "в работе",
-    productionStageId: "",
-    businessDirectionId: "",
-    assetId: "",
-    authorUserId: "",
+    authorName: "",
   })
 
   const [internalFilters, setInternalFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
@@ -78,46 +68,15 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const canPatchScenario = typeof scenariosRepo.patchScenario === 'function'
   const canCreateScenario = typeof scenariosRepo.createScenario === "function"
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setFormMode(null)
     setEditingRow(null)
     setScenarioSaveError(null)
     setFormData({
       name: "",
-      status: "в работе",
-      productionStageId: "",
-      businessDirectionId: "",
-      assetId: "",
-      authorUserId: "",
+      authorName: "",
     })
-  }, [])
-
-  const ensureLookups = useCallback(async () => {
-    if (lookupsLoading) return
-    setLookupsLoading(true)
-    setLookupsError(null)
-    try {
-      const [usersResp, assetsResp, stagesResp, directionsResp] = await Promise.all([
-        apiFetch(`${API_V1_PREFIX}/users?limit=200`),
-        apiFetch(`${API_V1_PREFIX}/assets`),
-        apiFetch(`${API_V1_PREFIX}/taxonomy/production-stages`),
-        apiFetch(`${API_V1_PREFIX}/taxonomy/business-directions`),
-      ])
-      setUsers(Array.isArray(usersResp) ? usersResp : [])
-      setAssets(Array.isArray(assetsResp) ? assetsResp : [])
-      setStageOptions(Array.isArray(stagesResp) ? stagesResp : [])
-      setDirectionOptions(Array.isArray(directionsResp) ? directionsResp : [])
-    } catch (e) {
-      setLookupsError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setLookupsLoading(false)
-    }
-  }, [lookupsLoading])
-
-  useEffect(() => {
-    if (!formMode) return
-    void ensureLookups()
-  }, [formMode, ensureLookups])
+  }
 
   const openCreateScenario = () => {
     if (!canCreateScenario) return
@@ -126,11 +85,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     setScenarioSaveError(null)
     setFormData({
       name: "",
-      status: "в работе",
-      productionStageId: stageOptions[0]?.id ? String(stageOptions[0].id) : "",
-      businessDirectionId: "",
-      assetId: assets[0]?.id ? String(assets[0].id) : "",
-      authorUserId: users[0]?.id ? String(users[0].id) : "",
+      authorName: "",
     })
   }
 
@@ -141,11 +96,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     setScenarioSaveError(null)
     setFormData({
       name: row.name || "",
-      status: row.status || "в работе",
-      productionStageId: row.productionStageId || "",
-      businessDirectionId: row.businessDirectionId || "",
-      assetId: row.assetId || "",
-      authorUserId: row.authorUserId || "",
+      authorName: row.author || "",
     })
   }
 
@@ -156,22 +107,9 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
       setScenarioSaveError("Введите название сценария")
       return
     }
-    if (!formData.productionStageId) {
-      setScenarioSaveError("Выберите этап производства")
-      return
-    }
-    if (!formData.assetId) {
-      setScenarioSaveError("Выберите месторождение")
-      return
-    }
     const payload = {
       name: trimmedName,
-      status: formData.status?.trim() || "в работе",
-      productionStageId: formData.productionStageId || null,
-      businessDirectionId: formData.businessDirectionId || null,
-      assetId: formData.assetId || null,
-      authorUserId: formData.authorUserId || null,
-      isApproved: false,
+      authorName: formData.authorName.trim() || null,
     }
     setScenarioSaveError(null)
     setSavingScenarioId(formMode === "edit" ? editingRow?.scenarioId : "new")
@@ -185,9 +123,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               scenarioId: createdScenarioId,
-              assetId: formData.assetId,
-              createdByUserId: formData.authorUserId || null,
-              updatedByUserId: formData.authorUserId || null,
+              assetId: created.assetId || null,
             }),
           })
           onScenarioClick?.({
@@ -343,11 +279,6 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
             <h3 className="scenarios-modal-title">
               {formMode === "create" ? "Создать сценарий" : "Редактировать сценарий"}
             </h3>
-            {lookupsError && (
-              <div className="scenarios-api-error" role="alert">
-                Ошибка загрузки справочников: {lookupsError}
-              </div>
-            )}
             <label className="scenarios-form-row">
               <span>Название</span>
               <input
@@ -359,79 +290,13 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
             </label>
             <label className="scenarios-form-row">
               <span>Автор</span>
-              <select
-                value={formData.authorUserId}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, authorUserId: e.target.value }))
-                }
-                disabled={lookupsLoading}
-              >
-                <option value="">Не выбран</option>
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="scenarios-form-row">
-              <span>Месторождение</span>
-              <select
-                value={formData.assetId}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, assetId: e.target.value }))
-                }
-                disabled={lookupsLoading}
-              >
-                <option value="">Выберите месторождение</option>
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="scenarios-form-row">
-              <span>Этап</span>
-              <select
-                value={formData.productionStageId}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, productionStageId: e.target.value }))
-                }
-                disabled={lookupsLoading}
-              >
-                <option value="">Выберите этап</option>
-                {stageOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.labelFull}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="scenarios-form-row">
-              <span>Направление</span>
-              <select
-                value={formData.businessDirectionId}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, businessDirectionId: e.target.value }))
-                }
-                disabled={lookupsLoading}
-              >
-                <option value="">Не выбрано</option>
-                {directionOptions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="scenarios-form-row">
-              <span>Статус</span>
               <input
                 type="text"
-                value={formData.status}
-                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-                placeholder="в работе"
+                value={formData.authorName}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, authorName: e.target.value }))
+                }
+                placeholder="Введите автора вручную"
               />
             </label>
             {scenarioSaveError && (

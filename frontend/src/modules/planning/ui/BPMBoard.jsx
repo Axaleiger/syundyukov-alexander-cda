@@ -425,7 +425,26 @@ function lessSaturated(hex, factor = 0.5) {
   return `hsl(${h}, ${Math.round(s * factor)}%, ${l}%)`
 }
 
-function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioName = 'Управление добычей с учетом ближайшего бурения', selectedAssetName, highlightCardName, onClose, onBoardChange, aiMode: aiModeProp, setAiMode: setAiModeProp, onOpenPlanningWithScenario, bpmCommand, onBpmCommandConsumed, animateAiBoardReveal = false }) {
+function BPMBoard({
+  initialStages,
+  initialTasks,
+  initialConnections,
+  scenarioName = 'Управление добычей с учетом ближайшего бурения',
+  selectedAssetName,
+  highlightCardName,
+  onClose,
+  onBoardChange,
+  aiMode: aiModeProp,
+  setAiMode: setAiModeProp,
+  onOpenPlanningWithScenario,
+  bpmCommand,
+  onBpmCommandConsumed,
+  onManualSave,
+  manualSaveDisabled = true,
+  manualSavePending = false,
+  manualSaveHint = '',
+  animateAiBoardReveal = false,
+}) {
   const isCreatePlanningCase = bpmCommand?.scenarioId === 'createPlanningCase'
   const [stages, setStages] = useState(() => {
     if (isCreatePlanningCase) return [...DEFAULT_CREATE_STAGES]
@@ -1204,6 +1223,17 @@ function BPMBoard({ initialStages, initialTasks, initialConnections, scenarioNam
                   </button>
                 )}
                 <h2>{scenarioName}{selectedAssetName ? ` — ${selectedAssetName}` : ''}</h2>
+                <button
+                  type="button"
+                  className="bpm-btn bpm-header-save-btn"
+                  disabled={manualSaveDisabled}
+                  onClick={() => {
+                    if (typeof onManualSave === 'function') onManualSave()
+                  }}
+                >
+                  {manualSavePending ? 'Сохранение...' : 'СОХРАНИТЬ'}
+                </button>
+                {manualSaveHint ? <span className="bpm-header-save-hint">{manualSaveHint}</span> : null}
               </div>
               <div className="bpm-header-actions">
                 <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>

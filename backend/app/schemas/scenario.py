@@ -13,12 +13,15 @@ class ScenarioCreate(BaseModel):
     name: str
     external_code: Optional[str] = Field(None, validation_alias="externalCode")
     status: str = "в работе"
-    production_stage_id: uuid.UUID = Field(..., validation_alias="productionStageId")
+    production_stage_id: Optional[uuid.UUID] = Field(
+        None, validation_alias="productionStageId"
+    )
     business_direction_id: Optional[uuid.UUID] = Field(
         None, validation_alias="businessDirectionId"
     )
     asset_id: Optional[uuid.UUID] = Field(None, validation_alias="assetId")
     author_user_id: Optional[uuid.UUID] = Field(None, validation_alias="authorUserId")
+    author_name: Optional[str] = Field(None, validation_alias="authorName")
     is_approved: bool = Field(False, validation_alias="isApproved")
     calculation_duration_text: Optional[str] = Field(
         None, validation_alias="calculationDurationText"
@@ -40,6 +43,8 @@ class ScenarioUpdate(BaseModel):
         None, validation_alias="businessDirectionId"
     )
     asset_id: Optional[uuid.UUID] = Field(None, validation_alias="assetId")
+    author_user_id: Optional[uuid.UUID] = Field(None, validation_alias="authorUserId")
+    author_name: Optional[str] = Field(None, validation_alias="authorName")
     is_approved: Optional[bool] = Field(None, validation_alias="isApproved")
     calculation_duration_text: Optional[str] = Field(
         None, validation_alias="calculationDurationText"

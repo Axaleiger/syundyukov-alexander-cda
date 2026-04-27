@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.models.tables import AppUser, BusinessDirection, Scenario
+from app.models.tables import AppUser, Asset, BusinessDirection, ProductionStage, Scenario
 from app.schemas.scenario import (
     ScenarioCreate,
     ScenarioListItem,
@@ -15,6 +15,31 @@ from app.schemas.scenario import (
 )
 
 router = APIRouter()
+
+
+def _resolve_author_user_id(
+    db: Session, author_user_id: Optional[uuid.UUID], author_name: Optional[str]
+) -> Optional[uuid.UUID]:
+    if author_user_id:
+        return author_user_id
+    author_name = (author_name or "").strip()
+    if not author_name:
+        return None
+    existing = (
+        db.query(AppUser)
+        .filter(AppUser.display_name == author_name, AppUser.is_active.is_(True))
+        .first()
+    )
+    if existing:
+        return existing.id
+    user = AppUser(
+        id=uuid.uuid4(),
+        display_name=author_name,
+        is_active=True,
+    )
+    db.add(user)
+    db.flush()
+    return user.id
 
 
 def _to_list_item(
@@ -96,15 +121,28 @@ def get_scenario(scenario_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.post("", response_model=ScenarioOut)
 def create_scenario(body: ScenarioCreate, db: Session = Depends(get_db)):
     now = datetime.now(timezone.utc)
+    stage_id = body.production_stage_id
+    if not stage_id:
+        first_stage = db.query(ProductionStage).order_by(ProductionStage.sort_order).first()
+        if not first_stage:
+            raise HTTPException(400, "production stage list is empty")
+        stage_id = first_stage.id
+    asset_id = body.asset_id
+    if not asset_id:
+        first_asset = db.query(Asset).order_by(Asset.display_name).first()
+        if not first_asset:
+            raise HTTPException(400, "asset list is empty")
+        asset_id = first_asset.id
+    author_user_id = _resolve_author_user_id(db, body.author_user_id, body.author_name)
     s = Scenario(
         id=uuid.uuid4(),
         external_code=body.external_code,
         name=body.name.strip(),
         status=body.status.strip() if body.status else "в работе",
-        production_stage_id=body.production_stage_id,
+        production_stage_id=stage_id,
         business_direction_id=body.business_direction_id,
-        asset_id=body.asset_id,
-        author_user_id=body.author_user_id,
+        asset_id=asset_id,
+        author_user_id=author_user_id,
         is_approved=bool(body.is_approved),
         calculation_duration_text=body.calculation_duration_text,
         created_at=now,
@@ -129,6 +167,12 @@ def patch_scenario(
     data = body.model_dump(exclude_unset=True)
     if not data:
         return _scenario_to_out(s, db)
+    if "author_name" in data:
+        s.author_user_id = _resolve_author_user_id(
+            db, data.get("author_user_id"), data.get("author_name")
+        )
+        data.pop("author_name", None)
+        data.pop("author_user_id", None)
     for k, v in data.items():
         setattr(s, k, v)
     s.updated_at = datetime.now(timezone.utc)
