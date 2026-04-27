@@ -26,7 +26,7 @@ function formatDateRu(iso) {
 /**
  * @param {object} raw
  * @param {Map<string, string>} stageIdToLabel
- * @param {Map<string, { displayName: string }>} assetIdToAsset
+ * @param {Map<string, { displayName: string, doLabel?: string }>} assetIdToAsset
  * @returns {import('../contracts/repositoryContracts.js').ScenarioRow}
  */
 function mapScenarioRow(raw, stageIdToLabel, assetIdToAsset) {
@@ -39,7 +39,7 @@ function mapScenarioRow(raw, stageIdToLabel, assetIdToAsset) {
 		? assetIdToAsset.get(String(raw.assetId))
 		: null
 	const field = asset?.displayName || "—"
-	const doLabel = FIELD_TO_DO[field] || "—"
+	const doLabel = asset?.doLabel || FIELD_TO_DO[field] || "—"
 	const id = raw.externalCode || String(raw.id)
 
 	return {
@@ -142,7 +142,10 @@ export function createHttpScenariosRepository() {
 			const assetIdToAsset = new Map(
 				assets.map((a) => [
 					String(a.id),
-					{ displayName: a.displayName },
+					{
+						displayName: a.displayName,
+						doLabel: a?.metadata?.doLabel || undefined,
+					},
 				]),
 			)
 

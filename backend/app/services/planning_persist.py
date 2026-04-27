@@ -22,8 +22,18 @@ from app.models.tables import (
 def _user_id_by_display_name(session: Session, name: Optional[str]) -> Optional[uuid.UUID]:
     if not name or not str(name).strip():
         return None
-    u = session.query(AppUser).filter(AppUser.display_name == str(name).strip()).one_or_none()
-    return u.id if u else None
+    clean = str(name).strip()
+    u = session.query(AppUser).filter(AppUser.display_name == clean).one_or_none()
+    if u:
+        return u.id
+    created = AppUser(
+        id=uuid.uuid4(),
+        display_name=clean,
+        is_active=True,
+    )
+    session.add(created)
+    session.flush()
+    return created.id
 
 
 def _parse_deadline(v: Any) -> Optional[date]:

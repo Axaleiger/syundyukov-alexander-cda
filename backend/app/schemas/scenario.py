@@ -20,6 +20,8 @@ class ScenarioCreate(BaseModel):
         None, validation_alias="businessDirectionId"
     )
     asset_id: Optional[uuid.UUID] = Field(None, validation_alias="assetId")
+    field_name: Optional[str] = Field(None, validation_alias="fieldName")
+    do_label: Optional[str] = Field(None, validation_alias="doLabel")
     author_user_id: Optional[uuid.UUID] = Field(None, validation_alias="authorUserId")
     author_name: Optional[str] = Field(None, validation_alias="authorName")
     is_approved: bool = Field(False, validation_alias="isApproved")
@@ -43,6 +45,8 @@ class ScenarioUpdate(BaseModel):
         None, validation_alias="businessDirectionId"
     )
     asset_id: Optional[uuid.UUID] = Field(None, validation_alias="assetId")
+    field_name: Optional[str] = Field(None, validation_alias="fieldName")
+    do_label: Optional[str] = Field(None, validation_alias="doLabel")
     author_user_id: Optional[uuid.UUID] = Field(None, validation_alias="authorUserId")
     author_name: Optional[str] = Field(None, validation_alias="authorName")
     is_approved: Optional[bool] = Field(None, validation_alias="isApproved")

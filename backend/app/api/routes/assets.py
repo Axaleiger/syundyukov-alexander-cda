@@ -18,6 +18,7 @@ def list_assets(db: Session = Depends(get_db)):
             "displayName": a.display_name,
             "assetType": a.asset_type,
             "orgUnitId": str(a.org_unit_id) if a.org_unit_id else None,
+            "metadata": a.metadata_ or {},
             "dataSource": "demo",
         }
         for a in rows

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -47,6 +48,40 @@ def _resolve_author_user_id(
     db.add(user)
     db.flush()
     return user.id
+
+
+def _upsert_asset_for_scenario(
+    db: Session,
+    *,
+    asset_id: Optional[uuid.UUID],
+    field_name: Optional[str],
+    do_label: Optional[str],
+) -> Optional[uuid.UUID]:
+    """Подбирает/создаёт asset по полю fieldName и сохраняет doLabel в metadata."""
+    resolved_asset_id = asset_id
+    field_name = (field_name or "").strip()
+    do_label = (do_label or "").strip()
+
+    asset = db.get(Asset, resolved_asset_id) if resolved_asset_id else None
+    if not asset and field_name:
+        asset = db.query(Asset).filter(Asset.display_name == field_name).first()
+    if not asset and field_name:
+        max_sort = db.query(func.max(Asset.map_sort_order)).scalar() or 0
+        asset = Asset(
+            id=uuid.uuid4(),
+            display_name=field_name,
+            map_sort_order=int(max_sort) + 1,
+            metadata_={},
+        )
+        db.add(asset)
+        db.flush()
+    if asset:
+        meta = dict(asset.metadata_ or {})
+        if do_label:
+            meta["doLabel"] = do_label
+        asset.metadata_ = meta
+        return asset.id
+    return resolved_asset_id
 
 
 def _to_list_item(
@@ -135,11 +170,17 @@ def create_scenario(body: ScenarioCreate, db: Session = Depends(get_db)):
             raise HTTPException(400, "production stage list is empty")
         stage_id = first_stage.id
     asset_id = body.asset_id
-    if not asset_id:
+    if not asset_id and not (body.field_name or "").strip():
         first_asset = db.query(Asset).order_by(Asset.display_name).first()
         if not first_asset:
             raise HTTPException(400, "asset list is empty")
         asset_id = first_asset.id
+    asset_id = _upsert_asset_for_scenario(
+        db,
+        asset_id=asset_id,
+        field_name=body.field_name,
+        do_label=body.do_label,
+    )
     author_user_id = _resolve_author_user_id(db, body.author_user_id, body.author_name)
     s = Scenario(
         id=uuid.uuid4(),
@@ -180,6 +221,16 @@ def patch_scenario(
         )
         data.pop("author_name", None)
         data.pop("author_user_id", None)
+    if "field_name" in data or "do_label" in data or "asset_id" in data:
+        s.asset_id = _upsert_asset_for_scenario(
+            db,
+            asset_id=data.get("asset_id", s.asset_id),
+            field_name=data.get("field_name"),
+            do_label=data.get("do_label"),
+        )
+        data.pop("field_name", None)
+        data.pop("do_label", None)
+        data.pop("asset_id", None)
     for k, v in data.items():
         setattr(s, k, v)
     s.updated_at = datetime.now(timezone.utc)

@@ -5,12 +5,6 @@ import { API_V1_PREFIX, apiFetch } from "../../../core/data/repositories/http/ht
 import './ScenariosList.css'
 
 const SUBCATEGORY_TITLES = ['Название подкатегории', 'Название подкатегории', 'Название подкатегории', 'Название подкатегории']
-const FIELD_TO_DO = {
-  Зимнее: "Газпромнефть-Хантос",
-  Новогоднее: "Газпромнефть-ННГ",
-  Аганское: "Газпромнефть-Мегион",
-}
-
 function scenarioDisplayName(name) {
   if (!name || typeof name !== 'string') return name
   return name.replace(/\s*\(раздел\s*"[^"]*"\)\s*$/i, '').trim() || name
@@ -33,11 +27,10 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const [scenarioSaveError, setScenarioSaveError] = useState(null)
   const [formMode, setFormMode] = useState(null) // 'create' | 'edit' | null
   const [editingRow, setEditingRow] = useState(null)
-  const [assets, setAssets] = useState([])
   const [formData, setFormData] = useState({
     name: "",
     authorName: "",
-    assetId: "",
+    fieldName: "",
     doLabel: "",
   })
 
@@ -84,27 +77,10 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     setFormData({
       name: "",
       authorName: "",
-      assetId: "",
+      fieldName: "",
       doLabel: "",
     })
   }
-
-  useEffect(() => {
-    if (!formMode) return
-    if (assets.length > 0) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const rows = await apiFetch(`${API_V1_PREFIX}/assets`)
-        if (!cancelled) setAssets(Array.isArray(rows) ? rows : [])
-      } catch {
-        if (!cancelled) setAssets([])
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [formMode, assets.length])
 
   const openCreateScenario = () => {
     if (!canCreateScenario) return
@@ -114,7 +90,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     setFormData({
       name: "",
       authorName: "",
-      assetId: "",
+      fieldName: "",
       doLabel: "",
     })
   }
@@ -127,7 +103,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     setFormData({
       name: row.name || "",
       authorName: row.author || "",
-      assetId: row.assetId || "",
+      fieldName: row.field === "—" ? "" : row.field || "",
       doLabel: row.do || "",
     })
   }
@@ -142,7 +118,8 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     const payload = {
       name: trimmedName,
       authorName: formData.authorName.trim() || null,
-      assetId: formData.assetId || null,
+      fieldName: formData.fieldName.trim() || null,
+      doLabel: formData.doLabel.trim() || null,
     }
     setScenarioSaveError(null)
     setSavingScenarioId(formMode === "edit" ? editingRow?.scenarioId : "new")
@@ -156,7 +133,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               scenarioId: createdScenarioId,
-              assetId: created.assetId || formData.assetId || null,
+              assetId: created.assetId || null,
             }),
           })
           onScenarioClick?.({
@@ -366,27 +343,14 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
             </label>
             <label className="scenarios-form-row">
               <span>Месторождение (опционально)</span>
-              <select
-                value={formData.assetId}
+              <input
+                type="text"
+                value={formData.fieldName}
                 onChange={(e) =>
-                  setFormData((prev) => {
-                    const nextAssetId = e.target.value
-                    const asset = assets.find((a) => a.id === nextAssetId)
-                    return {
-                      ...prev,
-                      assetId: nextAssetId,
-                      doLabel: FIELD_TO_DO[asset?.displayName] || prev.doLabel || "",
-                    }
-                  })
+                  setFormData((prev) => ({ ...prev, fieldName: e.target.value }))
                 }
-              >
-                <option value="">Не выбрано</option>
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.displayName}
-                  </option>
-                ))}
-              </select>
+                placeholder="Введите месторождение вручную"
+              />
             </label>
             <label className="scenarios-form-row">
               <span>ДО</span>
@@ -394,17 +358,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                 type="text"
                 value={formData.doLabel}
                 onChange={(e) =>
-                  setFormData((prev) => {
-                    const nextDo = e.target.value
-                    const matchAsset = assets.find(
-                      (a) => FIELD_TO_DO[a.displayName] === nextDo,
-                    )
-                    return {
-                      ...prev,
-                      doLabel: nextDo,
-                      assetId: matchAsset ? matchAsset.id : prev.assetId,
-                    }
-                  })
+                  setFormData((prev) => ({ ...prev, doLabel: e.target.value }))
                 }
                 placeholder="Введите ДО (опционально)"
               />
