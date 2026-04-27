@@ -1,44 +1,72 @@
 /**
  * Сущности по слоям воронки сквозных сценариев.
- * Программы: 4, Объекты: 10, Сервисы: 30, Микросервисы: 200, Функции: 1200.
+ * Программы: 5, Объекты: как в «2. Цифровые двойники объектов» (new-demo), Сервисы: 30; микросервисы и функции — длины из microservicesFunnel / functionsFunnel (6 функций на микросервис).
  * Данные можно заменить экспортом из Excel (hantos.xlsx, nng.xlsx, DATA.xlsx).
  */
 
-export const PROGRAMS = ['ЦД РБ', 'ЦД ПР', 'ЦД АВНМ', 'ЦД П']
+import { NEW_DEMO_CD_OBJECT_TWIN_NAMES } from './newDemoCdObjectTwins.js'
+import { MICROSERVICES } from './microservicesFunnel.js'
+import { FUNCTIONS } from './functionsFunnel.js'
 
-export const OBJECTS = [
-  'Пласт',
-  'Скважина',
-  'Промысел',
-  'Инфраструктура',
-  'Куст',
-  'ДНС',
-  'КНС',
-  'Трубопровод',
-  'Лицензионный участок',
-  'Объект',
-]
+export const PROGRAMS = ['ЦД РБ', 'ЦД ПР', 'ЦД АВНМ', 'ЦД П', 'ЦД РиД']
 
-const SERVICES_BASE = ['Б6К', 'СпекТР', 'КФА', 'eXoil', 'ГибРИМА', 'ЦДРБ', 'АВНМ', 'ЦДП', 'ЦДПр', 'Сервис ГТМ']
+/** Полные названия для подписей уровня «ЦД программ» (панель процентов, легенда). */
+export const CD_PROGRAM_DISPLAY_NAMES = {
+  'ЦД П': 'Цифровой двойник промысла',
+  'ЦД АВНМ': 'Цифровой двойник новых мощностей',
+  'ЦД ПР': 'Цифровой двойник проектных решений',
+  'ЦД РБ': 'Цифровой двойник ресурсной базы',
+  'ЦД РиД': 'Цифровой двойник разведки и добычи',
+}
+
+export function getCdProgramDisplayName(shortLabel) {
+  if (!shortLabel) return ''
+  return CD_PROGRAM_DISPLAY_NAMES[shortLabel] ?? shortLabel
+}
+
+/** Уровень «ЦД объекта» гиперкуба = список из раздела зрелости «2. Цифровые двойники объектов». */
+export const OBJECTS = [...NEW_DEMO_CD_OBJECT_TWIN_NAMES]
+
+/**
+ * Уровень «Сервисы» гиперкуба (30 позиций).
+ * Без дублей с уровнем «ЦД программ» (ЦДРБ/ЦДП/…); без «Сервис ГТМ» (пересечение со СпекТР).
+ * Середина списка — имена из корпоративного перечня (DUO Tech, ПЛУТОН, …).
+ */
 export const SERVICES = [
-  ...SERVICES_BASE,
-  ...Array.from({ length: 30 - SERVICES_BASE.length }, (_, i) => `Сервис ${i + 1}`),
-].slice(0, 30)
-
-export const MICROSERVICES = Array.from({ length: 200 }, (_, i) => `Микросервис ${i + 1}`)
-
-const FUNCTION_TEMPLATES = [
-  'Расчёт пластовых давлений',
-  'Моделирование фильтрации',
-  'Оптимизация режима работы',
-  'Прогноз добычи',
-  'Анализ ГД модели',
-  'Управление режимом',
+  'Пласт-ПРО (Б6К)',
+  'ГибРИМА',
+  'СпекТР',
+  'ЦД-Well',
+  'ЭРА: ИСКРА',
+  'КФА',
+  'ЕАРМ',
+  'eXoil',
+  'ТЕРРА',
+  'ЭРА: ПИК',
+  'ГРАД ВЕБ',
+  'СМБ 2.0',
+  'ЭРА: Ремонты',
+  'ИПА',
+  'DUO Tech',
+  'ПЛУТОН',
+  'ГРАД: Core',
+  'ЦРМС',
+  'ГеоБД 2.0',
+  'ЭРА: Добыча',
+  'NGT Smart',
+  'СППР',
+  'OIS Prod',
+  'NumEx',
+  'GeoMate',
+  'САРЕКС',
+  'Мета-актив',
+  'ШТР',
+  'ПАОТ',
+  'ВЕГА',
 ]
-export const FUNCTIONS = Array.from(
-  { length: 1200 },
-  (_, i) => `${FUNCTION_TEMPLATES[i % 6]} (${Math.floor(i / 6) + 1})`
-)
+
+export { MICROSERVICES }
+export { FUNCTIONS }
 
 export const FUNNEL_ENTITY_LABELS = {
   programs: PROGRAMS,

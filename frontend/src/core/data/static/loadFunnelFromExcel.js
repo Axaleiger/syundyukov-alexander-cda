@@ -2,7 +2,7 @@
  * Загрузка сущностей воронки из Excel (файлы в public/).
  * Ожидаемые файлы: hantos.xlsx, nng.xlsx, DATA.xlsx
  * В каждом листе берётся первый столбец с текстом (названия сущностей).
- * Требуемые длины: программы 4, объекты 10, сервисы 30, микросервисы 200, функции 1200.
+ * Целевые длины при паддинге совпадают с дефолтами из funnelEntities (меняются вместе с данными).
  */
 
 import * as XLSX from 'xlsx'
@@ -14,7 +14,6 @@ import {
   FUNCTIONS as defaultFunctions,
 } from './funnelEntities'
 
-const REQUIRED_LENGTHS = [4, 10, 30, 200, 1200]
 const DEFAULTS = [
   defaultPrograms,
   defaultObjects,
@@ -22,6 +21,7 @@ const DEFAULTS = [
   defaultMicroservices,
   defaultFunctions,
 ]
+const REQUIRED_LENGTHS = DEFAULTS.map((d) => d.length)
 
 function readFirstColumnText(sheet) {
   const out = []

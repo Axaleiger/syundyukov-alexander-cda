@@ -1,6 +1,6 @@
-# Продакшен-сервер: PostgreSQL + FastAPI + nginx (статика из frontend/). Один файл.
+# Продакшен-сервер: PostgreSQL + FastAPI + nginx (два бандла: / и /new-demo/).
 # Запуск: docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.vite up -d --build
-# Второй файл (из CI или вручную) задаёт VITE_* для сборки; перекрывает пустые VITE_* в .env.
+# .env.deploy.vite: VITE_* (основной стенд) и NEW_DEMO_VITE_* (new-demo); см. compose.env.example и Deploy workflow.
 
 services:
   db:
@@ -32,11 +32,18 @@ services:
       context: .
       dockerfile: Dockerfile.nginx
       args:
+        # Основной стенд (/, /demo)
         VITE_GROQ_API_KEY: ${VITE_GROQ_API_KEY:-}
         VITE_EXPO: ${VITE_EXPO:-}
         VITE_EXPO_DISABLE_TABS: ${VITE_EXPO_DISABLE_TABS:-}
         VITE_EXPO_ARM_DELAY_MS: ${VITE_EXPO_ARM_DELAY_MS:-}
         VITE_EXPO_IDLE_MS: ${VITE_EXPO_IDLE_MS:-}
+        # New-demo (/new-demo/) — отдельные секреты; если пусто, в Dockerfile подставятся те же ARG что и у main (см. .env.deploy.vite в CI).
+        NEW_DEMO_VITE_GROQ_API_KEY: ${NEW_DEMO_VITE_GROQ_API_KEY:-${VITE_GROQ_API_KEY:-}}
+        NEW_DEMO_VITE_EXPO: ${NEW_DEMO_VITE_EXPO:-${VITE_EXPO:-}}
+        NEW_DEMO_VITE_EXPO_DISABLE_TABS: ${NEW_DEMO_VITE_EXPO_DISABLE_TABS:-${VITE_EXPO_DISABLE_TABS:-}}
+        NEW_DEMO_VITE_EXPO_ARM_DELAY_MS: ${NEW_DEMO_VITE_EXPO_ARM_DELAY_MS:-${VITE_EXPO_ARM_DELAY_MS:-}}
+        NEW_DEMO_VITE_EXPO_IDLE_MS: ${NEW_DEMO_VITE_EXPO_IDLE_MS:-${VITE_EXPO_IDLE_MS:-}}
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"

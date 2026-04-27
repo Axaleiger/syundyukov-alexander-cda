@@ -9,6 +9,13 @@ const DEFAULT_SCENARIO_FILTERS = SCENARIO_STAGE_FILTERS.reduce(
 	{},
 )
 
+const persistStorageName =
+	import.meta.env.VITE_STAND_SCOPE === "newDemo"
+		? "cda-app-store-new-demo"
+		: import.meta.env.VITE_STAND_SCOPE === "main"
+			? "cda-app-store-main"
+			: "cda-app-store"
+
 export const useAppStore = create(
 	persist(
 		(set) => ({
@@ -207,7 +214,7 @@ export const useAppStore = create(
 		}),
 		}),
 		{
-			name: "cda-app-store",
+			name: persistStorageName,
 			version: 1,
 			partialize: (s) => ({
 				selectedScenarioId: s.selectedScenarioId,

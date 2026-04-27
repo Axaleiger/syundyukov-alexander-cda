@@ -1,13 +1,15 @@
 # syntax=docker/dockerfile:1
-# Сборка статики из frontend/ + nginx:alpine. Конфиг монтируется в compose.
+# Два бандла Vite: основной стенд (/) и new-demo (/new-demo/) — разные VITE_* и VITE_STAND_SCOPE.
+# Конфиг nginx для локального запуска образа без compose: docker/nginx/default.conf.
+# Прод: docker/nginx/server.conf монтируется в compose.
 
-FROM node:20-alpine AS frontend-build
+FROM node:20-alpine AS frontend-deps
 WORKDIR /app
-
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-
 COPY frontend/ .
+
+FROM frontend-deps AS frontend-build-main
 ARG VITE_GROQ_API_KEY
 ARG VITE_EXPO
 ARG VITE_EXPO_DISABLE_TABS
@@ -18,11 +20,29 @@ ENV VITE_EXPO=$VITE_EXPO
 ENV VITE_EXPO_DISABLE_TABS=$VITE_EXPO_DISABLE_TABS
 ENV VITE_EXPO_ARM_DELAY_MS=$VITE_EXPO_ARM_DELAY_MS
 ENV VITE_EXPO_IDLE_MS=$VITE_EXPO_IDLE_MS
-# Vite/rollup на большом бандле упирается в дефолтный heap Node (~2 GiB) — без этого build падает на малопамятных хостах.
+ENV VITE_STAND_SCOPE=main
+ENV VITE_BASE=/
 ENV NODE_OPTIONS=--max-old-space-size=4096
-RUN npm run build
+RUN npm run build && mkdir -p /out && mv dist /out/main
+
+FROM frontend-deps AS frontend-build-newdemo
+ARG NEW_DEMO_VITE_GROQ_API_KEY
+ARG NEW_DEMO_VITE_EXPO
+ARG NEW_DEMO_VITE_EXPO_DISABLE_TABS
+ARG NEW_DEMO_VITE_EXPO_ARM_DELAY_MS
+ARG NEW_DEMO_VITE_EXPO_IDLE_MS
+ENV VITE_GROQ_API_KEY=$NEW_DEMO_VITE_GROQ_API_KEY
+ENV VITE_EXPO=$NEW_DEMO_VITE_EXPO
+ENV VITE_EXPO_DISABLE_TABS=$NEW_DEMO_VITE_EXPO_DISABLE_TABS
+ENV VITE_EXPO_ARM_DELAY_MS=$NEW_DEMO_VITE_EXPO_ARM_DELAY_MS
+ENV VITE_EXPO_IDLE_MS=$NEW_DEMO_VITE_EXPO_IDLE_MS
+ENV VITE_STAND_SCOPE=newDemo
+ENV VITE_BASE=/new-demo/
+ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN npm run build && mkdir -p /out && mv dist /out/newdemo
 
 FROM nginx:alpine
-COPY --from=frontend-build /app/dist /usr/share/nginx/html
+COPY --from=frontend-build-main /out/main /usr/share/nginx/html
+COPY --from=frontend-build-newdemo /out/newdemo /usr/share/nginx/html/new-demo
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

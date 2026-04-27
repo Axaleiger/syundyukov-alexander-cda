@@ -3,6 +3,8 @@ import { getRepositories } from "../../core/data/repositories/registry.js"
 
 const RepositoriesContext = createContext(null)
 
+let didWarnRepositoriesOutsideProvider = false
+
 /**
  * Корень привязки репозиториев для React-дерева.
  * По умолчанию — тот же объект, что и `getRepositories()` из registry.
@@ -20,8 +22,13 @@ export function DataRepositoriesProvider({ children, value }) {
 /** @returns {import('../../core/data/repositories/contracts/repositoryContracts.js').AppRepositories} */
 export function useRepositories() {
 	const ctx = useContext(RepositoriesContext)
-	if (!ctx) {
-		throw new Error("useRepositories: оберните приложение в DataRepositoriesProvider")
+	if (ctx) return ctx
+	if (import.meta.env.DEV && !didWarnRepositoriesOutsideProvider) {
+		didWarnRepositoriesOutsideProvider = true
+		// eslint-disable-next-line no-console -- диагностика: виджет вне провайдера (портал, отдельный root, ошибка маршрута)
+		console.warn(
+			"useRepositories: контекст DataRepositoriesProvider отсутствует, подставляется getRepositories()",
+		)
 	}
-	return ctx
+	return getRepositories()
 }

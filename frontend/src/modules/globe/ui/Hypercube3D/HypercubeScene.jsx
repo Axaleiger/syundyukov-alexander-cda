@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { OrbitControls, Html } from '@react-three/drei'
 import * as THREE from 'three'
+import { getCdProgramDisplayName } from '../../../../core/data/static/funnelEntities.js'
 import { VARIANT_COLORS } from './hypercube3DLegendData'
 import { CASE_TREE_STEPS } from './hypercube3DCaseTree'
 import overlayStyles from './HypercubeScene.module.css'
@@ -675,7 +676,11 @@ function FunnelLevel({ pointsPerLevel, levelIndex, levelTitle, color, onPointCli
       onSelectedPointDetailsChange?.(null)
       return
     }
-    const pointName = getEntityLabel?.(levelIndex, selectedPointIdx) || `Точка ${selectedPointIdx + 1}`
+    const shortProgramName = getEntityLabel?.(levelIndex, selectedPointIdx)
+    const pointName =
+      levelIndex === 0 && shortProgramName
+        ? getCdProgramDisplayName(shortProgramName)
+        : shortProgramName || `Точка ${selectedPointIdx + 1}`
     const metrics = cylinderSegments
       .filter((seg) => seg?.label && Number.isFinite(seg?.share))
       .map((seg) => ({
