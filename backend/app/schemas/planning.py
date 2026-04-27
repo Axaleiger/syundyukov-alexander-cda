@@ -16,6 +16,19 @@ class PlanningBoardUpdateBody(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class PlanningCaseCreateBody(BaseModel):
+    scenario_id: Optional[uuid.UUID] = Field(None, serialization_alias="scenarioId")
+    asset_id: uuid.UUID = Field(..., serialization_alias="assetId")
+    created_by_user_id: Optional[uuid.UUID] = Field(
+        None, serialization_alias="createdByUserId"
+    )
+    updated_by_user_id: Optional[uuid.UUID] = Field(
+        None, serialization_alias="updatedByUserId"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class PlanningCaseSummary(DataSourceMixin):
     id: uuid.UUID
     scenario_id: Optional[uuid.UUID] = Field(None, serialization_alias="scenarioId")

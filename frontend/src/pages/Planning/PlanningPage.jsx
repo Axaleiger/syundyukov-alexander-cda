@@ -108,6 +108,9 @@ export function PlanningPage() {
 
 	const [boardMountKey, setBoardMountKey] = useState("default")
 	const [planningCaseLoading, setPlanningCaseLoading] = useState(false)
+	const [boardDirty, setBoardDirty] = useState(false)
+	const [boardSavePending, setBoardSavePending] = useState(false)
+	const [boardSaveError, setBoardSaveError] = useState(null)
 	const saveBoardTimerRef = useRef(null)
 	const pendingBoardRef = useRef(null)
 	const planningCaseIdRef = useRef(null)
@@ -119,6 +122,8 @@ export function PlanningPage() {
 		const caseId = planningCaseIdRef.current
 		const pending = pendingBoardRef.current
 		if (!caseId || !pending) return Promise.resolve()
+		setBoardSavePending(true)
+		setBoardSaveError(null)
 		const board = serializeBoardForSave(
 			pending.stages,
 			pending.tasks,
@@ -131,9 +136,19 @@ export function PlanningPage() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ board }),
 			},
-		).catch((err) => {
-			console.error("planning board save failed", err)
-		})
+		)
+			.then(() => {
+				setBoardDirty(false)
+			})
+			.catch((err) => {
+				console.error("planning board save failed", err)
+				setBoardSaveError(
+					err instanceof Error ? err.message : "Не удалось сохранить доску",
+				)
+			})
+			.finally(() => {
+				setBoardSavePending(false)
+			})
 	}
 
 	const selectedAssetPoint = useMemo(
@@ -319,12 +334,21 @@ export function PlanningPage() {
 					}
 				setPlanningCaseId(match.id)
 				setBpmBoard(board.stages, board.tasks, board.connections)
+				pendingBoardRef.current = {
+					stages: board.stages,
+					tasks: board.tasks,
+					connections: board.connections,
+				}
+				setBoardDirty(false)
+				setBoardSaveError(null)
 				setFlowCode(bpmToMermaid(board.stages, board.tasks))
 				setBoardMountKey(`${selectedScenarioId}-${match.id}`)
 			} catch {
 				if (!cancelled) {
 					setPlanningCaseId(null)
 					setBpmBoard(null, null, null)
+					pendingBoardRef.current = null
+					setBoardDirty(false)
 					setBoardMountKey(`${selectedScenarioId}-error`)
 				}
 			} finally {
@@ -356,6 +380,8 @@ export function PlanningPage() {
 		setBpmBoard(stages, tasks, connections)
 		setFlowCode(bpmToMermaid(stages, tasks))
 		pendingBoardRef.current = { stages, tasks, connections }
+		setBoardDirty(true)
+		setBoardSaveError(null)
 		if (!planningCaseIdRef.current) return
 		if (saveBoardTimerRef.current) {
 			clearTimeout(saveBoardTimerRef.current)
@@ -453,6 +479,8 @@ export function PlanningPage() {
 		bpmCommand?.scenarioId !== "createPlanningCase" &&
 		bpmCommand?.scenarioId !== "loadAiPresetBoard"
 
+	const canManualSave = Boolean(planningCaseId) && Boolean(pendingBoardRef.current)
+
 	return (
 		<div
 			className={`${appLayoutStyles["app-content"]} ${appLayoutStyles["app-content-bpm"]}`}
@@ -474,6 +502,27 @@ export function PlanningPage() {
 					— доска не загружается. Данные доски хранятся только в БД;
 					обратитесь к администратору, чтобы создать кейс для сценария, или
 					выберите другой сценарий.
+				</div>
+			)}
+			{showPlanningBoard && (
+				<div className={appLayoutStyles["bpm-save-bar"]}>
+					<button
+						type="button"
+						className={appLayoutStyles["bpm-save-button"]}
+						disabled={!canManualSave || boardSavePending || !boardDirty}
+						onClick={() => {
+							void flushBoardSaveRef.current()
+						}}
+					>
+						{boardSavePending ? "Сохранение..." : "СОХРАНИТЬ"}
+					</button>
+					<span className={appLayoutStyles["bpm-save-hint"]}>
+						{boardSaveError
+							? `Ошибка сохранения: ${boardSaveError}`
+							: boardDirty
+								? "Есть несохранённые изменения"
+								: "Все изменения сохранены"}
+					</span>
 				</div>
 			)}
 			{aiFromThinking && presetFromUrl && AI_PLANNING_BOARD_PRESETS[presetFromUrl] ? (

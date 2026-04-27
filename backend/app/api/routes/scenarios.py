@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.models.tables import AppUser, BusinessDirection, Scenario
-from app.schemas.scenario import ScenarioListItem, ScenarioOut, ScenarioUpdate
+from app.schemas.scenario import (
+    ScenarioCreate,
+    ScenarioListItem,
+    ScenarioOut,
+    ScenarioUpdate,
+)
 
 router = APIRouter()
 
@@ -85,6 +90,30 @@ def get_scenario(scenario_id: uuid.UUID, db: Session = Depends(get_db)):
     s = db.get(Scenario, scenario_id)
     if not s:
         raise HTTPException(404, "scenario not found")
+    return _scenario_to_out(s, db)
+
+
+@router.post("", response_model=ScenarioOut)
+def create_scenario(body: ScenarioCreate, db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    s = Scenario(
+        id=uuid.uuid4(),
+        external_code=body.external_code,
+        name=body.name.strip(),
+        status=body.status.strip() if body.status else "в работе",
+        production_stage_id=body.production_stage_id,
+        business_direction_id=body.business_direction_id,
+        asset_id=body.asset_id,
+        author_user_id=body.author_user_id,
+        is_approved=bool(body.is_approved),
+        calculation_duration_text=body.calculation_duration_text,
+        created_at=now,
+        updated_at=now,
+        data_source="api",
+    )
+    db.add(s)
+    db.commit()
+    db.refresh(s)
     return _scenario_to_out(s, db)
 
 

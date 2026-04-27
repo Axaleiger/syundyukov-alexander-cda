@@ -22,6 +22,7 @@
  * @property {() => ScenarioRow[]} getScenarios
  * @property {(scenarios: ScenarioRow[], periodValue: string) => ScenarioRow[]} filterScenariosByPeriod
  * @property {() => Promise<{ scenarioStageFilters: string[], periodOptions: { value: string, label: string }[], scenarioDirections: string[], allScenarios: ScenarioRow[], filterScenariosByPeriod: function }>} [fetchScenarioViewModel] загрузка с API (HTTP-реализация)
+ * @property {(payload: Record<string, unknown>) => Promise<unknown>} [createScenario] POST /api/v1/scenarios
  * @property {(scenarioId: string, patch: Record<string, unknown>) => Promise<unknown>} [patchScenario] PATCH /api/v1/scenarios/{id}
  */
 

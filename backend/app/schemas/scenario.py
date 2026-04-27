@@ -7,6 +7,26 @@ from pydantic import BaseModel, Field
 from app.schemas.common import DataSourceMixin
 
 
+class ScenarioCreate(BaseModel):
+    """Создание сценария (тело POST). Поля camelCase как в JSON API."""
+
+    name: str
+    external_code: Optional[str] = Field(None, validation_alias="externalCode")
+    status: str = "в работе"
+    production_stage_id: uuid.UUID = Field(..., validation_alias="productionStageId")
+    business_direction_id: Optional[uuid.UUID] = Field(
+        None, validation_alias="businessDirectionId"
+    )
+    asset_id: Optional[uuid.UUID] = Field(None, validation_alias="assetId")
+    author_user_id: Optional[uuid.UUID] = Field(None, validation_alias="authorUserId")
+    is_approved: bool = Field(False, validation_alias="isApproved")
+    calculation_duration_text: Optional[str] = Field(
+        None, validation_alias="calculationDurationText"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class ScenarioUpdate(BaseModel):
     """Частичное обновление сценария (тело PATCH). Поля camelCase как в JSON API."""
 

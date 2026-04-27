@@ -408,3 +408,59 @@
   font-size: 0.8rem;
   color: #b91c1c;
 }
+
+.scenarios-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.scenarios-modal {
+  width: min(620px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 18px 54px rgba(2, 8, 23, 0.35);
+  padding: 1rem;
+}
+
+.scenarios-modal-title {
+  margin: 0 0 0.75rem;
+  color: #1e3a5f;
+}
+
+.scenarios-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.scenarios-form-row > span {
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.scenarios-form-row input,
+.scenarios-form-row select {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #1f2937;
+  font-size: 0.92rem;
+}
+
+.scenarios-form-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}

@@ -45,6 +45,12 @@ function mapScenarioRow(raw, stageIdToLabel, assetIdToAsset) {
 	return {
 		id,
 		scenarioId: String(raw.id),
+		productionStageId: raw.productionStageId ? String(raw.productionStageId) : null,
+		businessDirectionId: raw.businessDirectionId
+			? String(raw.businessDirectionId)
+			: null,
+		assetId: raw.assetId ? String(raw.assetId) : null,
+		authorUserId: raw.authorUserId ? String(raw.authorUserId) : null,
 		name: raw.name,
 		stages: "—",
 		do: doLabel,
@@ -84,6 +90,14 @@ export function createHttpScenariosRepository() {
 
 		filterScenariosByPeriod: (scenarios, periodValue) =>
 			filterScenariosByPeriod(scenarios, periodValue),
+
+		async createScenario(payload) {
+			return apiFetch(`${API_V1_PREFIX}/scenarios`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			})
+		},
 
 		/**
 		 * @param {string} scenarioId — UUID сценария

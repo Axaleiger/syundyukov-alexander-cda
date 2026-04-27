@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import { useRepositories } from '../../../app/providers/DataRepositoriesProvider'
 import { useScenariosData } from '../model/useScenariosData'
+import { API_V1_PREFIX, apiFetch } from "../../../core/data/repositories/http/httpClient.js"
 import './ScenariosList.css'
 
 const SUBCATEGORY_TITLES = ['Название подкатегории', 'Название подкатегории', 'Название подкатегории', 'Название подкатегории']
@@ -23,11 +24,24 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
     refetchScenarios,
   } = useScenariosData()
 
-  const [editingScenarioId, setEditingScenarioId] = useState(null)
-  const [editNameValue, setEditNameValue] = useState('')
-  const [editNameBaseline, setEditNameBaseline] = useState('')
   const [savingScenarioId, setSavingScenarioId] = useState(null)
-  const [nameSaveError, setNameSaveError] = useState(null)
+  const [scenarioSaveError, setScenarioSaveError] = useState(null)
+  const [formMode, setFormMode] = useState(null) // 'create' | 'edit' | null
+  const [editingRow, setEditingRow] = useState(null)
+  const [users, setUsers] = useState([])
+  const [assets, setAssets] = useState([])
+  const [stageOptions, setStageOptions] = useState([])
+  const [directionOptions, setDirectionOptions] = useState([])
+  const [lookupsLoading, setLookupsLoading] = useState(false)
+  const [lookupsError, setLookupsError] = useState(null)
+  const [formData, setFormData] = useState({
+    name: "",
+    status: "в работе",
+    productionStageId: "",
+    businessDirectionId: "",
+    assetId: "",
+    authorUserId: "",
+  })
 
   const [internalFilters, setInternalFilters] = useState(() => SCENARIO_STAGE_FILTERS.reduce((acc, name) => ({ ...acc, [name]: true }), {}))
   const stageFilters = controlledFilters != null ? controlledFilters : internalFilters
@@ -62,42 +76,132 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
   const filteredScenarios = useMemo(() => filteredByPeriod, [filteredByPeriod])
 
   const canPatchScenario = typeof scenariosRepo.patchScenario === 'function'
+  const canCreateScenario = typeof scenariosRepo.createScenario === "function"
 
-  const startEditName = (row) => {
-    if (!row?.scenarioId || !canPatchScenario) return
-    setNameSaveError(null)
-    setEditingScenarioId(row.scenarioId)
-    setEditNameBaseline(row.name || '')
-    setEditNameValue(row.name || '')
-  }
+  const resetForm = useCallback(() => {
+    setFormMode(null)
+    setEditingRow(null)
+    setScenarioSaveError(null)
+    setFormData({
+      name: "",
+      status: "в работе",
+      productionStageId: "",
+      businessDirectionId: "",
+      assetId: "",
+      authorUserId: "",
+    })
+  }, [])
 
-  const cancelEditName = () => {
-    setEditingScenarioId(null)
-    setEditNameValue('')
-    setEditNameBaseline('')
-    setNameSaveError(null)
-  }
-
-  const commitEditName = async () => {
-    if (!editingScenarioId || !canPatchScenario) return
-    if (savingScenarioId) return
-    const trimmed = editNameValue.trim()
-    if (!trimmed) {
-      setNameSaveError('Введите непустое название')
-      return
-    }
-    if (trimmed === (editNameBaseline || '').trim()) {
-      cancelEditName()
-      return
-    }
-    setNameSaveError(null)
-    setSavingScenarioId(editingScenarioId)
+  const ensureLookups = useCallback(async () => {
+    if (lookupsLoading) return
+    setLookupsLoading(true)
+    setLookupsError(null)
     try {
-      await scenariosRepo.patchScenario(editingScenarioId, { name: trimmed })
-      cancelEditName()
-      await refetchScenarios()
+      const [usersResp, assetsResp, stagesResp, directionsResp] = await Promise.all([
+        apiFetch(`${API_V1_PREFIX}/users?limit=200`),
+        apiFetch(`${API_V1_PREFIX}/assets`),
+        apiFetch(`${API_V1_PREFIX}/taxonomy/production-stages`),
+        apiFetch(`${API_V1_PREFIX}/taxonomy/business-directions`),
+      ])
+      setUsers(Array.isArray(usersResp) ? usersResp : [])
+      setAssets(Array.isArray(assetsResp) ? assetsResp : [])
+      setStageOptions(Array.isArray(stagesResp) ? stagesResp : [])
+      setDirectionOptions(Array.isArray(directionsResp) ? directionsResp : [])
     } catch (e) {
-      setNameSaveError(e instanceof Error ? e.message : String(e))
+      setLookupsError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLookupsLoading(false)
+    }
+  }, [lookupsLoading])
+
+  useEffect(() => {
+    if (!formMode) return
+    void ensureLookups()
+  }, [formMode, ensureLookups])
+
+  const openCreateScenario = () => {
+    if (!canCreateScenario) return
+    setFormMode("create")
+    setEditingRow(null)
+    setScenarioSaveError(null)
+    setFormData({
+      name: "",
+      status: "в работе",
+      productionStageId: stageOptions[0]?.id ? String(stageOptions[0].id) : "",
+      businessDirectionId: "",
+      assetId: assets[0]?.id ? String(assets[0].id) : "",
+      authorUserId: users[0]?.id ? String(users[0].id) : "",
+    })
+  }
+
+  const openEditScenario = (row) => {
+    if (!row?.scenarioId || !canPatchScenario) return
+    setFormMode("edit")
+    setEditingRow(row)
+    setScenarioSaveError(null)
+    setFormData({
+      name: row.name || "",
+      status: row.status || "в работе",
+      productionStageId: row.productionStageId || "",
+      businessDirectionId: row.businessDirectionId || "",
+      assetId: row.assetId || "",
+      authorUserId: row.authorUserId || "",
+    })
+  }
+
+  const saveScenario = async () => {
+    if (savingScenarioId) return
+    const trimmedName = formData.name.trim()
+    if (!trimmedName) {
+      setScenarioSaveError("Введите название сценария")
+      return
+    }
+    if (!formData.productionStageId) {
+      setScenarioSaveError("Выберите этап производства")
+      return
+    }
+    if (!formData.assetId) {
+      setScenarioSaveError("Выберите месторождение")
+      return
+    }
+    const payload = {
+      name: trimmedName,
+      status: formData.status?.trim() || "в работе",
+      productionStageId: formData.productionStageId || null,
+      businessDirectionId: formData.businessDirectionId || null,
+      assetId: formData.assetId || null,
+      authorUserId: formData.authorUserId || null,
+      isApproved: false,
+    }
+    setScenarioSaveError(null)
+    setSavingScenarioId(formMode === "edit" ? editingRow?.scenarioId : "new")
+    try {
+      if (formMode === "create") {
+        const created = await scenariosRepo.createScenario(payload)
+        const createdScenarioId = created?.id ? String(created.id) : null
+        if (createdScenarioId) {
+          await apiFetch(`${API_V1_PREFIX}/planning/cases`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              scenarioId: createdScenarioId,
+              assetId: formData.assetId,
+              createdByUserId: formData.authorUserId || null,
+              updatedByUserId: formData.authorUserId || null,
+            }),
+          })
+          onScenarioClick?.({
+            name: trimmedName,
+            scenarioId: createdScenarioId,
+          })
+        }
+      } else if (formMode === "edit" && editingRow?.scenarioId) {
+        await scenariosRepo.patchScenario(editingRow.scenarioId, payload)
+      }
+      await refetchScenarios()
+      resetForm()
+    } catch (e) {
+      setScenarioSaveError(e instanceof Error ? e.message : String(e))
     } finally {
       setSavingScenarioId(null)
     }
@@ -134,7 +238,19 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
               onChange={(e) => setCustomPeriod(e.target.value)}
             />
           )}
-          <button type="button" className="scenarios-create-btn">Создать сценарий</button>
+          <button
+            type="button"
+            className="scenarios-create-btn"
+            onClick={openCreateScenario}
+            disabled={!canCreateScenario}
+            title={
+              canCreateScenario
+                ? "Создать сценарий"
+                : "Создание доступно только в API-режиме"
+            }
+          >
+            Создать сценарий
+          </button>
         </div>
       </div>
 
@@ -183,50 +299,6 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                   {(idx === 0 ? filteredScenarios : []).map((row) => (
                     <tr key={row.id}>
                       <td>
-                        {editingScenarioId === row.scenarioId ? (
-                          <div className="scenarios-name-edit">
-                            <input
-                              type="text"
-                              className="scenarios-name-input"
-                              value={editNameValue}
-                              disabled={savingScenarioId === row.scenarioId}
-                              onChange={(e) => setEditNameValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault()
-                                  void commitEditName()
-                                }
-                                if (e.key === 'Escape') {
-                                  e.preventDefault()
-                                  cancelEditName()
-                                }
-                              }}
-                              autoFocus
-                              aria-label="Название сценария"
-                            />
-                            <div className="scenarios-name-edit-actions">
-                              <button
-                                type="button"
-                                className="scenarios-name-save-btn"
-                                disabled={savingScenarioId === row.scenarioId}
-                                onClick={() => { void commitEditName() }}
-                              >
-                                Готово
-                              </button>
-                              <button
-                                type="button"
-                                className="scenarios-name-cancel-btn"
-                                disabled={savingScenarioId === row.scenarioId}
-                                onClick={cancelEditName}
-                              >
-                                Отмена
-                              </button>
-                            </div>
-                            {nameSaveError && editingScenarioId === row.scenarioId && (
-                              <span className="scenarios-name-save-error" role="alert">{nameSaveError}</span>
-                            )}
-                          </div>
-                        ) : (
                           <div className="scenarios-name-cell">
                             <button type="button" className="scenarios-name-link" onClick={() => onScenarioClick?.(row)}>
                               {scenarioDisplayName(row.name)}
@@ -235,15 +307,14 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                               <button
                                 type="button"
                                 className="scenarios-edit-name"
-                                title="Изменить название"
-                                aria-label="Изменить название"
-                                onClick={() => startEditName(row)}
+                                title="Редактировать сценарий"
+                                aria-label="Редактировать сценарий"
+                                onClick={() => openEditScenario(row)}
                               >
                                 ✎
                               </button>
                             )}
                           </div>
-                        )}
                       </td>
                       <td>{row.id}</td>
                       <td>{row.stages}</td>
@@ -266,6 +337,131 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
       ))}
         </div>
       </div>
+      {formMode && (
+        <div className="scenarios-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="scenarios-modal">
+            <h3 className="scenarios-modal-title">
+              {formMode === "create" ? "Создать сценарий" : "Редактировать сценарий"}
+            </h3>
+            {lookupsError && (
+              <div className="scenarios-api-error" role="alert">
+                Ошибка загрузки справочников: {lookupsError}
+              </div>
+            )}
+            <label className="scenarios-form-row">
+              <span>Название</span>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Введите название сценария"
+              />
+            </label>
+            <label className="scenarios-form-row">
+              <span>Автор</span>
+              <select
+                value={formData.authorUserId}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, authorUserId: e.target.value }))
+                }
+                disabled={lookupsLoading}
+              >
+                <option value="">Не выбран</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="scenarios-form-row">
+              <span>Месторождение</span>
+              <select
+                value={formData.assetId}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, assetId: e.target.value }))
+                }
+                disabled={lookupsLoading}
+              >
+                <option value="">Выберите месторождение</option>
+                {assets.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="scenarios-form-row">
+              <span>Этап</span>
+              <select
+                value={formData.productionStageId}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, productionStageId: e.target.value }))
+                }
+                disabled={lookupsLoading}
+              >
+                <option value="">Выберите этап</option>
+                {stageOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.labelFull}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="scenarios-form-row">
+              <span>Направление</span>
+              <select
+                value={formData.businessDirectionId}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, businessDirectionId: e.target.value }))
+                }
+                disabled={lookupsLoading}
+              >
+                <option value="">Не выбрано</option>
+                {directionOptions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="scenarios-form-row">
+              <span>Статус</span>
+              <input
+                type="text"
+                value={formData.status}
+                onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+                placeholder="в работе"
+              />
+            </label>
+            {scenarioSaveError && (
+              <div className="scenarios-name-save-error" role="alert">
+                {scenarioSaveError}
+              </div>
+            )}
+            <div className="scenarios-form-actions">
+              <button
+                type="button"
+                className="scenarios-name-save-btn"
+                onClick={() => {
+                  void saveScenario()
+                }}
+                disabled={Boolean(savingScenarioId)}
+              >
+                {formMode === "create" ? "Создать" : "Сохранить"}
+              </button>
+              <button
+                type="button"
+                className="scenarios-name-cancel-btn"
+                onClick={resetForm}
+                disabled={Boolean(savingScenarioId)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

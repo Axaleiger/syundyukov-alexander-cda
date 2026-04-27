@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,7 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.models.tables import PlanningCase, Scenario
-from app.schemas.planning import PlanningBoardUpdateBody, PlanningCaseOut, PlanningCaseSummary
+from app.schemas.planning import (
+    PlanningBoardUpdateBody,
+    PlanningCaseCreateBody,
+    PlanningCaseOut,
+    PlanningCaseSummary,
+)
 from app.seed.board_demo_snapshots import board_fallback_do_burenie, board_fallback_hantos
 from app.services.planning_assembly import build_board_payload
 from app.services.planning_persist import replace_board_from_payload
@@ -34,6 +40,33 @@ def list_cases(
         )
         for c in rows
     ]
+
+
+@router.post("/cases", response_model=PlanningCaseOut)
+def create_case(body: PlanningCaseCreateBody, db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    c = PlanningCase(
+        id=uuid.uuid4(),
+        scenario_id=body.scenario_id,
+        asset_id=body.asset_id,
+        created_by_user_id=body.created_by_user_id,
+        updated_by_user_id=body.updated_by_user_id or body.created_by_user_id,
+        data_source="api",
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return PlanningCaseOut(
+        id=c.id,
+        scenario_id=c.scenario_id,
+        asset_id=c.asset_id,
+        created_at=c.created_at,
+        updated_at=c.updated_at,
+        data_source=c.data_source,
+        board={"stages": [], "tasks": {}, "connections": []},
+    )
 
 
 # Маршруты с суффиксом /board объявляем до /cases/{case_id}, чтобы матчинг пути был однозначен.
