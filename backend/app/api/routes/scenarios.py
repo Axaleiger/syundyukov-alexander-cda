@@ -23,6 +23,7 @@ from app.schemas.scenario import (
 )
 
 router = APIRouter()
+SCENARIO_CUSTOM_ASSET_PREFIX = "__scenario_custom_asset__:"
 
 
 def _resolve_author_user_id(
@@ -56,32 +57,47 @@ def _upsert_asset_for_scenario(
     asset_id: Optional[uuid.UUID],
     field_name: Optional[str],
     do_label: Optional[str],
+    current_scenario_id: Optional[uuid.UUID] = None,
 ) -> Optional[uuid.UUID]:
-    """Подбирает/создаёт asset по полю fieldName и сохраняет doLabel в metadata."""
+    """Создаёт/обновляет персональный asset сценария для field/do."""
     resolved_asset_id = asset_id
     field_name = (field_name or "").strip()
     do_label = (do_label or "").strip()
+    if not field_name and not do_label and not resolved_asset_id:
+        return None
 
-    asset = db.get(Asset, resolved_asset_id) if resolved_asset_id else None
-    if not asset and field_name:
-        asset = db.query(Asset).filter(Asset.display_name == field_name).first()
-    if not asset and field_name:
+    existing = db.get(Asset, resolved_asset_id) if resolved_asset_id else None
+    existing_meta = dict(existing.metadata_ or {}) if existing else {}
+    existing_is_custom = bool(existing_meta.get("scenarioCustom")) if existing else False
+
+    if not field_name and not do_label and existing and existing_is_custom:
+        return None
+
+    if existing and existing_is_custom:
+        target = existing
+    else:
         max_sort = db.query(func.max(Asset.map_sort_order)).scalar() or 0
-        asset = Asset(
+        target = Asset(
             id=uuid.uuid4(),
-            display_name=field_name,
+            display_name=SCENARIO_CUSTOM_ASSET_PREFIX + str(uuid.uuid4()),
             map_sort_order=int(max_sort) + 1,
             metadata_={},
         )
-        db.add(asset)
+        db.add(target)
         db.flush()
-    if asset:
-        meta = dict(asset.metadata_ or {})
-        if do_label:
-            meta["doLabel"] = do_label
-        asset.metadata_ = meta
-        return asset.id
-    return resolved_asset_id
+
+    target.display_name = field_name or SCENARIO_CUSTOM_ASSET_PREFIX + str(target.id)
+    meta = dict(target.metadata_ or {})
+    meta["scenarioCustom"] = True
+    meta["doLabel"] = do_label
+    if field_name:
+        meta["fieldName"] = field_name
+    elif "fieldName" in meta:
+        meta.pop("fieldName", None)
+    if current_scenario_id:
+        meta["scenarioId"] = str(current_scenario_id)
+    target.metadata_ = meta
+    return target.id
 
 
 def _to_list_item(
@@ -175,6 +191,7 @@ def create_scenario(body: ScenarioCreate, db: Session = Depends(get_db)):
         asset_id=asset_id,
         field_name=body.field_name,
         do_label=body.do_label,
+        current_scenario_id=None,
     )
     author_user_id = _resolve_author_user_id(db, body.author_user_id, body.author_name)
     s = Scenario(
@@ -193,6 +210,15 @@ def create_scenario(body: ScenarioCreate, db: Session = Depends(get_db)):
         data_source="api",
     )
     db.add(s)
+    db.flush()
+    if body.field_name is not None or body.do_label is not None:
+        s.asset_id = _upsert_asset_for_scenario(
+            db,
+            asset_id=s.asset_id,
+            field_name=body.field_name,
+            do_label=body.do_label,
+            current_scenario_id=s.id,
+        )
     db.commit()
     db.refresh(s)
     return _scenario_to_out(s, db)
@@ -222,6 +248,7 @@ def patch_scenario(
             asset_id=data.get("asset_id", s.asset_id),
             field_name=data.get("field_name"),
             do_label=data.get("do_label"),
+            current_scenario_id=s.id,
         )
         data.pop("field_name", None)
         data.pop("do_label", None)

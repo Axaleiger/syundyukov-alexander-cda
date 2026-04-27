@@ -4,6 +4,7 @@ import {
 	filterScenariosByPeriod,
 } from "../../static/scenariosData.js"
 import { API_V1_PREFIX, apiFetch } from "./httpClient.js"
+const SCENARIO_CUSTOM_ASSET_PREFIX = "__scenario_custom_asset__:"
 
 /**
  * @param {string} iso
@@ -31,7 +32,11 @@ function mapScenarioRow(raw, stageIdToLabel, assetIdToAsset) {
 	const asset = raw.assetId
 		? assetIdToAsset.get(String(raw.assetId))
 		: null
-	const field = asset?.displayName || "—"
+	const rawField = asset?.displayName || ""
+	const field =
+		rawField && !rawField.startsWith(SCENARIO_CUSTOM_ASSET_PREFIX)
+			? rawField
+			: (asset?.fieldName || "—")
 	const doLabel = asset?.doLabel || "—"
 	const id = raw.externalCode || String(raw.id)
 
@@ -138,6 +143,7 @@ export function createHttpScenariosRepository() {
 					{
 						displayName: a.displayName,
 						doLabel: a?.metadata?.doLabel || undefined,
+						fieldName: a?.metadata?.fieldName || undefined,
 					},
 				]),
 			)
