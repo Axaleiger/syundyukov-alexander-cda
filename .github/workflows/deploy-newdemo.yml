@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-newdemo-${{ github.repository }}
+  group: deploy-server-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
@@ -69,4 +69,4 @@ jobs:
             } > .env.deploy.newdemo.vite
             chmod 600 .env.deploy.newdemo.vite
             docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.newdemo.vite build nginx_newdemo
-            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.newdemo.vite up -d db api nginx_newdemo edge
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.newdemo.vite up -d --remove-orphans db api nginx_newdemo edge

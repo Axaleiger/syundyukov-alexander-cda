@@ -65,8 +65,6 @@ services:
       - "${HTTPS_PORT:-443}:443"
     depends_on:
       - api
-      - nginx_main
-      - nginx_newdemo
     volumes:
       - ./docker/nginx/server.conf:/etc/nginx/conf.d/default.conf:ro
       - /var/www/certbot:/var/www/certbot:ro
