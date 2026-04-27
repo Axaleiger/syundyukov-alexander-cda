@@ -36,6 +36,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
+          timeout: 60s
+          command_timeout: 30m
           script_stop: true
           envs: VITE_GROQ_API_KEY,VITE_EXPO,VITE_EXPO_DISABLE_TABS,VITE_EXPO_ARM_DELAY_MS,VITE_EXPO_IDLE_MS,NEW_DEMO_VITE_GROQ_API_KEY,NEW_DEMO_VITE_EXPO,NEW_DEMO_VITE_EXPO_DISABLE_TABS,NEW_DEMO_VITE_EXPO_ARM_DELAY_MS,NEW_DEMO_VITE_EXPO_IDLE_MS
           script: |
