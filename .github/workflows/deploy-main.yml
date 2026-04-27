@@ -58,5 +58,5 @@ jobs:
               echo "VITE_EXPO_IDLE_MS=${VITE_EXPO_IDLE_MS:-}"
             } > .env.deploy.main.vite
             chmod 600 .env.deploy.main.vite
-            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.main.vite build nginx_main
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.main.vite build api nginx_main
             docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.main.vite up -d --remove-orphans db api nginx_main edge

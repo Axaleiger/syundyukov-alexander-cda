@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { BPM_STAGES, BPM_CARDS_BY_STAGE, PERSONNEL, SYSTEMS_LIST, cardMatchesHighlight } from '../data/bpmData'
 import { AI_PLANNING_BOARD_PRESETS } from '../data/aiPlanningBoardPresets.js'
@@ -22,7 +22,13 @@ function getAiCardData(seed) {
     periodEnd: dEnd.toISOString().slice(0, 10),
   }
 }
-import { generateBoardExcel, generateTemplateExcel, generateOntologyExcel } from '../data/bpmExcel'
+import {
+  generateBoardExcel,
+  generateTemplateExcel,
+  generateOntologyExcel,
+  parseBoardFromExcelLenient,
+  parseConnectionsFromExcel,
+} from '../data/bpmExcel'
 import { bpmToMermaid } from '../lib/bpmToMermaid'
 import CalculateGraph from './CalculateGraph'
 import BPMRightPanelSystems from './BPMRightPanelSystems'
@@ -496,6 +502,7 @@ function BPMBoard({
   const [aiSuggestionsOn, setAiSuggestionsOn] = useState(false)
   const [removedAiCardIds, setRemovedAiCardIds] = useState(() => new Set())
   const [aiSuggestionCardPlacements, setAiSuggestionCardPlacements] = useState(null)
+  const uploadBoardInputRef = useRef(null)
   const aiSuggestionPlacementsRef = React.useRef(null)
   const draggedAiCardRef = React.useRef(null)
   const boardRef = React.useRef(null)
@@ -856,6 +863,32 @@ function BPMBoard({
     const buf = generateTemplateExcel()
     downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'template.xlsx')
   }, [])
+
+  const handleUploadBoardFile = useCallback(async (file) => {
+    if (!file) return
+    try {
+      const ab = await file.arrayBuffer()
+      const parsed = parseBoardFromExcelLenient(ab)
+      const parsedConnections = parseConnectionsFromExcel(ab)
+      const parsedStages = Array.isArray(parsed?.stages) ? parsed.stages : []
+      const parsedTasks = parsed?.tasks && typeof parsed.tasks === 'object' ? parsed.tasks : {}
+      if (!parsedStages.length) {
+        window.alert('Не удалось прочитать этапы из файла Excel')
+        return
+      }
+      setStages(parsedStages)
+      setTasks(parsedTasks)
+      setConnections(Array.isArray(parsedConnections) ? parsedConnections : [])
+    } catch (e) {
+      window.alert(`Ошибка загрузки Excel: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }, [])
+
+  const handleUploadBoardInputChange = useCallback((e) => {
+    const file = e.target.files?.[0]
+    void handleUploadBoardFile(file)
+    e.target.value = ''
+  }, [handleUploadBoardFile])
 
   const handleDownloadOilFlow = useCallback(() => {
     const html = generateOilFlowHtml(stages, tasks)
@@ -1238,6 +1271,20 @@ function BPMBoard({
               <div className="bpm-header-actions">
                 <button type="button" className="bpm-btn" onClick={handleDownloadBoard}>Выгрузить доску</button>
                 <button type="button" className="bpm-btn" onClick={handleDownloadTemplate}>Шаблон</button>
+                <button
+                  type="button"
+                  className="bpm-btn"
+                  onClick={() => uploadBoardInputRef.current?.click()}
+                >
+                  Загрузить Excel
+                </button>
+                <input
+                  ref={uploadBoardInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="bpm-hidden-file-input"
+                  onChange={handleUploadBoardInputChange}
+                />
                 <button type="button" className="bpm-board-close" onClick={onClose}>Закрыть</button>
               </div>
             </div>

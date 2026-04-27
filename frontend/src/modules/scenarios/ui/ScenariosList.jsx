@@ -67,6 +67,7 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
 
   const canPatchScenario = typeof scenariosRepo.patchScenario === 'function'
   const canCreateScenario = typeof scenariosRepo.createScenario === "function"
+  const canDeleteScenario = typeof scenariosRepo.deleteScenario === "function"
 
   const resetForm = () => {
     setFormMode(null)
@@ -136,6 +137,24 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
       }
       await refetchScenarios()
       resetForm()
+    } catch (e) {
+      setScenarioSaveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingScenarioId(null)
+    }
+  }
+
+  const removeScenario = async (row) => {
+    if (!canDeleteScenario || !row?.scenarioId) return
+    const ok = window.confirm(
+      `Удалить сценарий "${row.name}" и связанные кейсы планирования безвозвратно?`,
+    )
+    if (!ok) return
+    setScenarioSaveError(null)
+    setSavingScenarioId(row.scenarioId)
+    try {
+      await scenariosRepo.deleteScenario(row.scenarioId)
+      await refetchScenarios()
     } catch (e) {
       setScenarioSaveError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -248,6 +267,20 @@ function ScenariosList({ activeStageFilter, stageFilters: controlledFilters, onS
                                 onClick={() => openEditScenario(row)}
                               >
                                 ✎
+                              </button>
+                            )}
+                            {canDeleteScenario && row.scenarioId && (
+                              <button
+                                type="button"
+                                className="scenarios-delete"
+                                title="Удалить сценарий"
+                                aria-label="Удалить сценарий"
+                                disabled={savingScenarioId === row.scenarioId}
+                                onClick={() => {
+                                  void removeScenario(row)
+                                }}
+                              >
+                                🗑
                               </button>
                             )}
                           </div>

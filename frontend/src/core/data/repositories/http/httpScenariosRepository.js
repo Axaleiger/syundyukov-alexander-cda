@@ -99,6 +99,12 @@ export function createHttpScenariosRepository() {
 			})
 		},
 
+		async deleteScenario(scenarioId) {
+			return apiFetch(`${API_V1_PREFIX}/scenarios/${scenarioId}`, {
+				method: "DELETE",
+			})
+		},
+
 		/**
 		 * @param {string} scenarioId — UUID сценария
 		 * @param {Record<string, unknown>} patch — camelCase, см. PATCH /scenarios/{id}

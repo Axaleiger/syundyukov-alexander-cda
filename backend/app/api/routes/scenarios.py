@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.models.tables import AppUser, Asset, BusinessDirection, ProductionStage, Scenario
+from app.models.tables import (
+    AppUser,
+    Asset,
+    BusinessDirection,
+    PlanningCase,
+    ProductionStage,
+    Scenario,
+)
 from app.schemas.scenario import (
     ScenarioCreate,
     ScenarioListItem,
@@ -93,7 +100,7 @@ def list_scenarios(
         q = q.filter(Scenario.production_stage_id == production_stage_id)
     if asset_id:
         q = q.filter(Scenario.asset_id == asset_id)
-    rows = q.order_by(Scenario.created_at.desc()).all()
+    rows = q.order_by(Scenario.updated_at.desc(), Scenario.created_at.desc()).all()
     author_ids = {s.author_user_id for s in rows if s.author_user_id}
     authors = {}
     if author_ids:
@@ -179,3 +186,16 @@ def patch_scenario(
     db.commit()
     db.refresh(s)
     return _scenario_to_out(s, db)
+
+
+@router.delete("/{scenario_id}")
+def delete_scenario(scenario_id: uuid.UUID, db: Session = Depends(get_db)):
+    s = db.get(Scenario, scenario_id)
+    if not s:
+        raise HTTPException(404, "scenario not found")
+    linked_cases = db.query(PlanningCase).filter(PlanningCase.scenario_id == scenario_id).all()
+    for c in linked_cases:
+        db.delete(c)
+    db.delete(s)
+    db.commit()
+    return {"ok": True, "deletedScenarioId": str(scenario_id), "deletedCases": len(linked_cases)}

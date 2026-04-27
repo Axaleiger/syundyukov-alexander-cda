@@ -353,6 +353,28 @@
   background: #e2e8f0;
 }
 
+.scenarios-delete {
+  flex-shrink: 0;
+  padding: 0.1rem 0.35rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.75;
+  border-radius: 4px;
+}
+
+.scenarios-delete:hover:not(:disabled) {
+  opacity: 1;
+  background: #fee2e2;
+}
+
+.scenarios-delete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .scenarios-name-edit {
   display: flex;
   flex-direction: column;

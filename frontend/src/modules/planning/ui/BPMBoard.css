@@ -127,6 +127,10 @@
   text-overflow: ellipsis;
 }
 
+.bpm-hidden-file-input {
+  display: none;
+}
+
 .bpm-btn-back {
   width: 32px;
   height: 32px;
