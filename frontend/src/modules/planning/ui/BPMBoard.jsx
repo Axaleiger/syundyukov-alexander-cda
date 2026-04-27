@@ -26,6 +26,7 @@ import {
   generateBoardExcel,
   generateTemplateExcel,
   generateOntologyExcel,
+  parseBoardFromExcel,
   parseBoardFromExcelLenient,
   parseConnectionsFromExcel,
 } from '../data/bpmExcel'
@@ -868,7 +869,12 @@ function BPMBoard({
     if (!file) return
     try {
       const ab = await file.arrayBuffer()
-      const parsed = parseBoardFromExcelLenient(ab)
+      let parsed
+      try {
+        parsed = parseBoardFromExcel(ab)
+      } catch {
+        parsed = parseBoardFromExcelLenient(ab)
+      }
       const parsedConnections = parseConnectionsFromExcel(ab)
       const parsedStages = Array.isArray(parsed?.stages) ? parsed.stages : []
       const parsedTasks = parsed?.tasks && typeof parsed.tasks === 'object' ? parsed.tasks : {}

@@ -110,17 +110,28 @@ export function parseBoardFromExcelLenient(arrayBuffer) {
   const ws = wb.Sheets[wb.SheetNames[0]]
   const rows = XLSX.utils.sheet_to_json(ws)
   if (!rows.length) return { stages: [], tasks: {} }
-  const first = rows[0]
-  const keys = Object.keys(first)
-  const stageKey = keys.find((k) => /этап|stage|название/i.test(k)) || keys[0]
-  const cardIdKey = keys.find((k) => /id|карточка|card/i.test(k) && !/создан|date/i.test(k)) || keys[1] || keys[0]
-  const cardNameKey = keys.find((k) => /название|name|карточка/i.test(k) && k !== stageKey) || keys[2] || cardIdKey
   const stages = []
   const tasks = {}
   const seenStages = new Set()
   const seenTasks = {}
+  const parseDeadline = (raw) => {
+    if (raw == null || raw === '') return new Date()
+    if (typeof raw === 'number') return serialToDate(raw)
+    const s = String(raw).trim()
+    if (!s) return new Date()
+    const ddmmyyyy = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/)
+    if (ddmmyyyy) {
+      const d = Number(ddmmyyyy[1])
+      const m = Number(ddmmyyyy[2]) - 1
+      const y = Number(ddmmyyyy[3].length === 2 ? `20${ddmmyyyy[3]}` : ddmmyyyy[3])
+      const dt = new Date(y, m, d)
+      if (!Number.isNaN(dt.getTime())) return dt
+    }
+    const dt = new Date(s)
+    return Number.isNaN(dt.getTime()) ? new Date() : dt
+  }
   for (const row of rows) {
-    let stage = row[stageKey]
+    let stage = getCol(row, 'Этап Название')
     if (stage == null || String(stage).trim() === '') continue
     stage = String(stage).trim()
     if (!seenStages.has(stage)) {
@@ -129,21 +140,37 @@ export function parseBoardFromExcelLenient(arrayBuffer) {
       tasks[stage] = []
       seenTasks[stage] = new Set()
     }
-    let cardId = row[cardIdKey]
+    let cardId = getCol(row, 'Карточка ID')
     if (cardId == null || String(cardId).trim() === '') continue
     cardId = String(cardId).trim()
     if (!seenTasks[stage].has(cardId)) {
       seenTasks[stage].add(cardId)
+      const cardNameRaw = getCol(row, 'Карточка Название')
+      const executorRaw = getCol(row, 'Исполнитель')
+      const approverRaw = getCol(row, 'Согласующий')
+      const deadlineRaw = getCol(row, 'Срок сдачи')
+      const statusRaw = getCol(row, 'Статус')
+      const dateRaw = getCol(row, 'Дата создания')
       tasks[stage].push({
         id: cardId,
-        name: (row[cardNameKey] != null ? String(row[cardNameKey]).trim() : '') || cardId,
-        executor: '',
-        approver: '',
-        deadline: new Date(),
-        status: 'в работе',
-        date: '',
+        name: (cardNameRaw != null ? String(cardNameRaw).trim() : '') || cardId,
+        executor: executorRaw != null ? String(executorRaw).trim() : '',
+        approver: approverRaw != null ? String(approverRaw).trim() : '',
+        deadline: parseDeadline(deadlineRaw),
+        status: statusRaw != null && String(statusRaw).trim() ? String(statusRaw).trim() : 'в работе',
+        date: dateRaw != null ? String(dateRaw) : '',
         entries: [],
       })
+    }
+    const task = tasks[stage].find((t) => t.id === cardId)
+    const systemRaw = getCol(row, 'Используемые системы')
+    const inputRaw = getCol(row, 'Входные данные')
+    const outputRaw = getCol(row, 'Выходные данные')
+    const system = systemRaw != null ? String(systemRaw).trim() : ''
+    const input = inputRaw != null ? String(inputRaw).trim() : ''
+    const output = outputRaw != null ? String(outputRaw).trim() : ''
+    if (task && (system || input || output)) {
+      task.entries.push({ system, input, output })
     }
   }
   return { stages, tasks }
