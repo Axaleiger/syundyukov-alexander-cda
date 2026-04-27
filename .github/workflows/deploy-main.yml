@@ -1,0 +1,62 @@
+# Деплой основного стенда (/, /demo): пересобирает только nginx_main.
+
+name: Deploy Main
+
+on:
+  push:
+    branches:
+      - server
+    paths-ignore:
+      - "frontend/src/**/new-demo/**"
+      - "frontend/src/pages/new-demo/**"
+      - "frontend/src/app/layouts/new-demo/**"
+      - "frontend/src/app/layouts/NewDemoLayout.jsx"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy main over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
+          VITE_EXPO: ${{ secrets.VITE_EXPO }}
+          VITE_EXPO_DISABLE_TABS: ${{ secrets.VITE_EXPO_DISABLE_TABS }}
+          VITE_EXPO_ARM_DELAY_MS: ${{ secrets.VITE_EXPO_ARM_DELAY_MS }}
+          VITE_EXPO_IDLE_MS: ${{ secrets.VITE_EXPO_IDLE_MS }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          timeout: 60s
+          command_timeout: 30m
+          script_stop: true
+          envs: VITE_GROQ_API_KEY,VITE_EXPO,VITE_EXPO_DISABLE_TABS,VITE_EXPO_ARM_DELAY_MS,VITE_EXPO_IDLE_MS
+          script: |
+            set -euo pipefail
+            REF="${{ github.ref_name }}"
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch origin
+            git checkout "$REF"
+            git pull --ff-only origin "$REF"
+            export VITE_GROQ_API_KEY="${VITE_GROQ_API_KEY:-}"
+            export VITE_EXPO="${VITE_EXPO:-}"
+            export VITE_EXPO_DISABLE_TABS="${VITE_EXPO_DISABLE_TABS:-}"
+            export VITE_EXPO_ARM_DELAY_MS="${VITE_EXPO_ARM_DELAY_MS:-}"
+            export VITE_EXPO_IDLE_MS="${VITE_EXPO_IDLE_MS:-}"
+            {
+              echo "VITE_GROQ_API_KEY=${VITE_GROQ_API_KEY:-}"
+              echo "VITE_EXPO=${VITE_EXPO:-}"
+              echo "VITE_EXPO_DISABLE_TABS=${VITE_EXPO_DISABLE_TABS:-}"
+              echo "VITE_EXPO_ARM_DELAY_MS=${VITE_EXPO_ARM_DELAY_MS:-}"
+              echo "VITE_EXPO_IDLE_MS=${VITE_EXPO_IDLE_MS:-}"
+            } > .env.deploy.main.vite
+            chmod 600 .env.deploy.main.vite
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.main.vite build nginx_main
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.main.vite up -d db api nginx_main edge

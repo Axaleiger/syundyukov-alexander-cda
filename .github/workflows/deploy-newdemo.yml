@@ -1,21 +1,32 @@
-# Полный деплой обоих стендов (служебный/manual fallback).
-# Для обычной работы используйте Deploy Main и Deploy NewDemo.
+# Деплой стенда /new-demo: пересобирает только nginx_newdemo.
 
-name: Deploy Full
+name: Deploy NewDemo
 
 on:
+  push:
+    branches:
+      - server
+    paths:
+      - "frontend/src/**/new-demo/**"
+      - "frontend/src/pages/new-demo/**"
+      - "frontend/src/app/layouts/new-demo/**"
+      - "frontend/src/app/layouts/NewDemoLayout.jsx"
+      - "frontend/src/app/stands/standsConfig.js"
+      - "Dockerfile.nginx.newdemo"
+      - "docker-compose.server.yml"
+      - "docker/nginx/server.conf"
+      - ".github/workflows/deploy-newdemo.yml"
   workflow_dispatch:
 
-# Одна активная сборка/деплой на сервер (все ветки в одной очереди — без параллельных docker build на хосте).
 concurrency:
-  group: deploy-${{ github.repository }}
+  group: deploy-newdemo-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy over SSH
+      - name: Deploy new-demo over SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
           VITE_GROQ_API_KEY: ${{ secrets.VITE_GROQ_API_KEY }}
@@ -44,28 +55,18 @@ jobs:
             git fetch origin
             git checkout "$REF"
             git pull --ff-only origin "$REF"
-            export VITE_GROQ_API_KEY="${VITE_GROQ_API_KEY:-}"
-            export VITE_EXPO="${VITE_EXPO:-}"
-            export VITE_EXPO_DISABLE_TABS="${VITE_EXPO_DISABLE_TABS:-}"
-            export VITE_EXPO_ARM_DELAY_MS="${VITE_EXPO_ARM_DELAY_MS:-}"
-            export VITE_EXPO_IDLE_MS="${VITE_EXPO_IDLE_MS:-}"
             export NEW_DEMO_VITE_GROQ_API_KEY="${NEW_DEMO_VITE_GROQ_API_KEY:-${VITE_GROQ_API_KEY:-}}"
             export NEW_DEMO_VITE_EXPO="${NEW_DEMO_VITE_EXPO:-${VITE_EXPO:-}}"
             export NEW_DEMO_VITE_EXPO_DISABLE_TABS="${NEW_DEMO_VITE_EXPO_DISABLE_TABS:-${VITE_EXPO_DISABLE_TABS:-}}"
             export NEW_DEMO_VITE_EXPO_ARM_DELAY_MS="${NEW_DEMO_VITE_EXPO_ARM_DELAY_MS:-${VITE_EXPO_ARM_DELAY_MS:-}}"
             export NEW_DEMO_VITE_EXPO_IDLE_MS="${NEW_DEMO_VITE_EXPO_IDLE_MS:-${VITE_EXPO_IDLE_MS:-}}"
-            # Секреты из CI в отдельном env: иначе пустые VITE_* из .env на сервере перебивают подстановку в build args.
             {
-              echo "VITE_GROQ_API_KEY=${VITE_GROQ_API_KEY:-}"
-              echo "VITE_EXPO=${VITE_EXPO:-}"
-              echo "VITE_EXPO_DISABLE_TABS=${VITE_EXPO_DISABLE_TABS:-}"
-              echo "VITE_EXPO_ARM_DELAY_MS=${VITE_EXPO_ARM_DELAY_MS:-}"
-              echo "VITE_EXPO_IDLE_MS=${VITE_EXPO_IDLE_MS:-}"
               echo "NEW_DEMO_VITE_GROQ_API_KEY=${NEW_DEMO_VITE_GROQ_API_KEY:-}"
               echo "NEW_DEMO_VITE_EXPO=${NEW_DEMO_VITE_EXPO:-}"
               echo "NEW_DEMO_VITE_EXPO_DISABLE_TABS=${NEW_DEMO_VITE_EXPO_DISABLE_TABS:-}"
               echo "NEW_DEMO_VITE_EXPO_ARM_DELAY_MS=${NEW_DEMO_VITE_EXPO_ARM_DELAY_MS:-}"
               echo "NEW_DEMO_VITE_EXPO_IDLE_MS=${NEW_DEMO_VITE_EXPO_IDLE_MS:-}"
-            } > .env.deploy.vite
-            chmod 600 .env.deploy.vite
-            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.vite up -d --build
+            } > .env.deploy.newdemo.vite
+            chmod 600 .env.deploy.newdemo.vite
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.newdemo.vite build nginx_newdemo
+            docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.newdemo.vite up -d db api nginx_newdemo edge

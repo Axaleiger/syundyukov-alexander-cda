@@ -1,6 +1,8 @@
-# Продакшен-сервер: PostgreSQL + FastAPI + nginx (два бандла: / и /new-demo/).
-# Запуск: docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.vite up -d --build
-# .env.deploy.vite: VITE_* (основной стенд) и NEW_DEMO_VITE_* (new-demo); см. compose.env.example и Deploy workflow.
+# Продакшен-сервер: PostgreSQL + FastAPI + edge nginx + два независимых фронтовых сервиса.
+# Запуск: docker compose -f docker-compose.server.yml --env-file .env --env-file .env.deploy.vite up -d
+# Сборки стендов выполняются отдельно:
+#   docker compose ... build nginx_main
+#   docker compose ... build nginx_newdemo
 
 services:
   db:
@@ -27,29 +29,44 @@ services:
       db:
         condition: service_healthy
 
-  nginx:
+  nginx_main:
     build:
       context: .
-      dockerfile: Dockerfile.nginx
+      dockerfile: Dockerfile.nginx.main
       args:
-        # Основной стенд (/, /demo)
         VITE_GROQ_API_KEY: ${VITE_GROQ_API_KEY:-}
         VITE_EXPO: ${VITE_EXPO:-}
         VITE_EXPO_DISABLE_TABS: ${VITE_EXPO_DISABLE_TABS:-}
         VITE_EXPO_ARM_DELAY_MS: ${VITE_EXPO_ARM_DELAY_MS:-}
         VITE_EXPO_IDLE_MS: ${VITE_EXPO_IDLE_MS:-}
-        # New-demo (/new-demo/) — отдельные секреты; если пусто, в Dockerfile подставятся те же ARG что и у main (см. .env.deploy.vite в CI).
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  nginx_newdemo:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx.newdemo
+      args:
         NEW_DEMO_VITE_GROQ_API_KEY: ${NEW_DEMO_VITE_GROQ_API_KEY:-${VITE_GROQ_API_KEY:-}}
         NEW_DEMO_VITE_EXPO: ${NEW_DEMO_VITE_EXPO:-${VITE_EXPO:-}}
         NEW_DEMO_VITE_EXPO_DISABLE_TABS: ${NEW_DEMO_VITE_EXPO_DISABLE_TABS:-${VITE_EXPO_DISABLE_TABS:-}}
         NEW_DEMO_VITE_EXPO_ARM_DELAY_MS: ${NEW_DEMO_VITE_EXPO_ARM_DELAY_MS:-${VITE_EXPO_ARM_DELAY_MS:-}}
         NEW_DEMO_VITE_EXPO_IDLE_MS: ${NEW_DEMO_VITE_EXPO_IDLE_MS:-${VITE_EXPO_IDLE_MS:-}}
     restart: unless-stopped
+    depends_on:
+      - api
+
+  edge:
+    image: nginx:alpine
+    restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"
     depends_on:
       - api
+      - nginx_main
+      - nginx_newdemo
     volumes:
       - ./docker/nginx/server.conf:/etc/nginx/conf.d/default.conf:ro
       - /var/www/certbot:/var/www/certbot:ro

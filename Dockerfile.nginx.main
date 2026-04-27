@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+# Сборка только основного стенда (/, /demo).
+
+FROM node:20-alpine AS frontend-build-main
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+
+ARG VITE_GROQ_API_KEY
+ARG VITE_EXPO
+ARG VITE_EXPO_DISABLE_TABS
+ARG VITE_EXPO_ARM_DELAY_MS
+ARG VITE_EXPO_IDLE_MS
+ENV VITE_GROQ_API_KEY=$VITE_GROQ_API_KEY
+ENV VITE_EXPO=$VITE_EXPO
+ENV VITE_EXPO_DISABLE_TABS=$VITE_EXPO_DISABLE_TABS
+ENV VITE_EXPO_ARM_DELAY_MS=$VITE_EXPO_ARM_DELAY_MS
+ENV VITE_EXPO_IDLE_MS=$VITE_EXPO_IDLE_MS
+ENV VITE_STAND_SCOPE=main
+ENV VITE_BASE=/
+ENV NODE_OPTIONS=--max-old-space-size=4096
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=frontend-build-main /app/dist /usr/share/nginx/html
+COPY docker/nginx/main-app.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
