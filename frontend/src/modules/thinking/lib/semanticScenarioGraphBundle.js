@@ -128,6 +128,84 @@ function assignCauseHypTwinDetailTexts(bundle) {
 	}
 }
 
+function buildIncomingAdjacency(edges) {
+	const incoming = new Map()
+	for (const e of edges || []) {
+		if (!incoming.has(e.to)) incoming.set(e.to, [])
+		incoming.get(e.to).push(e.from)
+	}
+	return incoming
+}
+
+function extractScenarioOrdinalFromId(id) {
+	const m = /^out-scenario-(\d+)$/.exec(String(id || ""))
+	return m ? parseInt(m[1], 10) : 1
+}
+
+function inferActionPackFromHypotheses(hypDetails, ordinal) {
+	const text = hypDetails.join(" ").toLowerCase()
+	const isGtm = text.includes("гтм")
+	const isPpd = text.includes("ппд") || text.includes("заводнен")
+	const isRepair = text.includes("опз") || text.includes("ремонт")
+	const grps = (isGtm ? 3 : 2) + (ordinal % 2)
+	const ppd = (isPpd ? 2 : 1) + (ordinal % 2 === 0 ? 0 : 1)
+	const opz = (isRepair ? 3 : 2) + (ordinal % 3 === 0 ? 1 : 0)
+	return { grps, ppd, opz }
+}
+
+function buildScenarioSimulationSummary({ ordinal, hypotheses, twinLabels }) {
+	const hypCount = Math.max(1, hypotheses.length)
+	const { grps, ppd, opz } = inferActionPackFromHypotheses(hypotheses, ordinal)
+	const oilDelta = 7 + ordinal * 2 + hypCount
+	const waterDelta = 1 + (ordinal % 3)
+	const pressureDelta = 4 + ordinal + Math.floor(hypCount / 2)
+	const annualRevenue = Math.round(oilDelta * 78)
+	const annualFcf = Math.round(annualRevenue * 0.62)
+	const npvDelta = Math.round(annualFcf * 2.4)
+	const twins = twinLabels.length ? twinLabels.join(", ") : "ЦД пласта, ЦД скважины"
+	return [
+		`Сценарий ${ordinal}: смоделирована связка гипотез (${hypCount}) на цифровых двойниках объектов: ${twins}.`,
+		`В расчётном контуре выполнены ${grps} ГРП, ${ppd} перевода в ППД и ${opz} ОПЗ.`,
+		`Итог моделирования: прирост добычи нефти +${oilDelta} т/сут, снижение темпов обводнённости на ${waterDelta}% и рост пластового давления на ${pressureDelta} атм.`,
+		`Экономический эффект: дополнительный денежный поток +${annualFcf} млн руб/год (выручка +${annualRevenue} млн руб/год), прирост NPV +${npvDelta} млн руб.`,
+	].join("\n")
+}
+
+function assignOutcomeScenarioSimulationSummaries(bundle) {
+	const nodesById = new Map((bundle.nodes || []).map((n) => [n.id, n]))
+	const incoming = buildIncomingAdjacency(bundle.edges || [])
+	for (const outNode of bundle.nodes || []) {
+		if (!/^out-scenario-\d+$/.test(String(outNode.id || ""))) continue
+		const ordinal = extractScenarioOrdinalFromId(outNode.id)
+		const preds = incoming.get(outNode.id) || []
+		const hypIds = new Set()
+		const twinLabels = []
+		for (const pid of preds) {
+			if (/^hyp-\d+$/.test(pid)) {
+				hypIds.add(pid)
+				continue
+			}
+			const cdNode = nodesById.get(pid)
+			if (cdNode?.cdSegment === "hs") {
+				const label = String(cdNode.label || "").trim()
+				if (label) twinLabels.push(label)
+				for (const maybeHyp of incoming.get(pid) || []) {
+					if (/^hyp-\d+$/.test(maybeHyp)) hypIds.add(maybeHyp)
+				}
+			}
+		}
+		const hypotheses = [...hypIds]
+			.map((id) => String(nodesById.get(id)?.detailText || "").trim())
+			.filter(Boolean)
+		const uniqTwins = [...new Set(twinLabels)]
+		outNode.detailText = buildScenarioSimulationSummary({
+			ordinal,
+			hypotheses,
+			twinLabels: uniqTwins,
+		})
+	}
+}
+
 /**
  * Как в prompt-builder `buildMermaidFromPanel`: «тяжёлые» причины/гипотезы — активные;
  * остальные помечаются `semanticChainActive: false` (на new-demo — красное угасание).
@@ -596,6 +674,7 @@ export function buildSemanticScenarioGraphBundle(preset, pipeline) {
 	assignCdLabels(out)
 	assignSemanticChainFlagsForCdNodes(out)
 	assignCauseHypTwinDetailTexts(out)
+	assignOutcomeScenarioSimulationSummaries(out)
 
 	relaxGraphNodeCollisions(out.nodes, { iterations: 72, margin: 46 })
 	repelNodesFromChordEdges(out.nodes, out.edges, { passes: 16, minClear: 58, strength: 0.58 })

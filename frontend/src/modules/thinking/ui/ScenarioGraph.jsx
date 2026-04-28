@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import chrome from './thinkingDrawerChrome.module.css'
+import { getCdProgramDisplayName } from '../../../core/data/static/funnelEntities.js'
 import {
   optimalScenarioEdgeKeys,
   optimalScenarioNodeIds,
@@ -8,6 +9,7 @@ import {
   scenarioGraphNodes,
 } from '../lib/scenarioGraphData'
 import { getNewDemoThinkingBandLayout } from '../lib/scenarioGraphLayout'
+import { generateScenarioSummaryDetailed } from '../lib/llmScenarioSummaryGenerator.js'
 
 const LINE_HEIGHT = 15
 const ZOOM_MIN = 0.08
@@ -85,6 +87,17 @@ function pickDisplayLabelForNode(node, graphBundle, hypLabelById, outLabelById) 
     return node.label
   }
   return hypLabelById.get(node.id) ?? outLabelById.get(node.id) ?? undefined
+}
+
+function formatDigitalTwinPopoverTitle(label) {
+  const raw = String(label ?? '').trim()
+  if (!raw) return ''
+  const expandedProgram = getCdProgramDisplayName(raw)
+  if (expandedProgram && expandedProgram !== raw) return expandedProgram
+  if (/^ЦД\s+/i.test(raw)) {
+    return `Цифровой двойник ${raw.replace(/^ЦД\s+/i, '')}`
+  }
+  return raw
 }
 
 const OUT_SCENARIO_ID_RE = /^out-scenario-\d+$/
@@ -690,14 +703,23 @@ const DETAIL_POPOVER_W = 300
 const DETAIL_POPOVER_MAX_H = 228
 const DETAIL_POPOVER_MAX_H_CD = 340
 
-function NodeDetailPopover({ node, layout, graphWidth, onClose, isNewDemo, title: titleOverride }) {
+function NodeDetailPopover({
+  node,
+  layout,
+  graphWidth,
+  onClose,
+  isNewDemo,
+  title: titleOverride,
+  detailOverride = null,
+  detailLoading = false,
+}) {
   const isScenarioGoal = /^scenario-\d+$/.test(node.id)
-  const detailText = String(node.detailText ?? '').trim()
+  const detailText = String(detailOverride ?? node.detailText ?? '').trim()
   const title = String(titleOverride ?? node.label ?? '')
   const detail =
     isScenarioGoal && detailText
       ? detailText
-      : String(node.detailText ?? node.label ?? '').trim()
+      : String(detailOverride ?? node.detailText ?? node.label ?? '').trim()
 
   const approxLines = Math.max(2, Math.ceil(detail.length / 40))
   const cap = /^cd-\d+$/.test(node.id) ? DETAIL_POPOVER_MAX_H_CD : DETAIL_POPOVER_MAX_H
@@ -741,11 +763,54 @@ function NodeDetailPopover({ node, layout, graphWidth, onClose, isNewDemo, title
           className="mt-2 min-h-0 flex-1 overflow-y-auto text-[12.5px] leading-snug text-slate-200/95"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
+          {detailLoading ? (
+            <div className="mb-2 text-[11.5px] text-sky-300/90">Генерируем инженерную сводку сценария…</div>
+          ) : null}
           {detail}
         </div>
       </div>
     </foreignObject>
   )
+}
+
+function buildIncomingMap(edges) {
+  const incoming = new Map()
+  for (const e of edges || []) {
+    if (!incoming.has(e.to)) incoming.set(e.to, [])
+    incoming.get(e.to).push(e.from)
+  }
+  return incoming
+}
+
+function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
+  const node = nodesById.get(nodeId)
+  if (!node) return null
+  const preds = incomingMap.get(nodeId) || []
+  const hypIds = new Set()
+  const twins = []
+  for (const pid of preds) {
+    if (/^hyp-\d+$/.test(pid)) {
+      hypIds.add(pid)
+      continue
+    }
+    const cd = nodesById.get(pid)
+    if (cd?.cdSegment === 'hs') {
+      const lbl = String(cd.label || '').trim()
+      if (lbl) twins.push(lbl)
+      for (const up of incomingMap.get(pid) || []) {
+        if (/^hyp-\d+$/.test(up)) hypIds.add(up)
+      }
+    }
+  }
+  const hypotheses = [...hypIds]
+    .map((id) => String(nodesById.get(id)?.detailText || '').trim())
+    .filter(Boolean)
+  return {
+    scenarioLabel: String(node.label || nodeId),
+    hypotheses,
+    digitalTwins: [...new Set(twins)],
+    baselineSummary: String(node.detailText || '').trim(),
+  }
 }
 
 function ScenarioGraph({
@@ -870,6 +935,8 @@ function ScenarioGraph({
         controlText: 'text-slate-100',
       }
   const [openDetailIds, setOpenDetailIds] = useState(() => new Set())
+  const [llmSummaryByNodeId, setLlmSummaryByNodeId] = useState(() => new Map())
+  const [llmSummaryLoadingIds, setLlmSummaryLoadingIds] = useState(() => new Set())
   const [graphFullscreen, setGraphFullscreen] = useState(false)
 
   const openNodeDetail = useCallback((id) => {
@@ -1007,6 +1074,47 @@ function ScenarioGraph({
     nodes.forEach((n) => m.set(n.id, n))
     return m
   }, [nodes])
+  const incomingMap = useMemo(() => buildIncomingMap(edges), [edges])
+
+  useEffect(() => {
+    if (!isNewDemo) return
+    const scenarioIds = [...openDetailIds].filter((id) => /^out-scenario-\d+$/.test(id))
+    if (!scenarioIds.length) return
+    let cancelled = false
+    scenarioIds.forEach((id) => {
+      if (llmSummaryByNodeId.has(id) || llmSummaryLoadingIds.has(id)) return
+      const payload = buildScenarioSummaryPayload(id, nodesById, incomingMap)
+      if (!payload) return
+      setLlmSummaryLoadingIds((prev) => {
+        const next = new Set(prev)
+        next.add(id)
+        return next
+      })
+      generateScenarioSummaryDetailed(payload)
+        .then((res) => {
+          if (cancelled) return
+          const summary = String(res?.summary || '').trim()
+          if (!summary) return
+          setLlmSummaryByNodeId((prev) => {
+            const next = new Map(prev)
+            next.set(id, summary)
+            return next
+          })
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (cancelled) return
+          setLlmSummaryLoadingIds((prev) => {
+            const next = new Set(prev)
+            next.delete(id)
+            return next
+          })
+        })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isNewDemo, openDetailIds, llmSummaryByNodeId, llmSummaryLoadingIds, nodesById, incomingMap])
 
   /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
   const preferredScenarioOutcomeIds = useMemo(() => {
@@ -2300,7 +2408,7 @@ function ScenarioGraph({
                 id === 'userQuery'
                   ? 'Пользовательский запрос'
                   : /^cd-\d+$/.test(id) && String(node.label ?? '').trim()
-                    ? `Цифровой двойник: ${String(node.label ?? '').trim()}`
+                    ? formatDigitalTwinPopoverTitle(node.label)
                     : String(node.label ?? '').trim() ||
                       (hypLabelById.get(id) ??
                         outLabelById.get(id) ??
@@ -2314,6 +2422,8 @@ function ScenarioGraph({
                   graphWidth={WIDTH}
                   isNewDemo={isNewDemo}
                   title={popoverTitle}
+                  detailOverride={llmSummaryByNodeId.get(id) ?? null}
+                  detailLoading={llmSummaryLoadingIds.has(id)}
                   onClose={() => closeNodeDetail(id)}
                 />
               )

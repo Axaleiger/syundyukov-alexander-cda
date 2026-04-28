@@ -8,15 +8,15 @@ import { NEW_DEMO_CD_OBJECT_TWIN_NAMES } from './newDemoCdObjectTwins.js'
 import { MICROSERVICES } from './microservicesFunnel.js'
 import { FUNCTIONS } from './functionsFunnel.js'
 
-export const PROGRAMS = ['ЦД РБ', 'ЦД ПР', 'ЦД АВНМ', 'ЦД П', 'ЦД РиД']
+export const PROGRAMS = ['ЦДРБ', 'ЦДП', 'ЦДПР', 'ЦД АВНМ', 'ЦДРиД']
 
 /** Полные названия для подписей уровня «ЦД программ» (панель процентов, легенда). */
 export const CD_PROGRAM_DISPLAY_NAMES = {
-  'ЦД П': 'Цифровой двойник промысла',
+  'ЦДП': 'Цифровой двойник промысла',
   'ЦД АВНМ': 'Цифровой двойник новых мощностей',
-  'ЦД ПР': 'Цифровой двойник проектных решений',
-  'ЦД РБ': 'Цифровой двойник ресурсной базы',
-  'ЦД РиД': 'Цифровой двойник разведки и добычи',
+  'ЦДПР': 'Цифровой двойник проектных решений',
+  'ЦДРБ': 'Цифровой двойник ресурсной базы',
+  'ЦДРиД': 'Цифровой двойник разведки и добычи',
 }
 
 export function getCdProgramDisplayName(shortLabel) {
