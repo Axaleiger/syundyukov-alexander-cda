@@ -4,7 +4,7 @@
  */
 
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
-const GROQ_MODEL = "llama-3.3-70b-versatile"
+const GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
 
 function getApiKey() {
 	try {
@@ -93,39 +93,46 @@ export async function generateScenarioSummaryDetailed(payload) {
 	}
 
 	try {
-		const response = await fetch(GROQ_CHAT_URL, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${key}`,
-			},
-			body: JSON.stringify({
-				model: GROQ_MODEL,
-				messages: [{ role: "user", content: buildPrompt(payload) }],
-				temperature: 0.35,
-				max_tokens: 520,
-			}),
-		})
-		if (!response.ok) {
-			debugLog("fallback: non-ok response", response.status)
-			return {
-				summary: fallback,
-				source: "fallback",
-				reason: `http_${response.status}`,
+		for (let i = 0; i < GROQ_MODELS.length; i++) {
+			const model = GROQ_MODELS[i]
+			const response = await fetch(GROQ_CHAT_URL, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${key}`,
+				},
+				body: JSON.stringify({
+					model,
+					messages: [{ role: "user", content: buildPrompt(payload) }],
+					temperature: 0.35,
+					max_tokens: 520,
+				}),
+			})
+			if (!response.ok) {
+				debugLog("model failed", { model, status: response.status })
+				if (i < GROQ_MODELS.length - 1) continue
+				return {
+					summary: fallback,
+					source: "fallback",
+					reason: `http_${response.status}`,
+				}
 			}
+			const data = await response.json()
+			const content = String(data?.choices?.[0]?.message?.content || "").trim()
+			if (!content) {
+				debugLog("model empty content", { model })
+				if (i < GROQ_MODELS.length - 1) continue
+				return { summary: fallback, source: "fallback", reason: "empty_content" }
+			}
+			const summary = extractSummaryFromModelContent(content)
+			if (!summary) {
+				debugLog("model empty summary after extract", { model })
+				if (i < GROQ_MODELS.length - 1) continue
+				return { summary: fallback, source: "fallback", reason: "empty_summary" }
+			}
+			return { summary, source: "groq" }
 		}
-		const data = await response.json()
-		const content = String(data?.choices?.[0]?.message?.content || "").trim()
-		if (!content) {
-			debugLog("fallback: empty content")
-			return { summary: fallback, source: "fallback", reason: "empty_content" }
-		}
-		const summary = extractSummaryFromModelContent(content)
-		if (!summary) {
-			debugLog("fallback: empty summary after extract")
-			return { summary: fallback, source: "fallback", reason: "empty_summary" }
-		}
-		return { summary, source: "groq" }
+		return { summary: fallback, source: "fallback", reason: "no_model_succeeded" }
 	} catch (e) {
 		debugLog("fallback: exception", e?.message)
 		return { summary: fallback, source: "fallback", reason: "exception" }
