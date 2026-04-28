@@ -763,9 +763,6 @@ function NodeDetailPopover({
           className="mt-2 min-h-0 flex-1 overflow-y-auto text-[12.5px] leading-snug text-slate-200/95"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          {detailLoading ? (
-            <div className="mb-2 text-[11.5px] text-sky-300/90">Генерируем инженерную сводку сценария…</div>
-          ) : null}
           {detail}
         </div>
       </div>

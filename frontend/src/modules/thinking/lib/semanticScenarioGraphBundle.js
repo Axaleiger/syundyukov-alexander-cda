@@ -144,18 +144,19 @@ function extractScenarioOrdinalFromId(id) {
 
 function inferActionPackFromHypotheses(hypDetails, ordinal) {
 	const text = hypDetails.join(" ").toLowerCase()
-	const isGtm = text.includes("гтм")
-	const isPpd = text.includes("ппд") || text.includes("заводнен")
-	const isRepair = text.includes("опз") || text.includes("ремонт")
-	const grps = (isGtm ? 3 : 2) + (ordinal % 2)
-	const ppd = (isPpd ? 2 : 1) + (ordinal % 2 === 0 ? 0 : 1)
-	const opz = (isRepair ? 3 : 2) + (ordinal % 3 === 0 ? 1 : 0)
-	return { grps, ppd, opz }
+	const operations = 4 + ordinal + Math.min(3, hypDetails.length)
+	const hasPressure = text.includes("давлен") || text.includes("ппд") || text.includes("заводнен")
+	const hasWater = text.includes("обводнен") || text.includes("вода") || text.includes("водо")
+	const hasDebits = text.includes("добыч") || text.includes("дебит") || text.includes("фонд")
+	return { operations, hasPressure, hasWater, hasDebits }
 }
 
 function buildScenarioSimulationSummary({ ordinal, hypotheses, twinLabels }) {
 	const hypCount = Math.max(1, hypotheses.length)
-	const { grps, ppd, opz } = inferActionPackFromHypotheses(hypotheses, ordinal)
+	const { operations, hasPressure, hasWater, hasDebits } = inferActionPackFromHypotheses(
+		hypotheses,
+		ordinal,
+	)
 	const oilDelta = 7 + ordinal * 2 + hypCount
 	const waterDelta = 1 + (ordinal % 3)
 	const pressureDelta = 4 + ordinal + Math.floor(hypCount / 2)
@@ -163,10 +164,18 @@ function buildScenarioSimulationSummary({ ordinal, hypotheses, twinLabels }) {
 	const annualFcf = Math.round(annualRevenue * 0.62)
 	const npvDelta = Math.round(annualFcf * 2.4)
 	const twins = twinLabels.length ? twinLabels.join(", ") : "ЦД пласта, ЦД скважины"
+	const effectParts = []
+	if (hasDebits) effectParts.push(`добыча нефти +${oilDelta} т/сут`)
+	if (hasWater) effectParts.push(`снижение темпов обводнённости на ${waterDelta}%`)
+	if (hasPressure) effectParts.push(`рост пластового давления на ${pressureDelta} атм`)
+	const effects =
+		effectParts.length > 0
+			? effectParts.join(", ")
+			: `добыча нефти +${oilDelta} т/сут и стабилизация технологических режимов`
 	return [
-		`Сценарий ${ordinal}: смоделирована связка гипотез (${hypCount}) на цифровых двойниках объектов: ${twins}.`,
-		`В расчётном контуре выполнены ${grps} ГРП, ${ppd} перевода в ППД и ${opz} ОПЗ.`,
-		`Итог моделирования: прирост добычи нефти +${oilDelta} т/сут, снижение темпов обводнённости на ${waterDelta}% и рост пластового давления на ${pressureDelta} атм.`,
+		`Проверка ${hypCount} гипотез на цифровых двойниках ${twins} показывает позитивный сценарий реализации.`,
+		`В расчётном контуре выполнен пакет из ${operations} целевых мероприятий по режиму работы фонда и параметрам разработки.`,
+		`Итог моделирования: ${effects}.`,
 		`Экономический эффект: дополнительный денежный поток +${annualFcf} млн руб/год (выручка +${annualRevenue} млн руб/год), прирост NPV +${npvDelta} млн руб.`,
 	].join("\n")
 }
