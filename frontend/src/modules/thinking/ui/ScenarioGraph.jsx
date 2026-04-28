@@ -820,6 +820,16 @@ function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
   }
 }
 
+function compactOutcomeBallLabel(text, fallbackLabel) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim()
+  if (!raw) return String(fallbackLabel || '').trim()
+  const firstSentence = raw.split(/[.!?]/).map((x) => x.trim()).find(Boolean) || raw
+  const words = firstSentence.split(' ').filter(Boolean).slice(0, 4).join(' ')
+  const compact = words || firstSentence
+  if (compact.length <= 24) return compact
+  return `${compact.slice(0, 23).trimEnd()}…`
+}
+
 function ScenarioGraph({
   visibleNodeIds = new Set(),
   graphComplete = false,
@@ -1086,7 +1096,7 @@ function ScenarioGraph({
 
   useEffect(() => {
     if (!isNewDemo) return
-    const scenarioIds = [...openDetailIds].filter((id) => /^out-scenario-\d+$/.test(id))
+    const scenarioIds = [...visibleNodeIds].filter((id) => /^out-scenario-\d+$/.test(id))
     if (!scenarioIds.length) return
     let cancelled = false
     scenarioIds.forEach((id) => {
@@ -1130,7 +1140,7 @@ function ScenarioGraph({
     return () => {
       cancelled = true
     }
-  }, [isNewDemo, openDetailIds, llmSummaryByNodeId, llmSummaryLoadingIds, nodesById, incomingMap])
+  }, [isNewDemo, visibleNodeIds, llmSummaryByNodeId, llmSummaryLoadingIds, nodesById, incomingMap])
 
   /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
   const preferredScenarioOutcomeIds = useMemo(() => {
@@ -1633,7 +1643,11 @@ function ScenarioGraph({
   const nodeLayouts = useMemo(() => {
     const m = new Map()
     for (const node of nodes) {
-      const displayLabel = pickDisplayLabelForNode(node, graphBundle, hypLabelById, outLabelById)
+      const baseDisplayLabel = pickDisplayLabelForNode(node, graphBundle, hypLabelById, outLabelById)
+      const displayLabel =
+        isNewDemo && /^out-scenario-\d+$/.test(node.id)
+          ? compactOutcomeBallLabel(llmSummaryByNodeId.get(node.id), baseDisplayLabel)
+          : baseDisplayLabel
       if (node.type === 'outcome') {
         const estimated = estimateRenderedBox(node, isNewDemo, displayLabel)
         const { w: bw, h: rectH, lines: linesClamped, box } = estimated
@@ -1826,6 +1840,7 @@ function ScenarioGraph({
     edges,
     dualRedCauseHypIds,
     optimalGarlandLitIds,
+    llmSummaryByNodeId,
   ])
 
   const animateToView = useCallback(
