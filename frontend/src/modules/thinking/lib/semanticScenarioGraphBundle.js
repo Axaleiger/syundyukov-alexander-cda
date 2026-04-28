@@ -600,6 +600,7 @@ export function buildSemanticScenarioGraphBundle(preset, pipeline) {
 		: goals.map((g) =>
 				typeof g?.id === "string" && /^G\d+$/i.test(g.id) ? g.id : null,
 			)
+	objectiveIdsByBranch = objectiveIdsByBranch.filter(Boolean)
 	while (objectiveIdsByBranch.length < SCENARIO_BRANCH_COUNT) objectiveIdsByBranch.push(null)
 	objectiveIdsByBranch = objectiveIdsByBranch.slice(0, SCENARIO_BRANCH_COUNT)
 	const keysForPanels = objectiveIdsByBranch
@@ -626,8 +627,7 @@ export function buildSemanticScenarioGraphBundle(preset, pipeline) {
 			if (oid) {
 				n.detailText = formatFormalizatorObjectiveDetailBody(branchNum, oid)
 			} else {
-				n.detailText =
-					"Уточните формулировку цели в запросе (выберите цель из каталога)."
+				n.detailText = ""
 			}
 			continue
 		}

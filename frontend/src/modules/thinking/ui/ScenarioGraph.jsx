@@ -812,6 +812,7 @@ function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
   const hypotheses = [...hypIds]
     .map((id) => String(nodesById.get(id)?.detailText || '').trim())
     .filter(Boolean)
+  const focusHypothesis = hypotheses[0] || ''
   const scenarioGoalIds = new Set()
   const q = [...hypIds]
   const seen = new Set(q)
@@ -832,30 +833,11 @@ function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
   return {
     scenarioLabel: String(node.label || nodeId),
     hypotheses,
+    focusHypothesis,
     digitalTwins: [...new Set(twins)],
     userQuery,
     goalContext,
   }
-}
-
-function compactOutcomeBallLabel(text, fallbackLabel) {
-  const raw = String(text || '').replace(/\s+/g, ' ').trim()
-  if (!raw) return String(fallbackLabel || '').trim()
-  const sentences = raw.split(/[.!?]/).map((x) => x.trim()).filter(Boolean)
-  const scored = sentences
-    .map((s) => {
-      const hasPercent = /\d+([.,]\d+)?\s*%/.test(s)
-      const hasMetric = /(добыч|обводн|opex|npv|irr|денежн|поток|дебит|давлен)/i.test(s)
-      const hasRange = /\d+\s*[-–]\s*\d+/.test(s)
-      const score = (hasPercent ? 3 : 0) + (hasMetric ? 2 : 0) + (hasRange ? 1 : 0)
-      return { s, score }
-    })
-    .sort((a, b) => b.score - a.score || b.s.length - a.s.length)
-  const bestSentence = scored[0]?.s || sentences[0] || raw
-  const words = bestSentence.split(' ').filter(Boolean).slice(0, 6).join(' ')
-  const compact = words || bestSentence
-  if (compact.length <= 24) return compact
-  return `${compact.slice(0, 23).trimEnd()}…`
 }
 
 function ScenarioGraph({
@@ -985,7 +967,14 @@ function ScenarioGraph({
   const [llmSummaryLoadingIds, setLlmSummaryLoadingIds] = useState(() => new Set())
   const llmSummaryByNodeIdRef = useRef(llmSummaryByNodeId)
   const llmSummaryLoadingIdsRef = useRef(llmSummaryLoadingIds)
+  const isMountedRef = useRef(true)
   const [graphFullscreen, setGraphFullscreen] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     llmSummaryByNodeIdRef.current = llmSummaryByNodeId
@@ -1136,7 +1125,6 @@ function ScenarioGraph({
     if (!isNewDemo) return
     const scenarioIds = [...visibleNodeIds].filter((id) => /^out-scenario-\d+$/.test(id))
     if (!scenarioIds.length) return
-    let cancelled = false
     scenarioIds.forEach((id) => {
       if (llmSummaryByNodeIdRef.current.has(id) || llmSummaryLoadingIdsRef.current.has(id)) return
       const payload = buildScenarioSummaryPayload(id, nodesById, incomingMap)
@@ -1152,7 +1140,7 @@ function ScenarioGraph({
       })
       generateScenarioSummaryDetailed({ ...payload, previousSummaries })
         .then((res) => {
-          if (cancelled) return
+          if (!isMountedRef.current) return
           const summary = String(res?.summary || '').trim()
           if (!summary) return
           setLlmSummaryMetaByNodeId((prev) => {
@@ -1171,7 +1159,7 @@ function ScenarioGraph({
         })
         .catch(() => {})
         .finally(() => {
-          if (cancelled) return
+          if (!isMountedRef.current) return
           setLlmSummaryLoadingIds((prev) => {
             const next = new Set(prev)
             next.delete(id)
@@ -1179,9 +1167,6 @@ function ScenarioGraph({
           })
         })
     })
-    return () => {
-      cancelled = true
-    }
   }, [isNewDemo, visibleNodeIds, nodesById, incomingMap])
 
   /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
@@ -1686,10 +1671,7 @@ function ScenarioGraph({
     const m = new Map()
     for (const node of nodes) {
       const baseDisplayLabel = pickDisplayLabelForNode(node, graphBundle, hypLabelById, outLabelById)
-      const displayLabel =
-        isNewDemo && /^out-scenario-\d+$/.test(node.id)
-          ? compactOutcomeBallLabel(llmSummaryByNodeId.get(node.id), baseDisplayLabel)
-          : baseDisplayLabel
+      const displayLabel = baseDisplayLabel
       if (node.type === 'outcome') {
         const estimated = estimateRenderedBox(node, isNewDemo, displayLabel)
         const { w: bw, h: rectH, lines: linesClamped, box } = estimated

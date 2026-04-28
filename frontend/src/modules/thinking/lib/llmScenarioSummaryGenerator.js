@@ -55,34 +55,40 @@ function buildPrompt({
 	digitalTwins,
 	userQuery,
 	goalContext,
+	focusHypothesis,
 	previousSummaries = [],
 }) {
 	const hyps = hypotheses?.length ? hypotheses.map((x, i) => `${i + 1}. ${x}`).join("\n") : "—"
 	const twins = digitalTwins?.length ? digitalTwins.join(", ") : "—"
 	const uq = String(userQuery || "").trim() || "—"
 	const goal = String(goalContext || "").trim() || "—"
+	const focus = String(focusHypothesis || "").trim() || "—"
 	const prev =
 		previousSummaries.length > 0
 			? previousSummaries.map((x, i) => `${i + 1}. ${x}`).join("\n")
 			: "—"
 	return `Ты эксперт в нефтегазовом инжиниринге, экономике разработки и управлении активами.
-Твоя задача — выдать живой и непохожий на другие прогноз для конкретного сценария.
+Твоя задача — выдать короткий, конкретный прогноз по сценарию строго из заданной гипотезы.
 
 Требования:
-- 3-4 предложения, без списков.
+- 2-3 коротких предложения, без списков.
 - Русский язык, деловой стиль.
 - Начинай сразу с технического эффекта в диапазоне (добыча/обводнённость/давление).
 - Отдельно дай экономику диапазонами (NPV/IRR/OPEX/денежный поток).
 - Обязательно дай риск и условие реализации.
+- Никаких вступлений и воды: запрещено начинать с «Реализация сценария», «может привести к», «в рамках сценария», «в результате реализации».
 - Нельзя использовать шаблонные фразы:
   «проверка гипотез показала позитивный сценарий»,
   «выполнен пакет мероприятий»,
   «итог моделирования».
 - Не повторяй стиль и формулировки предыдущих сценариев.
-- Используй только входные данные, но при нехватке данных формулируй ориентировочный инженерный вывод.
+- Используй только входные данные.
+- Ответ должен быть не длиннее 300 символов.
 - Не добавляй markdown.
 
 СЦЕНАРИЙ: ${scenarioLabel}
+КЛЮЧЕВАЯ ГИПОТЕЗА (ОТВЕЧАЙ ИМЕННО ПО НЕЙ):
+${focus}
 ГИПОТЕЗЫ:
 ${hyps}
 ЦД ОБЪЕКТЫ: ${twins}
@@ -126,10 +132,34 @@ function makeZeroBaselineFallback(payload) {
 		? payload.digitalTwins.join(", ")
 		: "ЦД скважин и пласта"
 	return [
-		`По сценарию ${label} ориентировочно ожидается неравномерный прирост добычи при реализации ${n} гипотез, проверяемых через ${twins}.`,
-		`Экономически вероятен положительный сдвиг по NPV и денежному потоку при контролируемом росте операционных затрат на этапе разгона.`,
-		`Ключевой риск — ускорение обводнённости по части фонда, поэтому эффект подтверждается только при поэтапном внедрении и контроле факта.`,
+		`Добыча по сценарию ${label} ориентировочно растёт в умеренном диапазоне при проверке ${n} гипотез через ${twins}.`,
+		`Экономика улучшается по NPV/денежному потоку, основной риск — рост обводнённости и OPEX без поэтапного внедрения.`,
 	].join(" ")
+}
+
+function compactSummary(raw) {
+	let text = String(raw || "").replace(/\s+/g, " ").trim()
+	if (!text) return ""
+	text = text
+		.replace(/^Реализация сценария[^,.!?]*[,.!?]\s*/i, "")
+		.replace(/^В рамках сценария[^,.!?]*[,.!?]\s*/i, "")
+		.replace(/\bможет привести к\b/gi, "даёт")
+		.replace(/\bможет\b/gi, "")
+		.replace(/\bв результате реализации\b/gi, "")
+		.replace(/\s{2,}/g, " ")
+		.trim()
+	const sentences = text
+		.split(/(?<=[.!?])\s+/)
+		.map((s) => s.trim())
+		.filter(Boolean)
+		.slice(0, 3)
+	let out = sentences.join(" ")
+	if (out.length > 300) {
+		out = out.slice(0, 300)
+		const cut = Math.max(out.lastIndexOf("."), out.lastIndexOf("!"), out.lastIndexOf("?"))
+		if (cut > 120) out = out.slice(0, cut + 1)
+	}
+	return out.trim()
 }
 
 /**
@@ -181,7 +211,7 @@ export async function generateScenarioSummaryDetailed(payload) {
 				const data = await response.json()
 				const content = String(data?.choices?.[0]?.message?.content || "").trim()
 				if (!content) continue
-				const summary = extractSummaryFromModelContent(content)
+				const summary = compactSummary(extractSummaryFromModelContent(content))
 				if (!summary) continue
 				const maxSim = previousSummaries.reduce(
 					(acc, s) => Math.max(acc, jaccardSimilarity(summary, s)),
@@ -194,10 +224,14 @@ export async function generateScenarioSummaryDetailed(payload) {
 				return { summary, source: "groq" }
 			}
 		}
-		return { summary: fallback, source: "fallback", reason: "no_model_succeeded" }
+		return {
+			summary: compactSummary(fallback),
+			source: "fallback",
+			reason: "no_model_succeeded",
+		}
 	} catch (e) {
 		debugLog("fallback: exception", e?.message)
-		return { summary: fallback, source: "fallback", reason: "exception" }
+		return { summary: compactSummary(fallback), source: "fallback", reason: "exception" }
 	}
 }
 
