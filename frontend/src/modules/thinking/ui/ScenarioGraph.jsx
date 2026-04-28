@@ -983,7 +983,17 @@ function ScenarioGraph({
   const [llmSummaryByNodeId, setLlmSummaryByNodeId] = useState(() => new Map())
   const [llmSummaryMetaByNodeId, setLlmSummaryMetaByNodeId] = useState(() => new Map())
   const [llmSummaryLoadingIds, setLlmSummaryLoadingIds] = useState(() => new Set())
+  const llmSummaryByNodeIdRef = useRef(llmSummaryByNodeId)
+  const llmSummaryLoadingIdsRef = useRef(llmSummaryLoadingIds)
   const [graphFullscreen, setGraphFullscreen] = useState(false)
+
+  useEffect(() => {
+    llmSummaryByNodeIdRef.current = llmSummaryByNodeId
+  }, [llmSummaryByNodeId])
+
+  useEffect(() => {
+    llmSummaryLoadingIdsRef.current = llmSummaryLoadingIds
+  }, [llmSummaryLoadingIds])
 
   const openNodeDetail = useCallback((id) => {
     setOpenDetailIds((prev) => {
@@ -1128,12 +1138,12 @@ function ScenarioGraph({
     if (!scenarioIds.length) return
     let cancelled = false
     scenarioIds.forEach((id) => {
-      if (llmSummaryByNodeId.has(id) || llmSummaryLoadingIds.has(id)) return
+      if (llmSummaryByNodeIdRef.current.has(id) || llmSummaryLoadingIdsRef.current.has(id)) return
       const payload = buildScenarioSummaryPayload(id, nodesById, incomingMap)
       if (!payload) return
       const previousSummaries = scenarioIds
         .filter((sid) => sid !== id)
-        .map((sid) => String(llmSummaryByNodeId.get(sid) || '').trim())
+        .map((sid) => String(llmSummaryByNodeIdRef.current.get(sid) || '').trim())
         .filter(Boolean)
       setLlmSummaryLoadingIds((prev) => {
         const next = new Set(prev)
@@ -1172,7 +1182,7 @@ function ScenarioGraph({
     return () => {
       cancelled = true
     }
-  }, [isNewDemo, visibleNodeIds, llmSummaryByNodeId, llmSummaryLoadingIds, nodesById, incomingMap])
+  }, [isNewDemo, visibleNodeIds, nodesById, incomingMap])
 
   /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
   const preferredScenarioOutcomeIds = useMemo(() => {
