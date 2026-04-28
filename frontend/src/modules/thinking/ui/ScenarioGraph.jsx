@@ -812,20 +812,49 @@ function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
   const hypotheses = [...hypIds]
     .map((id) => String(nodesById.get(id)?.detailText || '').trim())
     .filter(Boolean)
+  const scenarioGoalIds = new Set()
+  const q = [...hypIds]
+  const seen = new Set(q)
+  while (q.length) {
+    const v = q.shift()
+    for (const up of incomingMap.get(v) || []) {
+      if (/^scenario-\d+$/.test(up)) scenarioGoalIds.add(up)
+      if (seen.has(up)) continue
+      seen.add(up)
+      q.push(up)
+    }
+  }
+  const goalContext = [...scenarioGoalIds]
+    .map((id) => String(nodesById.get(id)?.detailText || '').trim())
+    .filter(Boolean)
+    .join(' | ')
+  const userQuery = String(nodesById.get('userQuery')?.detailText || '').trim()
   return {
     scenarioLabel: String(node.label || nodeId),
     hypotheses,
     digitalTwins: [...new Set(twins)],
     baselineSummary: String(node.detailText || '').trim(),
+    userQuery,
+    goalContext,
   }
 }
 
 function compactOutcomeBallLabel(text, fallbackLabel) {
   const raw = String(text || '').replace(/\s+/g, ' ').trim()
   if (!raw) return String(fallbackLabel || '').trim()
-  const firstSentence = raw.split(/[.!?]/).map((x) => x.trim()).find(Boolean) || raw
-  const words = firstSentence.split(' ').filter(Boolean).slice(0, 4).join(' ')
-  const compact = words || firstSentence
+  const sentences = raw.split(/[.!?]/).map((x) => x.trim()).filter(Boolean)
+  const scored = sentences
+    .map((s) => {
+      const hasPercent = /\d+([.,]\d+)?\s*%/.test(s)
+      const hasMetric = /(добыч|обводн|opex|npv|irr|денежн|поток|дебит|давлен)/i.test(s)
+      const hasRange = /\d+\s*[-–]\s*\d+/.test(s)
+      const score = (hasPercent ? 3 : 0) + (hasMetric ? 2 : 0) + (hasRange ? 1 : 0)
+      return { s, score }
+    })
+    .sort((a, b) => b.score - a.score || b.s.length - a.s.length)
+  const bestSentence = scored[0]?.s || sentences[0] || raw
+  const words = bestSentence.split(' ').filter(Boolean).slice(0, 6).join(' ')
+  const compact = words || bestSentence
   if (compact.length <= 24) return compact
   return `${compact.slice(0, 23).trimEnd()}…`
 }

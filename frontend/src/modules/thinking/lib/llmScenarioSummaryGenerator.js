@@ -29,10 +29,19 @@ function debugLog(...args) {
 	console.log("[llmScenarioSummary]", ...args)
 }
 
-function buildPrompt({ scenarioLabel, hypotheses, digitalTwins, baselineSummary }) {
+function buildPrompt({
+	scenarioLabel,
+	hypotheses,
+	digitalTwins,
+	baselineSummary,
+	userQuery,
+	goalContext,
+}) {
 	const hyps = hypotheses?.length ? hypotheses.map((x, i) => `${i + 1}. ${x}`).join("\n") : "—"
 	const twins = digitalTwins?.length ? digitalTwins.join(", ") : "—"
 	const base = String(baselineSummary || "").trim() || "—"
+	const uq = String(userQuery || "").trim() || "—"
+	const goal = String(goalContext || "").trim() || "—"
 	return `Ты эксперт в нефтегазовом инжиниринге, экономике разработки и управлении активами.
 На вход подаются гипотезы и цифровые двойники объектов, через которые эти гипотезы проверяются.
 Сформируй короткую инженерную сводку ожидаемого эффекта для месторождения после реализации гипотез.
@@ -40,7 +49,9 @@ function buildPrompt({ scenarioLabel, hypotheses, digitalTwins, baselineSummary 
 Требования:
 - 3-4 предложения, без списков.
 - Русский язык, деловой стиль.
-- Пиши сразу по сути, без вступлений и без шаблонов вида «Сценарий N...».
+- Пиши сразу по сути, без вступлений.
+- Запрещены шаблонные фразы вроде «проверка гипотез показала позитивный сценарий», «выполнен пакет мероприятий», «итог моделирования».
+- Первое предложение должно сразу начинаться с конкретного изменения и диапазона эффекта (например, добыча, обводнённость, OPEX, NPV, IRR).
 - Обязательно отрази: какие действия/изменения выполнены, как это повлияло на показатели и экономический эффект.
 - Указывай ориентировочные диапазоны эффекта там, где это уместно (например: добыча, обводнённость, OPEX, NPV, IRR), и обязательно дай краткое пояснение по рискам.
 - Используй только данные из входа. Не придумывай новые инструменты, модели и метрики.
@@ -51,6 +62,10 @@ function buildPrompt({ scenarioLabel, hypotheses, digitalTwins, baselineSummary 
 ГИПОТЕЗЫ:
 ${hyps}
 ЦД ОБЪЕКТЫ: ${twins}
+ИСХОДНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ:
+${uq}
+КОНТЕКСТ ЦЕЛИ:
+${goal}
 БАЗОВАЯ РАСЧЁТНАЯ СВОДКА:
 ${base}
 
