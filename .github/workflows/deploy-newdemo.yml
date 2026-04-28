@@ -11,6 +11,8 @@ on:
       - "frontend/src/pages/new-demo/**"
       - "frontend/src/app/layouts/new-demo/**"
       - "frontend/src/app/layouts/NewDemoLayout.jsx"
+      - "frontend/src/modules/thinking/**"
+      - "frontend/src/core/data/static/**"
       - "frontend/src/app/stands/standsConfig.js"
       - "Dockerfile.nginx.newdemo"
       - "docker-compose.server.yml"
