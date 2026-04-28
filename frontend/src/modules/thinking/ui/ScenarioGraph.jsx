@@ -711,7 +711,7 @@ function NodeDetailPopover({
   isNewDemo,
   title: titleOverride,
   detailOverride = null,
-  detailLoading = false,
+  summaryMeta = null,
 }) {
   const isScenarioGoal = /^scenario-\d+$/.test(node.id)
   const detailText = String(detailOverride ?? node.detailText ?? '').trim()
@@ -735,6 +735,13 @@ function NodeDetailPopover({
   const shell = isNewDemo
     ? 'border-sky-400/50 bg-slate-950/96 text-slate-50 shadow-[0_8px_28px_rgba(0,0,0,0.45)]'
     : 'border-slate-600/85 bg-[#0f1624]/98 text-slate-100 shadow-[0_10px_32px_rgba(0,0,0,0.5)]'
+  const isOutcomeScenario = /^out-scenario-\d+$/.test(node.id)
+  const sourceLabel =
+    !isOutcomeScenario || !summaryMeta?.source
+      ? ''
+      : summaryMeta.source === 'groq'
+        ? 'Источник: Groq'
+        : `Источник: Fallback${summaryMeta.reason ? ` (${summaryMeta.reason})` : ''}`
 
   return (
     <foreignObject x={px} y={py} width={DETAIL_POPOVER_W} height={h} data-sg-popover>
@@ -763,6 +770,9 @@ function NodeDetailPopover({
           className="mt-2 min-h-0 flex-1 overflow-y-auto text-[12.5px] leading-snug text-slate-200/95"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
+          {sourceLabel ? (
+            <div className="mb-2 text-[11.5px] text-slate-300/85">{sourceLabel}</div>
+          ) : null}
           {detail}
         </div>
       </div>
@@ -933,6 +943,7 @@ function ScenarioGraph({
       }
   const [openDetailIds, setOpenDetailIds] = useState(() => new Set())
   const [llmSummaryByNodeId, setLlmSummaryByNodeId] = useState(() => new Map())
+  const [llmSummaryMetaByNodeId, setLlmSummaryMetaByNodeId] = useState(() => new Map())
   const [llmSummaryLoadingIds, setLlmSummaryLoadingIds] = useState(() => new Set())
   const [graphFullscreen, setGraphFullscreen] = useState(false)
 
@@ -1092,6 +1103,14 @@ function ScenarioGraph({
           if (cancelled) return
           const summary = String(res?.summary || '').trim()
           if (!summary) return
+          setLlmSummaryMetaByNodeId((prev) => {
+            const next = new Map(prev)
+            next.set(id, {
+              source: res?.source === 'groq' ? 'groq' : 'fallback',
+              reason: String(res?.reason || '').trim(),
+            })
+            return next
+          })
           setLlmSummaryByNodeId((prev) => {
             const next = new Map(prev)
             next.set(id, summary)
@@ -2420,7 +2439,7 @@ function ScenarioGraph({
                   isNewDemo={isNewDemo}
                   title={popoverTitle}
                   detailOverride={llmSummaryByNodeId.get(id) ?? null}
-                  detailLoading={llmSummaryLoadingIds.has(id)}
+                  summaryMeta={llmSummaryMetaByNodeId.get(id) ?? null}
                   onClose={() => closeNodeDetail(id)}
                 />
               )

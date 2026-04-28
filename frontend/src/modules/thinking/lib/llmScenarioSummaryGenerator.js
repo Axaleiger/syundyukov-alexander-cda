@@ -4,6 +4,7 @@
  */
 
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+const GROQ_MODEL = "llama-3.3-70b-versatile"
 
 function getApiKey() {
 	try {
@@ -41,6 +42,7 @@ function buildPrompt({ scenarioLabel, hypotheses, digitalTwins, baselineSummary 
 - Русский язык, деловой стиль.
 - Пиши сразу по сути, без вступлений и без шаблонов вида «Сценарий N...».
 - Обязательно отрази: какие действия/изменения выполнены, как это повлияло на показатели и экономический эффект.
+- Указывай ориентировочные диапазоны эффекта там, где это уместно (например: добыча, обводнённость, OPEX, NPV, IRR), и обязательно дай краткое пояснение по рискам.
 - Используй только данные из входа. Не придумывай новые инструменты, модели и метрики.
 - Не добавляй markdown.
 - Если данных недостаточно для точного вывода, аккуратно укажи это («ориентировочно», «вероятно»), но дай практичную интерпретацию.
@@ -54,6 +56,28 @@ ${base}
 
 Верни строго JSON:
 {"summary":"..."}`
+}
+
+function extractSummaryFromModelContent(content) {
+	const text = String(content || "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim()
+	if (!text) return ""
+	try {
+		const parsed = JSON.parse(text)
+		const s = String(parsed?.summary || "").trim()
+		if (s) return s
+	} catch {
+		// no-op
+	}
+	const jsonLike = text.match(/\{[\s\S]*?"summary"\s*:\s*"([\s\S]*?)"[\s\S]*?\}/)
+	if (jsonLike?.[1]) {
+		return String(jsonLike[1])
+			.replace(/\\"/g, '"')
+			.replace(/\\n/g, "\n")
+			.trim()
+	}
+	const m = text.match(/summary\s*:\s*([\s\S]+)/i)
+	if (m?.[1]) return String(m[1]).trim()
+	return text
 }
 
 /**
@@ -76,10 +100,10 @@ export async function generateScenarioSummaryDetailed(payload) {
 				Authorization: `Bearer ${key}`,
 			},
 			body: JSON.stringify({
-				model: "llama-3.1-8b-instant",
+				model: GROQ_MODEL,
 				messages: [{ role: "user", content: buildPrompt(payload) }],
-				temperature: 0.25,
-				max_tokens: 420,
+				temperature: 0.35,
+				max_tokens: 520,
 			}),
 		})
 		if (!response.ok) {
@@ -96,17 +120,9 @@ export async function generateScenarioSummaryDetailed(payload) {
 			debugLog("fallback: empty content")
 			return { summary: fallback, source: "fallback", reason: "empty_content" }
 		}
-		const jsonStr = content.replace(/^```(?:json)?\s*|\s*```$/g, "").trim()
-		let parsed
-		try {
-			parsed = JSON.parse(jsonStr)
-		} catch {
-			debugLog("fallback: json parse error")
-			return { summary: fallback, source: "fallback", reason: "json_parse_error" }
-		}
-		const summary = String(parsed?.summary || "").trim()
+		const summary = extractSummaryFromModelContent(content)
 		if (!summary) {
-			debugLog("fallback: empty summary in json")
+			debugLog("fallback: empty summary after extract")
 			return { summary: fallback, source: "fallback", reason: "empty_summary" }
 		}
 		return { summary, source: "groq" }
