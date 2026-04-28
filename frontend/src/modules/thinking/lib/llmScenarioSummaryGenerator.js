@@ -1,10 +1,10 @@
 /**
- * LLM-сводка сценария для new-demo через тот же Groq API, что и в ИИ-помощнике.
- * Ключ берётся из import.meta.env.VITE_GROQ_API_KEY (секреты CI / локальный env).
+ * LLM-сводка сценария для new-demo.
+ * Принцип: без baselineSummary, только гипотезы + контекст цели + запрос пользователя.
  */
 
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
-const GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+const GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 function getApiKey() {
 	try {
@@ -29,34 +29,58 @@ function debugLog(...args) {
 	console.log("[llmScenarioSummary]", ...args)
 }
 
+function normalizeText(s) {
+	return String(s || "")
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}\s]/gu, " ")
+		.replace(/\s+/g, " ")
+		.trim()
+}
+
+function jaccardSimilarity(a, b) {
+	const wa = new Set(normalizeText(a).split(" ").filter(Boolean))
+	const wb = new Set(normalizeText(b).split(" ").filter(Boolean))
+	if (!wa.size || !wb.size) return 0
+	let inter = 0
+	for (const w of wa) {
+		if (wb.has(w)) inter += 1
+	}
+	const union = wa.size + wb.size - inter
+	return union > 0 ? inter / union : 0
+}
+
 function buildPrompt({
 	scenarioLabel,
 	hypotheses,
 	digitalTwins,
-	baselineSummary,
 	userQuery,
 	goalContext,
+	previousSummaries = [],
 }) {
 	const hyps = hypotheses?.length ? hypotheses.map((x, i) => `${i + 1}. ${x}`).join("\n") : "—"
 	const twins = digitalTwins?.length ? digitalTwins.join(", ") : "—"
-	const base = String(baselineSummary || "").trim() || "—"
 	const uq = String(userQuery || "").trim() || "—"
 	const goal = String(goalContext || "").trim() || "—"
+	const prev =
+		previousSummaries.length > 0
+			? previousSummaries.map((x, i) => `${i + 1}. ${x}`).join("\n")
+			: "—"
 	return `Ты эксперт в нефтегазовом инжиниринге, экономике разработки и управлении активами.
-На вход подаются гипотезы и цифровые двойники объектов, через которые эти гипотезы проверяются.
-Сформируй короткую инженерную сводку ожидаемого эффекта для месторождения после реализации гипотез.
+Твоя задача — выдать живой и непохожий на другие прогноз для конкретного сценария.
 
 Требования:
 - 3-4 предложения, без списков.
 - Русский язык, деловой стиль.
-- Пиши сразу по сути, без вступлений.
-- Запрещены шаблонные фразы вроде «проверка гипотез показала позитивный сценарий», «выполнен пакет мероприятий», «итог моделирования».
-- Первое предложение должно сразу начинаться с конкретного изменения и диапазона эффекта (например, добыча, обводнённость, OPEX, NPV, IRR).
-- Обязательно отрази: какие действия/изменения выполнены, как это повлияло на показатели и экономический эффект.
-- Указывай ориентировочные диапазоны эффекта там, где это уместно (например: добыча, обводнённость, OPEX, NPV, IRR), и обязательно дай краткое пояснение по рискам.
-- Используй только данные из входа. Не придумывай новые инструменты, модели и метрики.
+- Начинай сразу с технического эффекта в диапазоне (добыча/обводнённость/давление).
+- Отдельно дай экономику диапазонами (NPV/IRR/OPEX/денежный поток).
+- Обязательно дай риск и условие реализации.
+- Нельзя использовать шаблонные фразы:
+  «проверка гипотез показала позитивный сценарий»,
+  «выполнен пакет мероприятий»,
+  «итог моделирования».
+- Не повторяй стиль и формулировки предыдущих сценариев.
+- Используй только входные данные, но при нехватке данных формулируй ориентировочный инженерный вывод.
 - Не добавляй markdown.
-- Если данных недостаточно для точного вывода, аккуратно укажи это («ориентировочно», «вероятно»), но дай практичную интерпретацию.
 
 СЦЕНАРИЙ: ${scenarioLabel}
 ГИПОТЕЗЫ:
@@ -66,8 +90,8 @@ ${hyps}
 ${uq}
 КОНТЕКСТ ЦЕЛИ:
 ${goal}
-БАЗОВАЯ РАСЧЁТНАЯ СВОДКА:
-${base}
+ПРЕДЫДУЩИЕ ОТВЕТЫ (ИЗБЕГАЙ ПОХОЖЕСТИ):
+${prev}
 
 Верни строго JSON:
 {"summary":"..."}`
@@ -95,41 +119,16 @@ function extractSummaryFromModelContent(content) {
 	return text
 }
 
-function stableHash(text) {
-	let h = 2166136261 >>> 0
-	const s = String(text || "")
-	for (let i = 0; i < s.length; i++) {
-		h ^= s.charCodeAt(i)
-		h = Math.imul(h, 16777619)
-	}
-	return h >>> 0
-}
-
-function pickRange(seed, min, max) {
-	const n = max - min + 1
-	return min + (seed % Math.max(1, n))
-}
-
-function buildHeuristicScenarioSummary(payload) {
-	const scenarioLabel = String(payload?.scenarioLabel || "").trim()
-	const hypotheses = Array.isArray(payload?.hypotheses) ? payload.hypotheses.filter(Boolean) : []
-	const twins = Array.isArray(payload?.digitalTwins) ? payload.digitalTwins.filter(Boolean) : []
-	const goal = String(payload?.goalContext || "").trim()
-	const seedBase = stableHash(`${scenarioLabel}|${hypotheses.join("|")}|${goal}`)
-	const hypN = Math.max(1, hypotheses.length)
-	const twinText = twins.length ? twins.join(", ") : "ЦД скважин и пласта"
-	const dLow = pickRange(seedBase ^ 0x11ab, 10, 18) + Math.min(6, hypN)
-	const dHigh = dLow + pickRange(seedBase ^ 0x32ef, 8, 20)
-	const npvLow = pickRange(seedBase ^ 0x5511, 8, 16)
-	const npvHigh = npvLow + pickRange(seedBase ^ 0x77cc, 9, 18)
-	const opexLow = pickRange(seedBase ^ 0x88dd, 4, 9)
-	const opexHigh = opexLow + pickRange(seedBase ^ 0x9a20, 4, 10)
-	const irrLow = pickRange(seedBase ^ 0xb341, 2, 4)
-	const irrHigh = irrLow + pickRange(seedBase ^ 0xc552, 2, 5)
+function makeZeroBaselineFallback(payload) {
+	const label = String(payload?.scenarioLabel || "сценарий").trim()
+	const n = Math.max(1, (payload?.hypotheses || []).length)
+	const twins = Array.isArray(payload?.digitalTwins) && payload.digitalTwins.length
+		? payload.digitalTwins.join(", ")
+		: "ЦД скважин и пласта"
 	return [
-		`По сценарию ${scenarioLabel || "реализации гипотез"} после проверки на ${twinText} ожидается рост добычи примерно на ${dLow}-${dHigh}% с основным вкладом от ${hypN} приоритетных гипотез.`,
-		`В экономике проекта это обычно даёт прирост NPV порядка ${npvLow}-${npvHigh}% и повышение IRR на ${irrLow}-${irrHigh} п.п. при условии удержания темпа внедрения мероприятий.`,
-		`Риски смещаются в сторону роста OPEX на ${opexLow}-${opexHigh}% и более раннего обводнения на высокодебитном фонде, поэтому требуется поэтапный запуск и контроль факта по скважинам-кандидатам.`,
+		`По сценарию ${label} ориентировочно ожидается неравномерный прирост добычи при реализации ${n} гипотез, проверяемых через ${twins}.`,
+		`Экономически вероятен положительный сдвиг по NPV и денежному потоку при контролируемом росте операционных затрат на этапе разгона.`,
+		`Ключевой риск — ускорение обводнённости по части фонда, поэтому эффект подтверждается только при поэтапном внедрении и контроле факта.`,
 	].join(" ")
 }
 
@@ -139,74 +138,66 @@ function buildHeuristicScenarioSummary(payload) {
  */
 export async function generateScenarioSummaryDetailed(payload) {
 	const key = getApiKey()
-	const fallback =
-		buildHeuristicScenarioSummary(payload) ||
-		String(payload?.baselineSummary || "").trim()
+	const fallback = makeZeroBaselineFallback(payload)
 	if (!key) {
 		debugLog("fallback: missing api key")
 		return {
 			summary: fallback,
 			source: "fallback",
-			reason: "missing_api_key_heuristic",
+			reason: "missing_api_key",
 		}
 	}
 
 	try {
 		for (let i = 0; i < GROQ_MODELS.length; i++) {
 			const model = GROQ_MODELS[i]
-			const response = await fetch(GROQ_CHAT_URL, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${key}`,
-				},
-				body: JSON.stringify({
-					model,
-					messages: [{ role: "user", content: buildPrompt(payload) }],
-					temperature: 0.35,
-					max_tokens: 520,
-				}),
-			})
-			if (!response.ok) {
-				debugLog("model failed", { model, status: response.status })
-				if (i < GROQ_MODELS.length - 1) continue
-				return {
-					summary: fallback,
-					source: "fallback",
-					reason: `http_${response.status}_heuristic`,
+			const previousSummaries = Array.isArray(payload?.previousSummaries)
+				? payload.previousSummaries.filter(Boolean)
+				: []
+			for (let attempt = 0; attempt < 2; attempt++) {
+				const response = await fetch(GROQ_CHAT_URL, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${key}`,
+					},
+					body: JSON.stringify({
+						model,
+						messages: [
+							{
+								role: "user",
+								content: buildPrompt({ ...payload, previousSummaries }),
+							},
+						],
+						temperature: attempt === 0 ? 0.95 : 1.1,
+						top_p: 0.95,
+						max_tokens: 520,
+					}),
+				})
+				if (!response.ok) {
+					debugLog("model failed", { model, status: response.status })
+					break
 				}
-			}
-			const data = await response.json()
-			const content = String(data?.choices?.[0]?.message?.content || "").trim()
-			if (!content) {
-				debugLog("model empty content", { model })
-				if (i < GROQ_MODELS.length - 1) continue
-				return {
-					summary: fallback,
-					source: "fallback",
-					reason: "empty_content_heuristic",
+				const data = await response.json()
+				const content = String(data?.choices?.[0]?.message?.content || "").trim()
+				if (!content) continue
+				const summary = extractSummaryFromModelContent(content)
+				if (!summary) continue
+				const maxSim = previousSummaries.reduce(
+					(acc, s) => Math.max(acc, jaccardSimilarity(summary, s)),
+					0,
+				)
+				if (maxSim > 0.72 && attempt === 0) {
+					debugLog("retry by similarity", { model, maxSim })
+					continue
 				}
+				return { summary, source: "groq" }
 			}
-			const summary = extractSummaryFromModelContent(content)
-			if (!summary) {
-				debugLog("model empty summary after extract", { model })
-				if (i < GROQ_MODELS.length - 1) continue
-				return {
-					summary: fallback,
-					source: "fallback",
-					reason: "empty_summary_heuristic",
-				}
-			}
-			return { summary, source: "groq" }
 		}
-		return {
-			summary: fallback,
-			source: "fallback",
-			reason: "no_model_succeeded_heuristic",
-		}
+		return { summary: fallback, source: "fallback", reason: "no_model_succeeded" }
 	} catch (e) {
 		debugLog("fallback: exception", e?.message)
-		return { summary: fallback, source: "fallback", reason: "exception_heuristic" }
+		return { summary: fallback, source: "fallback", reason: "exception" }
 	}
 }
 

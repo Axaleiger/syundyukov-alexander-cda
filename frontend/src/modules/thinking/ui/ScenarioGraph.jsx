@@ -833,7 +833,6 @@ function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
     scenarioLabel: String(node.label || nodeId),
     hypotheses,
     digitalTwins: [...new Set(twins)],
-    baselineSummary: String(node.detailText || '').trim(),
     userQuery,
     goalContext,
   }
@@ -1132,12 +1131,16 @@ function ScenarioGraph({
       if (llmSummaryByNodeId.has(id) || llmSummaryLoadingIds.has(id)) return
       const payload = buildScenarioSummaryPayload(id, nodesById, incomingMap)
       if (!payload) return
+      const previousSummaries = scenarioIds
+        .filter((sid) => sid !== id)
+        .map((sid) => String(llmSummaryByNodeId.get(sid) || '').trim())
+        .filter(Boolean)
       setLlmSummaryLoadingIds((prev) => {
         const next = new Set(prev)
         next.add(id)
         return next
       })
-      generateScenarioSummaryDetailed(payload)
+      generateScenarioSummaryDetailed({ ...payload, previousSummaries })
         .then((res) => {
           if (cancelled) return
           const summary = String(res?.summary || '').trim()
