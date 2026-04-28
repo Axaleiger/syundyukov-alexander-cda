@@ -6,6 +6,10 @@
 const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 const GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
+function sleep(ms) {
+	return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 function getApiKey() {
 	try {
 		const key = import.meta.env.VITE_GROQ_API_KEY
@@ -65,7 +69,10 @@ function buildPrompt({
 	const focus = String(focusHypothesis || "").trim() || "—"
 	const prev =
 		previousSummaries.length > 0
-			? previousSummaries.map((x, i) => `${i + 1}. ${x}`).join("\n")
+			? previousSummaries
+					.slice(0, 2)
+					.map((x, i) => `${i + 1}. ${String(x).slice(0, 180)}`)
+					.join("\n")
 			: "—"
 	return `Ты эксперт в нефтегазовом инжиниринге, экономике разработки и управлении активами.
 Твоя задача — выдать короткий, конкретный прогноз по сценарию строго из заданной гипотезы.
@@ -184,7 +191,7 @@ export async function generateScenarioSummaryDetailed(payload) {
 			const previousSummaries = Array.isArray(payload?.previousSummaries)
 				? payload.previousSummaries.filter(Boolean)
 				: []
-			for (let attempt = 0; attempt < 2; attempt++) {
+			for (let attempt = 0; attempt < 3; attempt++) {
 				const response = await fetch(GROQ_CHAT_URL, {
 					method: "POST",
 					headers: {
@@ -201,11 +208,21 @@ export async function generateScenarioSummaryDetailed(payload) {
 						],
 						temperature: attempt === 0 ? 0.95 : 1.1,
 						top_p: 0.95,
-						max_tokens: 520,
+						max_tokens: 220,
 					}),
 				})
 				if (!response.ok) {
-					debugLog("model failed", { model, status: response.status })
+					let errorBody = ""
+					try {
+						errorBody = String(await response.text()).slice(0, 220)
+					} catch {
+						// no-op
+					}
+					debugLog("model failed", { model, status: response.status, errorBody })
+					if ((response.status === 429 || response.status >= 500) && attempt < 2) {
+						await sleep(450 * (attempt + 1))
+						continue
+					}
 					break
 				}
 				const data = await response.json()
@@ -217,7 +234,7 @@ export async function generateScenarioSummaryDetailed(payload) {
 					(acc, s) => Math.max(acc, jaccardSimilarity(summary, s)),
 					0,
 				)
-				if (maxSim > 0.72 && attempt === 0) {
+				if (previousSummaries.length > 0 && maxSim > 0.9 && attempt === 0) {
 					debugLog("retry by similarity", { model, maxSim })
 					continue
 				}

@@ -524,24 +524,15 @@ function pruneBundleToActiveScenarioBranches(bundle, preset, activeRealGoals) {
 		stubScenarioIds.add(`scenario-${k}`)
 	}
 
+	/** Полностью удаляем пустые цели и их рёбра, без визуальных «обрубков». */
 	const edges = [...(bundle.edges || [])].filter((e) => {
 		if (stubScenarioIds.has(e.from)) return false
-		if (stubScenarioIds.has(e.to) && e.from !== "userQuery") return false
+		if (stubScenarioIds.has(e.to)) return false
 		return true
 	})
-	for (const sid of stubScenarioIds) {
-		if (!edges.some((e) => e.from === "userQuery" && e.to === sid)) {
-			edges.push({ from: "userQuery", to: sid })
-		}
-	}
 	bundle.edges = edges
 
-	for (const n of bundle.nodes) {
-		const m = /^scenario-(\d+)$/.exec(n.id)
-		if (!m) continue
-		const k = parseInt(m[1], 10)
-		n.scenarioSlotUnused = k > activeRealGoals
-	}
+	bundle.nodes = (bundle.nodes || []).filter((n) => !stubScenarioIds.has(n.id))
 
 	const adj = new Map()
 	for (const e of bundle.edges) {

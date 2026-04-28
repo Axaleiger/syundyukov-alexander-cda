@@ -24,6 +24,8 @@ const FIT_DEBOUNCE_MS = 220
 const REVEAL_ACCENT_DELAY_MS = 2000
 /** Интервал между этапами гирлянды лучшего и «красного сценария» пути (new-demo), мс */
 const BRANCH_GARLAND_STEP_MS = 200
+const MAX_LLM_PARALLEL = 2
+const MAX_GROQ_RETRIES_PER_SCENARIO = 2
 
 /** Визуальный акцент лучшего сценария: тонкая яркая линия + мягкий ореол */
 const OPT_EDGE_GLOW_W = 8.5
@@ -966,7 +968,9 @@ function ScenarioGraph({
   const [llmSummaryMetaByNodeId, setLlmSummaryMetaByNodeId] = useState(() => new Map())
   const [llmSummaryLoadingIds, setLlmSummaryLoadingIds] = useState(() => new Set())
   const llmSummaryByNodeIdRef = useRef(llmSummaryByNodeId)
+  const llmSummaryMetaByNodeIdRef = useRef(llmSummaryMetaByNodeId)
   const llmSummaryLoadingIdsRef = useRef(llmSummaryLoadingIds)
+  const llmRetryCountByNodeIdRef = useRef(new Map())
   const isMountedRef = useRef(true)
   const [graphFullscreen, setGraphFullscreen] = useState(false)
 
@@ -979,6 +983,10 @@ function ScenarioGraph({
   useEffect(() => {
     llmSummaryByNodeIdRef.current = llmSummaryByNodeId
   }, [llmSummaryByNodeId])
+
+  useEffect(() => {
+    llmSummaryMetaByNodeIdRef.current = llmSummaryMetaByNodeId
+  }, [llmSummaryMetaByNodeId])
 
   useEffect(() => {
     llmSummaryLoadingIdsRef.current = llmSummaryLoadingIds
@@ -1125,8 +1133,17 @@ function ScenarioGraph({
     if (!isNewDemo) return
     const scenarioIds = [...visibleNodeIds].filter((id) => /^out-scenario-\d+$/.test(id))
     if (!scenarioIds.length) return
+    let startedNow = 0
     scenarioIds.forEach((id) => {
-      if (llmSummaryByNodeIdRef.current.has(id) || llmSummaryLoadingIdsRef.current.has(id)) return
+      const meta = llmSummaryMetaByNodeIdRef.current.get(id)
+      const hasGroq = meta?.source === 'groq'
+      if (hasGroq || llmSummaryLoadingIdsRef.current.has(id)) return
+      const retryCount = llmRetryCountByNodeIdRef.current.get(id) || 0
+      const canRetry = retryCount < MAX_GROQ_RETRIES_PER_SCENARIO
+      const hasAnySummary = llmSummaryByNodeIdRef.current.has(id)
+      if (hasAnySummary && !canRetry) return
+      const activeLoads = llmSummaryLoadingIdsRef.current.size + startedNow
+      if (activeLoads >= MAX_LLM_PARALLEL) return
       const payload = buildScenarioSummaryPayload(id, nodesById, incomingMap)
       if (!payload) return
       const previousSummaries = scenarioIds
@@ -1138,15 +1155,21 @@ function ScenarioGraph({
         next.add(id)
         return next
       })
+      startedNow += 1
       generateScenarioSummaryDetailed({ ...payload, previousSummaries })
         .then((res) => {
           if (!isMountedRef.current) return
           const summary = String(res?.summary || '').trim()
           if (!summary) return
+          const source = res?.source === 'groq' ? 'groq' : 'fallback'
+          if (source !== 'groq') {
+            const prevRetry = llmRetryCountByNodeIdRef.current.get(id) || 0
+            llmRetryCountByNodeIdRef.current.set(id, prevRetry + 1)
+          }
           setLlmSummaryMetaByNodeId((prev) => {
             const next = new Map(prev)
             next.set(id, {
-              source: res?.source === 'groq' ? 'groq' : 'fallback',
+              source,
               reason: String(res?.reason || '').trim(),
             })
             return next
@@ -1167,7 +1190,7 @@ function ScenarioGraph({
           })
         })
     })
-  }, [isNewDemo, visibleNodeIds, nodesById, incomingMap])
+  }, [isNewDemo, visibleNodeIds, nodesById, incomingMap, llmSummaryLoadingIds])
 
   /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
   const preferredScenarioOutcomeIds = useMemo(() => {
