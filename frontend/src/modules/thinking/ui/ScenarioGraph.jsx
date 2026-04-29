@@ -1718,28 +1718,8 @@ function ScenarioGraph({
         const isGreenBall = preferredBall || optimalLegacy
         const isDeadScenarioBall =
           isNewDemo && isScenarioBall && !preferredScenarioOutcomeIds.has(node.id)
-        let cdSemanticDead =
-          isNewDemo &&
-          isCdBall &&
-          graphBundle?.semanticUiChain &&
-          node.semanticChainActive === false
-        if (cdSemanticDead && isNewDemo) {
-          if (node.cdSegment === 'hs') {
-            const hypUp = edges.find((e) => e.to === node.id && /^hyp-\d+$/.test(e.from))?.from
-            if (hypUp && reachPreferredScenarioAncestors.has(hypUp)) cdSemanticDead = false
-          } else if (node.cdSegment === 'ch' && node.cdEdgePair) {
-            const m = /^(cause-\d+)-(hyp-\d+)$/.exec(String(node.cdEdgePair))
-            if (
-              m &&
-              (reachPreferredScenarioAncestors.has(m[1]) ||
-                reachPreferredScenarioAncestors.has(m[2]))
-            ) {
-              cdSemanticDead = false
-            }
-          }
-        }
         const deadBallVisual = isDeadScenarioBall
-        const cdDeadVisual = cdSemanticDead
+        const cdDeadVisual = false
         const strokeColor = isGreenBall
           ? palette.optimalNodeStroke
           : deadBallVisual || cdDeadVisual
@@ -1753,7 +1733,7 @@ function ScenarioGraph({
             ? palette.deadOutcomePort
             : styles.port
         const portStrokeW = isGreenBall ? (isNewDemo ? 2.4 : OPT_PORT_STROKE_W) : isNewDemo ? 1.6 : 2
-        const stubBreakCross = isNewDemo && (deadBallVisual || cdDeadVisual)
+        const stubBreakCross = isNewDemo && isScenarioBall && deadBallVisual
         m.set(node.id, {
           bw,
           rectH,
@@ -1772,7 +1752,7 @@ function ScenarioGraph({
           portStrokeW,
           isOptimal: isGreenBall,
           nodeType: 'outcome',
-          bodyOpacity: cdDeadVisual ? 0.42 : 1,
+          bodyOpacity: 1,
           stubBreakCross,
         })
         continue

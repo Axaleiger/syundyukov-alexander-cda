@@ -29,8 +29,6 @@ import {
 	DEMO_AI_ASSISTANT_SUGGESTIONS,
 } from "../lib/demoAiAssistantSuggestions"
 import { useMapPointsData } from "../../globe/model/useMapPointsData"
-import { useStand } from "../../../app/stands/standContext"
-import { restartDemoSessionFromPreset } from "../../../shared/lib/restartDemoSessionFromPreset"
 import { useThinkingStore } from "../../thinking/model/thinkingStore.js"
 
 /** Эталонные подсказки / пресет доски без выбранного шаблона → тот же id, что в prompt-builder / scenario_presets.json */
@@ -38,6 +36,43 @@ const BOARD_PRESET_TO_SCENARIO_TEMPLATE_ID = Object.freeze({
 	base_drilling: "base_oil",
 	fcf_no_drill: "fcf_no_drill_capex",
 	opex_reduction: "opex_program",
+})
+
+const HORIZON_LABEL_BY_ID = Object.freeze({
+	T06: "Оперативный такт 8 недель",
+	T05: "Квартальный тактический горизонт",
+	T01: "1 год",
+	T08: "2 года",
+	H03: "3 года",
+	H05: "5 лет",
+	H10: "10 лет",
+})
+
+const OBJECTIVES_WITHOUT_MODE = new Set([
+	"G06",
+	"G07",
+	"G17",
+	"G18",
+	"G19",
+	"G20",
+	"G21",
+	"G22",
+])
+const OBJECTIVES_WITH_MINIMIZE_MODE = new Set(["G13", "G05"])
+const OBJECTIVES_YEAR_THRESHOLD = new Set(["G16"])
+const CONSTRAINT_DEFAULT_VALUES = Object.freeze({
+	C02: 100000000,
+	C03: 50000000,
+	C04: 95,
+	C05: 12,
+})
+
+const DEFAULT_NEW_DEMO_WIZARD_SETS = Object.freeze({
+	...EMPTY_WIZARD_SETS,
+	bases: ["B01"],
+	horizons: ["T01"],
+	objectives: ["G01"],
+	levers: ["L01", "L02", "L04"],
 })
 
 function normRuPromptLine(s) {
@@ -174,7 +209,6 @@ function AIAssistantWidget({
 }) {
 	const styles = appearance === "newDemo" ? newDemoStyles : classicStyles
 	const enableDrag = appearance === "classic"
-	const { routePrefix } = useStand()
 	const mapPointsData = useMapPointsData()
 
 	const [open, setOpen] = useState(false)
@@ -202,8 +236,18 @@ function AIAssistantWidget({
 	const [livePipeline, setLivePipeline] = useState(null)
 	const debounceRef = useRef(null)
 	const [wizardStep, setWizardStep] = useState(1)
-	const [wizardSets, setWizardSets] = useState(() => normalizeWizardSets(EMPTY_WIZARD_SETS))
+	const [wizardSets, setWizardSets] = useState(() =>
+		normalizeWizardSets(DEFAULT_NEW_DEMO_WIZARD_SETS),
+	)
+	const [wizardTargets, setWizardTargets] = useState({ objectives: {}, constraints: {} })
+	const [constructorExpanded, setConstructorExpanded] = useState(false)
+	const [wizardDirty, setWizardDirty] = useState(false)
+	const [hasTemplateSelection, setHasTemplateSelection] = useState(false)
+	const [hasConstructorInput, setHasConstructorInput] = useState(false)
+	const [hasConstructorFinalConfirm, setHasConstructorFinalConfirm] = useState(false)
+	const [hasVoiceInput, setHasVoiceInput] = useState(false)
 	const lastSeededNormRef = useRef("")
+	const promptInputRef = useRef(null)
 
 	const addThinkingStepLocal = useCallback(
 		(label) => {
@@ -235,6 +279,27 @@ function AIAssistantWidget({
 	useEffect(() => {
 		if (assistantCloseSignal > 0) setOpen(false)
 	}, [assistantCloseSignal])
+
+	useEffect(() => {
+		if (appearance !== "newDemo" || !open) return
+		// #region agent log
+		fetch("http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "945340" }, body: JSON.stringify({ sessionId: "945340", runId: "pre-fix", hypothesisId: "H1", location: "AIAssistantWidget.jsx:open-reset-effect:start", message: "newDemo open reset effect entered", data: { open, selectedTemplateId, wizardBases: wizardSets?.bases || [], wizardStep }, timestamp: Date.now() }) }).catch(() => {})
+		// #endregion
+		setSelectedTemplateId(null)
+		setWizardDirty(false)
+		setConstructorExpanded(false)
+		setWizardStep(1)
+		setWizardSets(normalizeWizardSets(DEFAULT_NEW_DEMO_WIZARD_SETS))
+		setWizardTargets({ objectives: { G01: { mode: "maximize", value: 10 } }, constraints: {} })
+		setHasTemplateSelection(false)
+		setHasConstructorInput(false)
+		setHasConstructorFinalConfirm(false)
+		setHasVoiceInput(false)
+		lastSeededNormRef.current = ""
+		// #region agent log
+		fetch("http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "945340" }, body: JSON.stringify({ sessionId: "945340", runId: "pre-fix", hypothesisId: "H1", location: "AIAssistantWidget.jsx:open-reset-effect:end", message: "newDemo open reset effect applied defaults", data: { appliedBases: DEFAULT_NEW_DEMO_WIZARD_SETS.bases, appliedHorizons: DEFAULT_NEW_DEMO_WIZARD_SETS.horizons, appliedObjectives: DEFAULT_NEW_DEMO_WIZARD_SETS.objectives }, timestamp: Date.now() }) }).catch(() => {})
+		// #endregion
+	}, [appearance, open])
 
 	const handlePointerDown = useCallback(
 		(e) => {
@@ -311,13 +376,18 @@ function AIAssistantWidget({
 		setVoiceError(null)
 		if (isListening) {
 			stopListening()
-			setTranscript(getTranscript())
+			const finalTranscript = getTranscript()
+			setTranscript(finalTranscript)
+			if (String(finalTranscript || "").trim()) setHasVoiceInput(true)
 			setIsListening(false)
 			return
 		}
 		setTranscript("")
 		startListening(
-			(text) => setTranscript(text),
+			(text) => {
+				setTranscript(text)
+				if (String(text || "").trim()) setHasVoiceInput(true)
+			},
 			(err) => {
 				setVoiceError(err)
 				setIsListening(false)
@@ -342,6 +412,10 @@ function AIAssistantWidget({
 		() => mapThreeScenarioTemplatesForNewDemo(scenarioPresetsList),
 		[scenarioPresetsList],
 	)
+	const selectedAssetName = useMemo(() => {
+		if (!selectedAssetId) return ""
+		return String(mapPointsData.find((p) => p.id === selectedAssetId)?.name || "").trim()
+	}, [mapPointsData, selectedAssetId])
 
 	const dimensionCatalog = useMemo(() => {
 		const d = assetModelingKnowledge.dimensions || {}
@@ -373,8 +447,15 @@ function AIAssistantWidget({
 		if (!selectedTemplateId) return
 		const t = scenarioPresetsList.find((p) => p.id === selectedTemplateId)
 		if (t?.sets) {
-			setWizardSets(normalizeWizardSets(t.sets))
+			const seeded = normalizeWizardSets(t.sets)
+			if (Array.isArray(seeded.objectives) && seeded.objectives.length > 1) {
+				seeded.objectives = [seeded.objectives[0]]
+			}
+			setWizardSets(seeded)
+			setWizardTargets({ objectives: {}, constraints: {} })
 			setWizardStep(1)
+			setConstructorExpanded(false)
+			setWizardDirty(false)
 			lastSeededNormRef.current = ""
 		}
 	}, [appearance, selectedTemplateId, scenarioPresetsList])
@@ -382,30 +463,357 @@ function AIAssistantWidget({
 	useEffect(() => {
 		if (appearance !== "newDemo") return
 		if (selectedTemplateId) return
+		if (wizardDirty) return
+		const raw = String(transcript || question || "").trim()
+		if (!raw) return
 		if (!livePipeline?.semanticWizardSets) {
 			if (!livePipeline) lastSeededNormRef.current = ""
 			return
 		}
 		const n = livePipeline.normText ?? ""
 		if (n !== lastSeededNormRef.current) {
+			// #region agent log
+			fetch("http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "945340" }, body: JSON.stringify({ sessionId: "945340", runId: "pre-fix", hypothesisId: "H2", location: "AIAssistantWidget.jsx:livePipeline-seed:before-apply", message: "livePipeline semantic seed about to apply", data: { rawLength: raw.length, prevBases: wizardSets?.bases || [], semanticBases: livePipeline?.semanticWizardSets?.bases || [] }, timestamp: Date.now() }) }).catch(() => {})
+			// #endregion
 			lastSeededNormRef.current = n
-			setWizardSets(normalizeWizardSets(livePipeline.semanticWizardSets))
+			const seeded = normalizeWizardSets(livePipeline.semanticWizardSets)
+			if (Array.isArray(seeded.objectives) && seeded.objectives.length > 1) {
+				seeded.objectives = [seeded.objectives[0]]
+			}
+			setWizardSets(seeded)
+			setWizardTargets({ objectives: {}, constraints: {} })
 			setWizardStep(1)
 		}
-	}, [appearance, selectedTemplateId, livePipeline])
+	}, [appearance, selectedTemplateId, livePipeline, wizardDirty, transcript, question])
 
-	const toggleWizardDimension = useCallback((dimKey, id) => {
-		setWizardSets((prev) => {
-			const max = WIZARD_STEP_MAX[dimKey] ?? 4
-			const cur = new Set(prev[dimKey] || [])
-			if (cur.has(id)) cur.delete(id)
-			else {
-				if (cur.size >= max) return prev
-				cur.add(id)
+	const withAssetPrefix = useCallback(
+		(text) => {
+			const body = String(text || "").trim()
+			if (!selectedAssetName) return body
+			if (!body) return `Сформируй сценарий для «${selectedAssetName}».`
+			if (/для\s+до\s+«[^»]+»/i.test(body) || /для\s+«[^»]+»/i.test(body)) return body
+			return `Сформируй сценарий для «${selectedAssetName}». ${body}`
+		},
+		[selectedAssetName],
+	)
+
+	const formatDoAssetName = useCallback(() => {
+		const clean = String(selectedAssetName || "").trim().toUpperCase()
+		if (!clean) return "АКТИВА"
+		return /^ДО\s+/i.test(clean) ? clean : `ДО «${clean}»`
+	}, [selectedAssetName])
+
+	const buildFormalizatorTemplatePrompt = useCallback((templateId) => {
+		const asset = formatDoAssetName()
+		if (templateId === "fcf_no_drill_capex") {
+			return `Сформируй сценарий для ${asset} с горизонтом планирования в 3–5 лет, который должен достигать следующих целей:
+• максимизация свободного денежного потока (fcf) (Максимизация показателя →+∞), с учётом следующих ограничений:
+• без нового бурения скважин, за счёт применения рычагов:
+• гТМ / капремонт / срочный ремонт;
+• режимы скважин, дросселирование, перераспределение отборов;
+• дОФ, УЭЦН, газлифт, компрессия;
+• закачка, ППД, МУН, давление пласта;
+• приоритизация и фазирование портфеля CAPEX;
+• переторжка услуг: повторный тендер и снижение цен с подрядчиками (ребид).`
+		}
+		if (templateId === "base_oil") {
+			return `Сформируй сценарий для ${asset} с горизонтом планирования в 3–5 лет, который должен достигать следующих целей:
+• максимизация добычи нефти (Максимизация показателя →+∞), за счёт применения рычагов:
+• гТМ / капремонт / срочный ремонт;
+• режимы скважин, дросселирование, перераспределение отборов;
+• дОФ, УЭЦН, газлифт, компрессия;
+• закачка, ППД, МУН, давление пласта;
+• цифровизация: ППР, предиктив, диспетчеризация;
+• переторжка услуг: повторный тендер и снижение цен с подрядчиками (ребид).`
+		}
+		if (templateId === "npv_push") {
+			return `Сформируй сценарий для ${asset} с горизонтом планирования до конца лоф / пир, который должен достигать следующих целей:
+• максимизация чистой приведённой стоимости (npv) (Максимизация показателя →+∞), с учётом следующих ограничений:
+• лимит capex (кап) (потолок 100 000 000 ₽);
+• лимит opex (потолок 50 000 000 ₽), за счёт применения рычагов:
+• приоритизация и фазирование портфеля CAPEX;
+• гТМ / капремонт / срочный ремонт;
+• режимы скважин, дросселирование, перераспределение отборов;
+• закачка, ППД, МУН, давление пласта;
+• налоговое планирование (в рамках закона);
+• переторжка услуг: повторный тендер и снижение цен с подрядчиками (ребид).`
+		}
+		return `Сформируй сценарий для ${asset}.`
+	}, [formatDoAssetName])
+
+	const buildQuestionFromWizard = useCallback((sets, targets, revealStep = wizardStep) => {
+		const d = describeTemplateSets(sets)
+		const formatAssetLead = () => `Сформируй сценарий для ${formatDoAssetName()}`
+		const horizonLabel = (ids) => {
+			const arr = (Array.isArray(ids) ? ids : []).filter((id) => id !== "T03")
+			if (!arr.length) return null
+			const labels = arr.map((id) => HORIZON_LABEL_BY_ID[id] || id)
+			return labels[0] || null
+		}
+		const objectiveLines = (arr) => {
+			if (!Array.isArray(arr) || !arr.length) return []
+			return arr.map((item) => {
+				const cfg = targets?.objectives?.[item.id] || {}
+				const fallbackMode = OBJECTIVES_WITH_MINIMIZE_MODE.has(item.id)
+					? "minimize"
+					: "maximize"
+				const mode = cfg.mode === "threshold" ? "threshold" : cfg.mode || fallbackMode
+				const value = Number.isFinite(Number(cfg.value)) ? Number(cfg.value) : 10
+				if (OBJECTIVES_WITHOUT_MODE.has(item.id)) {
+					return `• ${String(item.name || "").toLowerCase()}`
+				}
+				if (mode === "threshold") {
+					if (OBJECTIVES_YEAR_THRESHOLD.has(item.id)) {
+						return `• ${String(item.name || "").toLowerCase()} (порог >= ${Math.round(value)} лет)`
+					}
+					return `• ${String(item.name || "").toLowerCase()} (порог >= ${value}%)`
+				}
+				return mode === "minimize"
+					? `• ${String(item.name || "").toLowerCase()} (минимизация показателя)`
+					: `• ${String(item.name || "").toLowerCase()} (максимизация показателя)`
+			})
+		}
+		const constraintLines = (arr, key, withLeverSection) => {
+			if (!Array.isArray(arr) || !arr.length) return []
+			return arr.map((item, idx) => {
+				const rawValue = targets?.[key]?.[item.id]
+				const value = Number.isFinite(Number(rawValue))
+					? Number(rawValue)
+					: CONSTRAINT_DEFAULT_VALUES[item.id]
+				const suffix = idx === arr.length - 1 && withLeverSection ? "," : ";"
+				if (item.id === "C02") {
+					return `• потолок capex за горизонт модели: ${Math.round(value)} ₽${suffix}`
+				}
+				if (item.id === "C03") {
+					return `• потолок opex (например за год): ${Math.round(value)} ₽${suffix}`
+				}
+				if (item.id === "C04") {
+					return `• нижняя граница добычи нефти: не ниже ${value}% к базовому профилю${suffix}`
+				}
+				if (item.id === "C05") {
+					return `• максимальный срок внедрения мероприятий: ${Math.round(value)} мес.${suffix}`
+				}
+				return `• ${String(item.name || "").toLowerCase()}${suffix}`
+			})
+		}
+		const leverLines = (arr) => {
+			if (!Array.isArray(arr) || !arr.length) return []
+			return arr.map((item) => `• ${String(item.name || "").toLowerCase()}.`)
+		}
+
+		const horizon = horizonLabel(sets?.horizons)
+		const objectives = objectiveLines(d.objectives)
+		const levers = leverLines(d.levers)
+		const constraints = constraintLines(d.constraints, "constraints", levers.length > 0 && revealStep >= 5)
+
+		let text = formatAssetLead()
+		if (revealStep < 2 || !horizon) return `${text}…`
+		text += ` с горизонтом планирования в ${horizon}`
+		if (revealStep >= 3 && objectives.length) {
+			text += ", который должен достигать следующих целей:\n"
+			text += objectives.join("\n")
+		}
+		if (revealStep >= 4 && constraints.length) {
+			text += ", с учётом следующих ограничений:\n"
+			text += constraints.join("\n")
+		}
+		if (revealStep >= 5 && levers.length) {
+			text += ", за счёт применения рычагов:\n"
+			text += `• ${levers.map((x) => x.replace(/^•\s*/, "").replace(/\.$/, "")).join(" / ")}.`
+		}
+		return text.trim()
+	}, [formatDoAssetName, wizardStep])
+
+	const handleToggleDimensionAndSync = useCallback(
+		(dimKey, id) => {
+			setWizardDirty(true)
+			setHasConstructorInput(true)
+			setHasConstructorFinalConfirm(false)
+			let nextSets = null
+			setWizardSets((prev) => {
+				const current = Array.isArray(prev[dimKey]) ? prev[dimKey] : []
+				if (dimKey === "objectives" || dimKey === "constraints" || dimKey === "levers") {
+					const cur = new Set(current)
+					if (cur.has(id)) cur.delete(id)
+					else cur.add(id)
+					nextSets = { ...prev, [dimKey]: [...cur] }
+				} else {
+					nextSets = { ...prev, [dimKey]: current[0] === id ? [] : [id] }
+				}
+				return nextSets
+			})
+			if (nextSets) {
+				setQuestion(buildQuestionFromWizard(nextSets, wizardTargets))
+				setTranscript("")
 			}
-			return { ...prev, [dimKey]: [...cur] }
-		})
-	}, [])
+		},
+		[buildQuestionFromWizard, wizardTargets],
+	)
+
+	const handleSetObjectiveMode = useCallback(
+		(id, mode) => {
+			setWizardDirty(true)
+			setHasConstructorInput(true)
+			setHasConstructorFinalConfirm(false)
+			setWizardTargets((prev) => {
+				const current = prev?.objectives?.[id] || {
+					mode: OBJECTIVES_WITH_MINIMIZE_MODE.has(id) ? "minimize" : "maximize",
+					value: OBJECTIVES_YEAR_THRESHOLD.has(id) ? 3 : 10,
+				}
+				const next = {
+					...prev,
+					objectives: {
+						...(prev.objectives || {}),
+						[id]: {
+							...current,
+							mode:
+								mode === "threshold"
+									? "threshold"
+									: mode === "minimize"
+										? "minimize"
+										: "maximize",
+						},
+					},
+				}
+				setQuestion(buildQuestionFromWizard(wizardSets, next))
+				setTranscript("")
+				return next
+			})
+		},
+		[buildQuestionFromWizard, wizardSets],
+	)
+
+	const handleObjectiveDelta = useCallback(
+		(id, delta) => {
+			setWizardDirty(true)
+			setHasConstructorInput(true)
+			setHasConstructorFinalConfirm(false)
+			setWizardTargets((prev) => {
+				const current = prev?.objectives?.[id] || {
+					mode: "threshold",
+					value: OBJECTIVES_YEAR_THRESHOLD.has(id) ? 3 : 10,
+				}
+				const base = Number.isFinite(Number(current.value)) ? Number(current.value) : 10
+				const value = Math.max(0, base + delta)
+				const next = {
+					...prev,
+					objectives: {
+						...(prev.objectives || {}),
+						[id]: { ...current, mode: "threshold", value },
+					},
+				}
+				setQuestion(buildQuestionFromWizard(wizardSets, next))
+				setTranscript("")
+				return next
+			})
+		},
+		[buildQuestionFromWizard, wizardSets],
+	)
+
+	const handleSetTargetValue = useCallback(
+		(groupKey, id, value) => {
+			setWizardDirty(true)
+			setHasConstructorInput(true)
+			setHasConstructorFinalConfirm(false)
+			setWizardTargets((prev) => {
+				const next = {
+					...prev,
+					[groupKey]: { ...(prev[groupKey] || {}), [id]: value },
+				}
+				setQuestion(buildQuestionFromWizard(wizardSets, next))
+				setTranscript("")
+				return next
+			})
+		},
+		[buildQuestionFromWizard, wizardSets],
+	)
+
+	const handleSetConstraintMode = useCallback(
+		(id, mode) => {
+			setWizardDirty(true)
+			setHasConstructorInput(true)
+			setHasConstructorFinalConfirm(false)
+			setWizardTargets((prev) => {
+				const current = prev?.constraints?.[id] || { mode: "threshold", value: 10 }
+				const next = {
+					...prev,
+					constraints: {
+						...(prev.constraints || {}),
+						[id]: { ...current, mode: mode === "maximize" ? "maximize" : "threshold" },
+					},
+				}
+				setQuestion(buildQuestionFromWizard(wizardSets, next))
+				setTranscript("")
+				return next
+			})
+		},
+		[buildQuestionFromWizard, wizardSets],
+	)
+
+	const handleConstraintDelta = useCallback(
+		(id, delta) => {
+			setWizardDirty(true)
+			setHasConstructorInput(true)
+			setHasConstructorFinalConfirm(false)
+			setWizardTargets((prev) => {
+				const current = prev?.constraints?.[id]
+				const base = Number.isFinite(Number(current))
+					? Number(current)
+					: Number.isFinite(Number(current?.value))
+						? Number(current.value)
+						: CONSTRAINT_DEFAULT_VALUES[id] ?? 10
+				const value = Math.max(0, base + delta)
+				const next = {
+					...prev,
+					constraints: {
+						...(prev.constraints || {}),
+						[id]: value,
+					},
+				}
+				setQuestion(buildQuestionFromWizard(wizardSets, next))
+				setTranscript("")
+				return next
+			})
+		},
+		[buildQuestionFromWizard, wizardSets],
+	)
+
+	useEffect(() => {
+		if (appearance !== "newDemo") return
+		if ((wizardSets?.bases || []).length > 0) return
+		const preferredBase = (dimensionCatalog?.bases || []).find((x) => x.id === "B01")?.id
+		const firstBase = preferredBase || dimensionCatalog?.bases?.[0]?.id
+		if (!firstBase) return
+		// #region agent log
+		fetch("http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "945340" }, body: JSON.stringify({ sessionId: "945340", runId: "pre-fix", hypothesisId: "H3", location: "AIAssistantWidget.jsx:base-default-effect", message: "base default effect sets base", data: { preferredBase, firstBase, currentBases: wizardSets?.bases || [] }, timestamp: Date.now() }) }).catch(() => {})
+		// #endregion
+		const next = { ...wizardSets, bases: [firstBase] }
+		setWizardSets(next)
+	}, [appearance, wizardSets, dimensionCatalog])
+
+	useEffect(() => {
+		if (appearance !== "newDemo") return
+		const horizons = Array.isArray(wizardSets?.horizons) ? wizardSets.horizons : []
+		if (!horizons.length) {
+			const next = { ...wizardSets, horizons: ["T01"] }
+			setWizardSets(next)
+			return
+		}
+		if (!horizons.includes("T04")) return
+		const next = { ...wizardSets, horizons: ["T01"] }
+		setWizardSets(next)
+	}, [appearance, wizardSets])
+
+	const canSendNewDemo = useMemo(() => {
+		if (appearance !== "newDemo") return true
+		if (hasVoiceInput) return true
+		if (hasTemplateSelection && selectedTemplateId) return true
+		if (hasConstructorFinalConfirm) return true
+		// #region agent log
+		fetch("http://127.0.0.1:7689/ingest/835d33eb-bbbf-4335-a415-5b77553fca5e", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "945340" }, body: JSON.stringify({ sessionId: "945340", runId: "pre-fix", hypothesisId: "H4", location: "AIAssistantWidget.jsx:canSendNewDemo", message: "send remains disabled", data: { hasVoiceInput, hasTemplateSelection, selectedTemplateId: selectedTemplateId || null, hasConstructorInput }, timestamp: Date.now() }) }).catch(() => {})
+		// #endregion
+		return false
+	}, [appearance, hasVoiceInput, hasTemplateSelection, selectedTemplateId, hasConstructorFinalConfirm])
 
 	useEffect(() => {
 		if (appearance !== "newDemo" || !open || !selectedAssetId) return
@@ -423,6 +831,14 @@ function AIAssistantWidget({
 			if (debounceRef.current) clearTimeout(debounceRef.current)
 		}
 	}, [appearance, open, selectedAssetId, question, transcript])
+
+	useEffect(() => {
+		if (appearance !== "newDemo") return
+		if (!open) return
+		if (!selectedAssetName) return
+		if (selectedTemplateId) return
+		setQuestion(buildQuestionFromWizard(wizardSets, wizardTargets, wizardStep))
+	}, [appearance, open, selectedAssetName, selectedTemplateId, wizardStep, wizardSets, wizardTargets, buildQuestionFromWizard])
 
 	const runExecutor = useCallback(
 		async (scenarioId, topicOrMetric, preset, execOptions = {}) => {
@@ -503,6 +919,7 @@ function AIAssistantWidget({
 	)
 
 	const handleSend = useCallback(() => {
+		if (appearance === "newDemo" && !canSendNewDemo) return
 		let text = (transcript || question || "").trim()
 		if (
 			!text &&
@@ -645,7 +1062,8 @@ function AIAssistantWidget({
 					presetBoard,
 					{ semanticGraphBundle: bundle },
 				)
-				setWizardSets(normalizeWizardSets(EMPTY_WIZARD_SETS))
+				setWizardSets(normalizeWizardSets(DEFAULT_NEW_DEMO_WIZARD_SETS))
+				setWizardTargets({ objectives: {}, constraints: {} })
 				setWizardStep(1)
 				lastSeededNormRef.current = ""
 				return
@@ -667,6 +1085,7 @@ function AIAssistantWidget({
 	}, [
 		question,
 		transcript,
+		canSendNewDemo,
 		runExecutor,
 		selectedAssetId,
 		setClarification,
@@ -679,23 +1098,58 @@ function AIAssistantWidget({
 
 	const handleSuggestionPick = useCallback((value) => {
 		setTranscript("")
-		setQuestion(value)
+		setQuestion(withAssetPrefix(value))
 		setSelectedTemplateId(null)
-		setWizardSets(normalizeWizardSets(EMPTY_WIZARD_SETS))
+		setWizardSets(normalizeWizardSets(DEFAULT_NEW_DEMO_WIZARD_SETS))
+		setWizardTargets({ objectives: { G01: { mode: "maximize", value: 10 } }, constraints: {} })
 		setWizardStep(1)
+		setConstructorExpanded(false)
+		setWizardDirty(false)
 		lastSeededNormRef.current = ""
-	}, [])
+	}, [withAssetPrefix])
 
 	const handleResetScenario = useCallback(() => {
+		const defaultSets = normalizeWizardSets(DEFAULT_NEW_DEMO_WIZARD_SETS)
+		const defaultTargets = { objectives: { G01: { mode: "maximize", value: 10 } }, constraints: {} }
 		setSelectedTemplateId(null)
 		setLivePipeline(null)
-		setWizardSets(normalizeWizardSets(EMPTY_WIZARD_SETS))
+		setTranscript("")
+		setQuestion(buildQuestionFromWizard(defaultSets, defaultTargets, 1))
+		setWizardSets(defaultSets)
+		setWizardTargets(defaultTargets)
 		setWizardStep(1)
+		setConstructorExpanded(false)
+		setWizardDirty(false)
+		setHasTemplateSelection(false)
+		setHasConstructorInput(false)
+		setHasConstructorFinalConfirm(false)
+		setHasVoiceInput(false)
 		lastSeededNormRef.current = ""
-		void restartDemoSessionFromPreset(routePrefix).catch((e) => {
-			console.warn("[ai-assistant] restartDemoSessionFromPreset", e)
+	}, [buildQuestionFromWizard])
+
+	const handleToggleConstructorExpanded = useCallback(() => {
+		setConstructorExpanded((isOpen) => {
+			const nextOpen = !isOpen
+			if (
+				nextOpen &&
+				!wizardDirty &&
+				appearance === "newDemo" &&
+				((wizardSets?.bases || [])[0] !== "B01" ||
+					(wizardSets?.objectives || []).length !== 1 ||
+					(wizardSets?.objectives || [])[0] !== "G01" ||
+					(wizardSets?.levers || []).length !== 3 ||
+					!["L01", "L02", "L04"].every((id) => (wizardSets?.levers || []).includes(id)))
+			) {
+				setWizardSets((prev) => ({
+					...prev,
+					bases: ["B01"],
+					objectives: ["G01"],
+					levers: ["L01", "L02", "L04"],
+				}))
+			}
+			return nextOpen
 		})
-	}, [routePrefix])
+	}, [appearance, wizardDirty, wizardSets])
 
 	const hasThinkingResult = (thinkingSteps ?? localThinkingSteps).length > 0
 	useEffect(() => {
@@ -715,6 +1169,51 @@ function AIAssistantWidget({
 	const isUnrecognizedState = Boolean(displayClarification)
 	const needsAssetSelection = !selectedAssetId && !isThinkingMode
 
+	useEffect(() => {
+		if (appearance !== "newDemo") return
+		const el = promptInputRef.current
+		if (!el) return
+		const nextText = String(inputValue || "")
+		if (el.innerText !== nextText) el.innerText = nextText
+	}, [appearance, inputValue])
+
+	const renderPromptWithHighlight = (text) => {
+		const src = String(text || "")
+		if (!src) return null
+		const tokens = [
+			"Сформируй сценарий для ",
+			"с горизонтом планирования в",
+			"относительно базы",
+			"который должен достигать следующих целей:",
+			"с учётом следующих ограничений:",
+			"за счёт применения рычагов:",
+		]
+		const out = []
+		let pos = 0
+		while (pos < src.length) {
+			let nextIdx = -1
+			let nextTok = ""
+			for (const tok of tokens) {
+				const i = src.indexOf(tok, pos)
+				if (i >= 0 && (nextIdx < 0 || i < nextIdx)) {
+					nextIdx = i
+					nextTok = tok
+				}
+			}
+			if (nextIdx < 0) {
+				out.push(<span key={`p-${pos}`}>{src.slice(pos)}</span>)
+				break
+			}
+			if (nextIdx > pos) out.push(<span key={`p-${pos}`}>{src.slice(pos, nextIdx)}</span>)
+			out.push(
+				<span key={`k-${nextIdx}`} className={styles.promptSkeletonToken}>
+					{nextTok}
+				</span>,
+			)
+			pos = nextIdx + nextTok.length
+		}
+		return out
+	}
 	return (
 		<div
 			ref={widgetRef}
@@ -770,9 +1269,6 @@ function AIAssistantWidget({
 										onClick={() => setSelectedAssetId?.(p.id)}
 									>
 										<span className={styles.assetPickName}>{p.name}</span>
-										{p.city ? (
-											<span className={styles.assetPickCity}>{p.city}</span>
-										) : null}
 									</button>
 								))}
 							</div>
@@ -802,7 +1298,7 @@ function AIAssistantWidget({
 								: chatHistory.length
 									? "Продолжайте диалог."
 									: appearance === "newDemo"
-										? "Здравствуйте: выберите шаблон сценария или опишите задачу в окне запроса."
+											? "Здравствуйте: выберите готовый шаблон сценария (1) ниже или воспользуйтесь конструктором запроса (2). Чтобы задать запрос в свободной форме (3) воспользуйтесь микрофоном в окне запроса."
 										: "Здравствуйте, задайте свой промпт."}
 						</p>
 
@@ -811,9 +1307,12 @@ function AIAssistantWidget({
 								<NewDemoAiPromptConstructor
 									presets={scenarioTemplatesForForm}
 									selectedTemplateId={selectedTemplateId}
+									constructorExpanded={constructorExpanded}
+									onToggleConstructorExpanded={handleToggleConstructorExpanded}
 									onSelectTemplate={(t) => {
 										setSelectedTemplateId(t.id)
-										setQuestion(t.label)
+										setHasTemplateSelection(true)
+										setQuestion(buildFormalizatorTemplatePrompt(t.id))
 										setTranscript("")
 									}}
 									constructorDisplay={constructorDisplay}
@@ -821,16 +1320,38 @@ function AIAssistantWidget({
 									onWizardStep={setWizardStep}
 									dimensionCatalog={dimensionCatalog}
 									wizardSets={wizardSets}
-									onToggleDimension={toggleWizardDimension}
+									wizardTargets={wizardTargets}
+									onToggleDimension={handleToggleDimensionAndSync}
+									onSetTargetValue={handleSetTargetValue}
+									onSetObjectiveMode={handleSetObjectiveMode}
+									onObjectiveDelta={handleObjectiveDelta}
+									onSetConstraintMode={handleSetConstraintMode}
+									onConstraintDelta={handleConstraintDelta}
 									maxPerDimension={WIZARD_STEP_MAX}
+									onStepUp={() => {
+										setWizardDirty(true)
+										setHasConstructorFinalConfirm(false)
+										setWizardStep((s) => Math.max(1, s - 1))
+									}}
+									onStepDown={() => {
+										setWizardDirty(true)
+										setHasConstructorFinalConfirm(false)
+										setWizardStep((s) => Math.min(5, s + 1))
+									}}
+									onConfirmStep={() => {
+										if (wizardStep === 3 && !(wizardSets?.objectives?.length > 0)) return
+										setWizardDirty(true)
+										setWizardStep((s) => {
+											if (s >= 5) {
+												setHasConstructorInput(true)
+												setHasConstructorFinalConfirm(true)
+												setConstructorExpanded(false)
+												return 5
+											}
+											return Math.min(5, s + 1)
+										})
+									}}
 								/>
-								<button
-									type="button"
-									className={`${styles.suggestionButton} ${styles.suggestionButtonReset}`}
-									onClick={handleResetScenario}
-								>
-									{DEMO_AI_ASSISTANT_RESET_ACTION_LABEL}
-								</button>
 							</>
 						) : (
 							<div className={styles.suggestionList} aria-label="Готовые промпты">
@@ -869,28 +1390,55 @@ function AIAssistantWidget({
 
 						{appearance === "newDemo" ? (
 							<>
-								<div className={styles.promptWindowLabel}>Окно запроса</div>
-								<p className={styles.constructorHint}>
-									Первая строка задаёт смысл запроса. Ниже можно уточнить детали и согласовать с
-									выбранным шаблоном.
-								</p>
+								<div className={styles.promptWindowLabel}>
+									<span className={styles.sectionBadge}>3</span>
+									Окно запроса
+								</div>
 							</>
 						) : null}
 
 						<div className={styles.inputRow}>
-							<textarea
-								className={`${styles.input} ${appearance === "newDemo" ? styles.inputCompact : ""}`}
-								placeholder={isListening ? "Слушаю…" : "Введите промпт"}
-								value={inputValue}
-								onChange={(e) => setQuestion(e.target.value)}
-								onKeyDown={(e) =>
-									e.key === "Enter" &&
-									!e.shiftKey &&
-									(e.preventDefault(), handleSend())
-								}
-								rows={3}
-								disabled={isListening}
-							/>
+							{appearance === "newDemo" ? (
+								<div className={styles.inputStack}>
+									<div
+										className={`${styles.input} ${styles.inputCompact} ${styles.inputRich} ${styles.inputHighlightOverlay}`}
+										aria-hidden="true"
+									>
+										{renderPromptWithHighlight(inputValue)}
+									</div>
+									<div
+										ref={promptInputRef}
+										className={`${styles.input} ${styles.inputCompact} ${styles.inputRich} ${styles.inputRichEditable} ${isListening ? styles.inputRichDisabled : ""}`}
+										contentEditable={!isListening}
+										suppressContentEditableWarning
+										data-placeholder={isListening ? "Слушаю…" : "Введите промпт"}
+										onInput={(e) => setQuestion(e.currentTarget.innerText)}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" && !e.shiftKey) {
+												e.preventDefault()
+												handleSend()
+											}
+										}}
+										aria-label="Введите промпт"
+										role="textbox"
+										aria-multiline="true"
+									/>
+								</div>
+							) : (
+								<textarea
+									className={`${styles.input} ${appearance === "newDemo" ? styles.inputCompact : ""}`}
+									placeholder={isListening ? "Слушаю…" : "Введите промпт"}
+									value={inputValue}
+									onChange={(e) => setQuestion(e.target.value)}
+									onKeyDown={(e) =>
+										e.key === "Enter" &&
+										!e.shiftKey &&
+										(e.preventDefault(), handleSend())
+									}
+									rows={3}
+									disabled={isListening}
+								/>
+							)}
 							<button
 								type="button"
 								className={`${styles.mic} ${isListening ? styles.micActive : ""} ${!isSupported ? styles.micDisabled : ""}`}
@@ -909,15 +1457,31 @@ function AIAssistantWidget({
 						</div>
 
 						<div className={styles.actionsRow}>
+							<div className={styles.actionsLeft}>
+								{appearance === "newDemo" ? (
+									<button
+										type="button"
+										className={`${styles.openThinking} ${styles.resetInline}`}
+										onClick={handleResetScenario}
+									>
+										{DEMO_AI_ASSISTANT_RESET_ACTION_LABEL}
+									</button>
+								) : null}
+								<button
+									type="button"
+									className={styles.openThinking}
+									onClick={() => onThinkingPanelOpen?.(true)}
+									disabled={!isResultReopenable}
+								>
+									{appearance === "newDemo" ? "Открыть Мышление" : "Открыть мышление"}
+								</button>
+							</div>
 							<button
 								type="button"
-								className={styles.openThinking}
-								onClick={() => onThinkingPanelOpen?.(true)}
-								disabled={!isResultReopenable}
+								className={styles.send}
+								onClick={handleSend}
+								disabled={appearance === "newDemo" && !canSendNewDemo}
 							>
-								{appearance === "newDemo" ? "Открыть Мышление" : "Открыть мышление"}
-							</button>
-							<button type="button" className={styles.send} onClick={handleSend}>
 								Отправить
 							</button>
 						</div>

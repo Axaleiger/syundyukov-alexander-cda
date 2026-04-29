@@ -30,7 +30,8 @@ import {
 } from "./scenarioGraphLayout.js"
 import {
 	CH_TWIN_LONG_DESCRIPTION,
-	formatChEdgeBusinessLines,
+	CD_OBJECT_FUNCTIONS,
+	CD_PROGRAM_FUNCTIONS,
 } from "./causeHypTwinDocumentation.js"
 import {
 	buildPerGoalCauseHypothesisPanels,
@@ -104,9 +105,78 @@ function assignCdLabels(bundle) {
 	}
 }
 
+const CD_FUNCTION_KEYWORDS = {
+	ЦДРБ: ["запас", "геолог", "пласт", "ресурс", "развед", "потенциал", "поров", "проницаем"],
+	ЦДП: ["скважин", "фонд", "добыч", "промысл", "инфраструктур", "энергет", "потер", "эффектив"],
+	ЦДПР: ["проект", "бурен", "ввод", "мощност", "траектор", "capex", "капекс", "программ"],
+	АВНМ: ["новых мощност", "строительств", "ввод", "капитальн", "подряд", "мто"],
+	"ЦД РИД": ["разведк", "зон", "бурени", "интеграц", "риск добыч"],
+}
+
+function normalizeForKeywordMatch(s) {
+	return String(s || "")
+		.toLowerCase()
+		.replace(/\s+/g, " ")
+		.trim()
+}
+
+function pickRelevantCdFunctions(code, longDescription, contextText) {
+	const kbFunctions = Array.isArray(CD_PROGRAM_FUNCTIONS?.[code])
+		? CD_PROGRAM_FUNCTIONS[code]
+		: []
+	const legacyBullets = String(longDescription || "")
+		.split("\n")
+		.map((x) => x.trim())
+		.filter((x) => x.startsWith("•"))
+		.map((x) => x.replace(/^•\s*/, "").trim())
+	const sourceRows = kbFunctions.length > 0 ? kbFunctions : legacyBullets
+	if (!sourceRows.length) return ""
+	const ctx = normalizeForKeywordMatch(contextText)
+	const keys = CD_FUNCTION_KEYWORDS[code] || []
+	const picked = sourceRows.filter((line) => {
+		const normalized = normalizeForKeywordMatch(line)
+		if (!keys.length) return false
+		return keys.some((k) => ctx.includes(k) && normalized.includes(k))
+	})
+	const uniq = [...new Set((picked.length ? picked : sourceRows.slice(0, 1)).slice(0, 3))]
+	return uniq.map((x) => `• ${x}`).join("\n")
+}
+
+function pickHsTwinFunctions(codes) {
+	const code = Array.isArray(codes) && codes.length ? String(codes[0]) : ""
+	const rows = Array.isArray(CD_OBJECT_FUNCTIONS?.[code]) ? CD_OBJECT_FUNCTIONS[code] : []
+	const picked = rows.slice(0, 3)
+	return picked.map((x) => `• ${x}`).join("\n")
+}
+
+const HS_FUNCTION_KEYWORDS = {
+	СКВ: ["скважин", "дебит", "режим", "забойн", "устьев", "фонд", "гтм", "обводнен"],
+	ПЛА: ["пласт", "разработк", "профил", "истор", "внс", "хв", "кпрод", "проницаем"],
+	ИНФ: ["инфраструктур", "трубопровод", "узел", "кнс", "днс", "поток", "давлен", "сбор"],
+	ФЛЮ: ["флюид", "pvt", "газов", "обводнен", "фаз", "сепарац", "свойств"],
+	ПОД: ["подготовк", "сепарац", "обезвож", "качеств", "упн", "укпг", "потер"],
+	ЭНЕ: ["энерг", "нагруз", "мощност", "закачк", "opex", "потреблен", "электро"],
+	БУР: ["бурен", "ствол", "траектор", "ввод", "очеред", "kpi", "гтм"],
+}
+
+function pickRelevantHsFunctions(code, contextText) {
+	const rows = Array.isArray(CD_OBJECT_FUNCTIONS?.[code]) ? CD_OBJECT_FUNCTIONS[code] : []
+	if (!rows.length) return ""
+	const ctx = normalizeForKeywordMatch(contextText)
+	const keys = HS_FUNCTION_KEYWORDS[code] || []
+	const picked = rows.filter((line) => {
+		const normalized = normalizeForKeywordMatch(line)
+		if (!keys.length) return false
+		return keys.some((k) => ctx.includes(k) && normalized.includes(k))
+	})
+	const uniq = [...new Set((picked.length ? picked : rows.slice(0, 1)).slice(0, 3))]
+	return uniq.map((x) => `• ${x}`).join("\n")
+}
+
 /** Пояснения для ЦД первого перегона: описание типа + блок сквозных процессов при совпадении кодов на ребре. */
 function assignCauseHypTwinDetailTexts(bundle) {
 	const byEdge = new Map()
+	const byId = new Map((bundle.nodes || []).map((x) => [x.id, x]))
 	for (const n of bundle.nodes) {
 		if (!/^cd-\d+$/.test(n.id) || n.cdSegment !== "ch") continue
 		const k = n.cdEdgePair
@@ -115,16 +185,45 @@ function assignCauseHypTwinDetailTexts(bundle) {
 		byEdge.get(k).push(n)
 	}
 	for (const nodes of byEdge.values()) {
-		const unionCodes = [
-			...new Set(nodes.flatMap((x) => (Array.isArray(x.cdTwinSlots) ? x.cdTwinSlots : []))),
-		]
-		const biz = formatChEdgeBusinessLines(unionCodes)
 		for (const n of nodes) {
 			const slots = Array.isArray(n.cdTwinSlots) ? n.cdTwinSlots : []
 			const code = slots[0]
 			const main = code ? CH_TWIN_LONG_DESCRIPTION[code] : ""
-			n.detailText = [main, biz].filter(Boolean).join("\n\n")
+			const pair = /^(cause-\d+)-(hyp-\d+)$/.exec(String(n.cdEdgePair || ""))
+			const causeText = pair ? String(byId.get(pair[1])?.detailText || "").trim() : ""
+			const hypText = pair ? String(byId.get(pair[2])?.detailText || "").trim() : ""
+			const contextText = `${causeText} ${hypText}`.trim()
+			const mainRelevant = pickRelevantCdFunctions(code, main, contextText)
+			n.detailText = mainRelevant
 		}
+	}
+}
+
+function assignHypScenarioTwinDetailTexts(bundle) {
+	const byId = new Map((bundle.nodes || []).map((x) => [x.id, x]))
+	const incoming = new Map()
+	const outgoing = new Map()
+	for (const e of bundle.edges || []) {
+		if (!incoming.has(e.to)) incoming.set(e.to, [])
+		incoming.get(e.to).push(e.from)
+		if (!outgoing.has(e.from)) outgoing.set(e.from, [])
+		outgoing.get(e.from).push(e.to)
+	}
+	for (const n of bundle.nodes || []) {
+		if (!/^cd-\d+$/.test(String(n.id || "")) || n.cdSegment !== "hs") continue
+		const slots = Array.isArray(n.cdTwinSlots) ? n.cdTwinSlots : []
+		const code = slots[0]
+		const upHypId = (incoming.get(n.id) || []).find((id) => /^hyp-\d+$/.test(String(id || "")))
+		const downScenarioId = (outgoing.get(n.id) || []).find((id) =>
+			/^out-scenario-\d+$/.test(String(id || "")),
+		)
+		const hypText = upHypId ? String(byId.get(upHypId)?.detailText || "").trim() : ""
+		const scenarioText = downScenarioId
+			? String(byId.get(downScenarioId)?.detailText || "").trim()
+			: ""
+		const contextText = `${hypText} ${scenarioText}`.trim()
+		const text = pickRelevantHsFunctions(code, contextText) || pickHsTwinFunctions(slots)
+		if (text) n.detailText = text
 	}
 }
 
@@ -674,6 +773,7 @@ export function buildSemanticScenarioGraphBundle(preset, pipeline) {
 	assignCdLabels(out)
 	assignSemanticChainFlagsForCdNodes(out)
 	assignCauseHypTwinDetailTexts(out)
+	assignHypScenarioTwinDetailTexts(out)
 	assignOutcomeScenarioSimulationSummaries(out)
 
 	relaxGraphNodeCollisions(out.nodes, { iterations: 72, margin: 46 })
