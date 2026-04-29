@@ -9,7 +9,7 @@ import {
   scenarioGraphNodes,
 } from '../lib/scenarioGraphData'
 import { getNewDemoThinkingBandLayout } from '../lib/scenarioGraphLayout'
-import { generateScenarioSummaryDetailed } from '../lib/llmScenarioSummaryGenerator.js'
+import { generateScenarioSummaryDetailed, rankScenariosDetailed } from '../lib/llmScenarioSummaryGenerator.js'
 
 const LINE_HEIGHT = 15
 const ZOOM_MIN = 0.08
@@ -989,9 +989,18 @@ function ScenarioGraph({
   const [llmSummaryByNodeId, setLlmSummaryByNodeId] = useState(() => new Map())
   const [llmSummaryMetaByNodeId, setLlmSummaryMetaByNodeId] = useState(() => new Map())
   const [llmSummaryLoadingIds, setLlmSummaryLoadingIds] = useState(() => new Set())
+  const [llmScenarioRanking, setLlmScenarioRanking] = useState(() => ({
+    top1Id: null,
+    top3Ids: [],
+    scores: {},
+    source: 'fallback',
+    reason: 'init',
+  }))
   const llmSummaryByNodeIdRef = useRef(llmSummaryByNodeId)
   const llmSummaryMetaByNodeIdRef = useRef(llmSummaryMetaByNodeId)
   const llmSummaryLoadingIdsRef = useRef(llmSummaryLoadingIds)
+  const llmRankingInFlightRef = useRef(false)
+  const llmRankingKeyRef = useRef('')
   const llmRetryCountByNodeIdRef = useRef(new Map())
   const isMountedRef = useRef(true)
   const [graphFullscreen, setGraphFullscreen] = useState(false)
@@ -1214,7 +1223,60 @@ function ScenarioGraph({
     })
   }, [isNewDemo, visibleNodeIds, nodesById, incomingMap, llmSummaryLoadingIds])
 
-  /** На new-demo первые min(3, N) итоговых сценариев — «лучшие» (зелёные), остальные шары — красные. */
+  useEffect(() => {
+    if (!isNewDemo) return
+    const scenarioIds = [...visibleNodeIds]
+      .filter((id) => /^out-scenario-\d+$/.test(id))
+      .sort((a, b) => {
+        const ma = /^out-scenario-(\d+)$/.exec(a)
+        const mb = /^out-scenario-(\d+)$/.exec(b)
+        return (ma ? parseInt(ma[1], 10) : 0) - (mb ? parseInt(mb[1], 10) : 0)
+      })
+    if (!scenarioIds.length) return
+    if (llmSummaryLoadingIdsRef.current.size > 0) return
+
+    const scenarios = scenarioIds
+      .map((id) => {
+        const payload = buildScenarioSummaryPayload(id, nodesById, incomingMap)
+        if (!payload) return null
+        return {
+          id,
+          label: payload.scenarioLabel,
+          goalContext: payload.goalContext,
+          focusHypothesis: payload.focusHypothesis,
+          hypothesisLevers: payload.focusHypothesis ? [payload.focusHypothesis] : [],
+          summary: String(llmSummaryByNodeIdRef.current.get(id) || '').trim(),
+          userQuery: payload.userQuery,
+        }
+      })
+      .filter(Boolean)
+    if (!scenarios.length) return
+    const rankKey = JSON.stringify({
+      ids: scenarioIds,
+      summaries: scenarioIds.map((id) => String(llmSummaryByNodeIdRef.current.get(id) || '')),
+    })
+    if (llmRankingInFlightRef.current || llmRankingKeyRef.current === rankKey) return
+    llmRankingInFlightRef.current = true
+    const userQuery = String(scenarios[0]?.userQuery || '')
+    rankScenariosDetailed({ userQuery, scenarios })
+      .then((res) => {
+        if (!isMountedRef.current) return
+        setLlmScenarioRanking({
+          top1Id: String(res?.top1Id || '') || null,
+          top3Ids: Array.isArray(res?.top3Ids) ? res.top3Ids.map((x) => String(x || '')).filter(Boolean) : [],
+          scores: res?.scores && typeof res.scores === 'object' ? res.scores : {},
+          source: res?.source === 'groq' ? 'groq' : 'fallback',
+          reason: String(res?.reason || '').trim(),
+        })
+        llmRankingKeyRef.current = rankKey
+      })
+      .catch(() => {})
+      .finally(() => {
+        llmRankingInFlightRef.current = false
+      })
+  }, [isNewDemo, visibleNodeIds, nodesById, incomingMap, llmSummaryByNodeId, llmSummaryLoadingIds])
+
+  /** На new-demo: топ-3 от Groq-ранжирования; при отсутствии — fallback по id. */
   const preferredScenarioOutcomeIds = useMemo(() => {
     const outs = nodes
       .filter((n) => n.type === 'outcome' && /^out-scenario-\d+$/.test(n.id))
@@ -1223,9 +1285,12 @@ function ScenarioGraph({
         const mb = /^out-scenario-(\d+)$/.exec(b.id)
         return (ma ? parseInt(ma[1], 10) : 0) - (mb ? parseInt(mb[1], 10) : 0)
       })
-    const k = Math.min(3, outs.length)
-    return new Set(outs.slice(0, k).map((n) => n.id))
-  }, [nodes])
+    const fallbackTop = outs.slice(0, Math.min(3, outs.length)).map((n) => n.id)
+    const llmTop = Array.isArray(llmScenarioRanking?.top3Ids)
+      ? llmScenarioRanking.top3Ids.filter((id) => outs.some((n) => n.id === id))
+      : []
+    return new Set((llmTop.length ? llmTop : fallbackTop).slice(0, 3))
+  }, [nodes, llmScenarioRanking])
 
   /** Предки по рёбрам: из узла вперёд можно дойти до «зелёного» шара сценария (топ‑3). */
   const reachPreferredScenarioAncestors = useMemo(() => {
