@@ -452,6 +452,15 @@ function viewFromBBox(bbox, viewW, viewH, fitScale = 0.97) {
   }
 }
 
+function tightenFitBBoxForNewDemo(bbox) {
+  const contentW = Math.max(80, bbox.maxX - bbox.minX)
+  const contentH = Math.max(80, bbox.maxY - bbox.minY)
+  const bw = Math.max(120, contentW + 8)
+  const bh = Math.max(120, contentH + 12)
+  const cx = (bbox.minX + bbox.maxX) / 2 + contentW * 0.06
+  return { ...bbox, bw, bh, cx }
+}
+
 const OutcomeBallNode = memo(function OutcomeBallNode({
   node,
   visible,
@@ -722,6 +731,14 @@ function NodeDetailPopover({
     isScenarioGoal && detailText
       ? detailText
       : String(detailOverride ?? node.detailText ?? node.label ?? '').trim()
+  const isCdNode = /^cd-\d+$/.test(node.id)
+  const detailForRender = isCdNode
+    ? detail
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{2,}/g, '\n')
+        .replace(/\s*•\s*/g, '\n• ')
+        .trim()
+    : detail
 
   const approxLines = Math.max(2, Math.ceil(detail.length / 40))
   const cap = /^cd-\d+$/.test(node.id) ? DETAIL_POPOVER_MAX_H_CD : DETAIL_POPOVER_MAX_H
@@ -769,13 +786,13 @@ function NodeDetailPopover({
           </button>
         </div>
         <div
-          className="mt-2 min-h-0 flex-1 overflow-y-auto text-[12.5px] leading-snug text-slate-200/95"
+          className="mt-2 min-h-0 flex-1 overflow-y-auto whitespace-pre-line text-[12.5px] leading-snug text-slate-200/95"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {sourceLabel ? (
             <div className="mb-2 text-[11.5px] text-slate-300/85">{sourceLabel}</div>
           ) : null}
-          {detail}
+          {detailForRender}
         </div>
       </div>
     </foreignObject>
@@ -1941,16 +1958,18 @@ function ScenarioGraph({
   const stageLabelFitTopY = columnBandGeometry?.fitExtraTopY ?? null
 
   const fitAllVisible = useCallback(() => {
-    const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
-    const fitScale = isNewDemo ? 0.82 : 0.97
+    const rawBbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
+    const bbox = isNewDemo ? tightenFitBBoxForNewDemo(rawBbox) : rawBbox
+    const fitScale = isNewDemo ? 1.03 : 0.97
     const v = viewFromBBox(bbox, WIDTH, HEIGHT, fitScale)
     animateToView(v.zoom, v.pan)
   }, [visibleIds, nodesById, boxById, animateToView, WIDTH, HEIGHT, stageLabelFitTopY, isNewDemo])
 
   const fitOptimalOnly = useCallback(() => {
     const ids = [...optimalNodeIds].filter((id) => visibleIds.has(id))
-    const bbox = computeBBoxForNodeIds(ids, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
-    const fitScale = isNewDemo ? 0.82 : 0.97
+    const rawBbox = computeBBoxForNodeIds(ids, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
+    const bbox = isNewDemo ? tightenFitBBoxForNewDemo(rawBbox) : rawBbox
+    const fitScale = isNewDemo ? 1.03 : 0.97
     const v = viewFromBBox(bbox, WIDTH, HEIGHT, fitScale)
     animateToView(v.zoom, v.pan)
   }, [visibleIds, nodesById, boxById, animateToView, optimalNodeIds, WIDTH, HEIGHT, stageLabelFitTopY, isNewDemo])
@@ -1974,8 +1993,9 @@ function ScenarioGraph({
     if (fitDebounceRef.current) clearTimeout(fitDebounceRef.current)
     fitDebounceRef.current = setTimeout(() => {
       fitDebounceRef.current = null
-      const bbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
-      const fitScale = isNewDemo ? 0.82 : 0.97
+      const rawBbox = computeBBoxForNodeIds(visibleIds, nodesById, boxById, WIDTH, HEIGHT, stageLabelFitTopY)
+      const bbox = isNewDemo ? tightenFitBBoxForNewDemo(rawBbox) : rawBbox
+      const fitScale = isNewDemo ? 1.03 : 0.97
       const v = viewFromBBox(bbox, WIDTH, HEIGHT, fitScale)
       animateToView(v.zoom, v.pan)
     }, FIT_DEBOUNCE_MS)

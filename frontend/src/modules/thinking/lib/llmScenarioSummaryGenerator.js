@@ -96,6 +96,7 @@ function buildPrompt({
 	focusHypothesis,
 	hypothesisLevers = [],
 	previousSummaries = [],
+	enforcePercentRanges = false,
 }) {
 	const hyps = hypotheses?.length ? hypotheses.map((x, i) => `${i + 1}. ${x}`).join("\n") : "—"
 	const levers =
@@ -119,6 +120,8 @@ function buildPrompt({
 Формат ответа (не буквально заголовками — связным текстом):
 - В 2–3 предложениях свяжи прогноз с РЫЧАГАМИ: если пунктов несколько — назови минимум два из списка ниже своими словами и кратко опиши эффект каждого; если в списке один общий блок — раздели его на две смысловые части (как в тексте гипотезы) и опиши эффект каждой.
 - Метрики (добыча, обводнённость, давление, NPV, IRR, OPEX, денежный поток, риск) вплетай в предложения как следствие мер, а не отдельной строкой «добыча x–y%, NPV x–y%…» подряд.
+- Для каждого ключевого эффекта обязательно укажи оценочный диапазон в процентах (например, +2–4%, -1–3%) прямо в тексте рядом с эффектом.
+- Нужны минимум два числовых диапазона с символом % в ответе.
 - Запрещено выдавать ответ в виде однотипного перечисления пяти–шести показателей подряд без привязки к формулировкам рычагов.
 - Русский язык, деловой стиль, без markdown и без нумерованных списков.
 - Начинай сразу с сути (первая фраза — про конкретный эффект первого по смыслу рычага).
@@ -127,6 +130,7 @@ function buildPrompt({
 - Не копируй структуру и обороты из предыдущих ответов ниже.
 - Допускай разумные диапазоны и условия, опираясь на вход; не выдумывай названий месторождений и контрактов, если их нет во входе.
 - Не длиннее ${SUMMARY_MAX_CHARS} символов.
+${enforcePercentRanges ? "- Критично: верни ответ только если в нем есть минимум два диапазона в %; иначе исправь и дополни оценками." : ""}
 
 СЦЕНАРИЙ: ${scenarioLabel}
 КЛЮЧЕВАЯ ГИПОТЕЗА:
@@ -145,6 +149,13 @@ ${prev}
 
 Верни строго JSON:
 {"summary":"..."}`
+}
+
+function hasPercentEstimates(text) {
+	const s = String(text || "")
+	const rangeMatches = s.match(/\b[+-]?\d+(?:[.,]\d+)?\s*[–-]\s*[+-]?\d+(?:[.,]\d+)?\s*%/g) || []
+	const singlePercentMatches = s.match(/\b[+-]?\d+(?:[.,]\d+)?\s*%/g) || []
+	return rangeMatches.length >= 1 || singlePercentMatches.length >= 2
 }
 
 function extractSummaryFromModelContent(content) {
@@ -257,6 +268,7 @@ export async function generateScenarioSummaryDetailed(payload) {
 								content: buildPrompt({
 									...enrichedPayload,
 									previousSummaries,
+									enforcePercentRanges: attempt > 0,
 								}),
 							},
 						],
@@ -284,6 +296,10 @@ export async function generateScenarioSummaryDetailed(payload) {
 				if (!content) continue
 				const summary = compactSummary(extractSummaryFromModelContent(content))
 				if (!summary) continue
+				if (!hasPercentEstimates(summary) && attempt < 2) {
+					debugLog("retry by missing percent estimates", { model, attempt })
+					continue
+				}
 				const maxSim = previousSummaries.reduce(
 					(acc, s) => Math.max(acc, jaccardSimilarity(summary, s)),
 					0,
