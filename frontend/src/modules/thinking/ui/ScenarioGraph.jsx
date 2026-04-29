@@ -711,8 +711,6 @@ const GraphNode = memo(function GraphNode({ node, visible, layout, inc, isEnteri
 })
 
 const DETAIL_POPOVER_W = 300
-const DETAIL_POPOVER_MAX_H = 228
-const DETAIL_POPOVER_MAX_H_CD = 340
 
 function NodeDetailPopover({
   node,
@@ -741,8 +739,7 @@ function NodeDetailPopover({
     : detail
 
   const approxLines = Math.max(2, Math.ceil(detail.length / 40))
-  const cap = /^cd-\d+$/.test(node.id) ? DETAIL_POPOVER_MAX_H_CD : DETAIL_POPOVER_MAX_H
-  const h = Math.min(cap, Math.max(104, 56 + approxLines * 16))
+  const h = Math.max(104, 56 + approxLines * 16)
   const { rectH } = layout
   const half = rectH / 2
   const spaceAbove = node.y - half
@@ -786,8 +783,7 @@ function NodeDetailPopover({
           </button>
         </div>
         <div
-          className="mt-2 min-h-0 flex-1 overflow-y-auto whitespace-pre-line text-[12.5px] leading-snug text-slate-200/95"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="mt-2 whitespace-pre-line text-[12.5px] leading-snug text-slate-200/95"
         >
           {sourceLabel ? (
             <div className="mb-2 text-[11.5px] text-slate-300/85">{sourceLabel}</div>
