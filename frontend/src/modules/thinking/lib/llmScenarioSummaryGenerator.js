@@ -53,6 +53,40 @@ function jaccardSimilarity(a, b) {
 	return union > 0 ? inter / union : 0
 }
 
+/** Дробим ключевую гипотезу на смысловые «рычаги» для явной привязки ответа. */
+export function extractHypothesisLevers(focusHypothesis) {
+	const raw = String(focusHypothesis || "")
+		.trim()
+		.replace(/\s+/g, " ")
+	if (!raw) return []
+	const out = []
+	const bySemi = raw.split(/;/).map((s) => s.trim()).filter(Boolean)
+	if (bySemi.length > 1) {
+		for (const s of bySemi) {
+			if (s.length > 2) out.push(s)
+		}
+		return out.slice(0, 10)
+	}
+	const colon = raw.indexOf(":")
+	if (colon > 0 && colon < raw.length - 1) {
+		const left = raw.slice(0, colon).trim()
+		const right = raw.slice(colon + 1).trim()
+		if (left.length > 2) out.push(left)
+		for (const chunk of right.split(/\s*,\s*/)) {
+			const c = chunk.trim()
+			if (c.length > 2) out.push(c)
+		}
+		return out.length ? out.slice(0, 10) : [raw]
+	}
+	for (const chunk of raw.split(/\s*,\s*/)) {
+		const c = chunk.trim()
+		if (c.length > 2) out.push(c)
+	}
+	return out.length ? out.slice(0, 10) : [raw]
+}
+
+const SUMMARY_MAX_CHARS = 380
+
 function buildPrompt({
 	scenarioLabel,
 	hypotheses,
@@ -60,9 +94,14 @@ function buildPrompt({
 	userQuery,
 	goalContext,
 	focusHypothesis,
+	hypothesisLevers = [],
 	previousSummaries = [],
 }) {
 	const hyps = hypotheses?.length ? hypotheses.map((x, i) => `${i + 1}. ${x}`).join("\n") : "—"
+	const levers =
+		hypothesisLevers?.length > 0
+			? hypothesisLevers.map((x, i) => `${i + 1}. ${x}`).join("\n")
+			: "—"
 	const twins = digitalTwins?.length ? digitalTwins.join(", ") : "—"
 	const uq = String(userQuery || "").trim() || "—"
 	const goal = String(goalContext || "").trim() || "—"
@@ -71,32 +110,30 @@ function buildPrompt({
 		previousSummaries.length > 0
 			? previousSummaries
 					.slice(0, 2)
-					.map((x, i) => `${i + 1}. ${String(x).slice(0, 180)}`)
+					.map((x, i) => `${i + 1}. ${String(x).slice(0, 200)}`)
 					.join("\n")
 			: "—"
 	return `Ты эксперт в нефтегазовом инжиниринге, экономике разработки и управлении активами.
-Твоя задача — выдать короткий, конкретный прогноз по сценарию строго из заданной гипотезы.
+Твоя задача — по результатам «мысленного» прогона ключевой гипотезы на цифровых двойниках дать короткий вывод: какие эффекты даёт каждый названный рычаг, с оценкой порядка величин.
 
-Требования:
-- 2-3 коротких предложения, без списков.
-- Русский язык, деловой стиль.
-- Начинай сразу с технического эффекта в диапазоне (добыча/обводнённость/давление).
-- Отдельно дай экономику диапазонами (NPV/IRR/OPEX/денежный поток).
-- Обязательно дай риск и условие реализации.
-- Никаких вступлений и воды: запрещено начинать с «Реализация сценария», «может привести к», «в рамках сценария», «в результате реализации».
-- Нельзя использовать шаблонные фразы:
-  «проверка гипотез показала позитивный сценарий»,
-  «выполнен пакет мероприятий»,
-  «итог моделирования».
-- Не повторяй стиль и формулировки предыдущих сценариев.
-- Используй только входные данные.
-- Ответ должен быть не длиннее 300 символов.
-- Не добавляй markdown.
+Формат ответа (не буквально заголовками — связным текстом):
+- В 2–3 предложениях свяжи прогноз с РЫЧАГАМИ: если пунктов несколько — назови минимум два из списка ниже своими словами и кратко опиши эффект каждого; если в списке один общий блок — раздели его на две смысловые части (как в тексте гипотезы) и опиши эффект каждой.
+- Метрики (добыча, обводнённость, давление, NPV, IRR, OPEX, денежный поток, риск) вплетай в предложения как следствие мер, а не отдельной строкой «добыча x–y%, NPV x–y%…» подряд.
+- Запрещено выдавать ответ в виде однотипного перечисления пяти–шести показателей подряд без привязки к формулировкам рычагов.
+- Русский язык, деловой стиль, без markdown и без нумерованных списков.
+- Начинай сразу с сути (первая фраза — про конкретный эффект первого по смыслу рычага).
+- Запрещены вступления: «Реализация сценария», «может привести к», «в рамках сценария», «в результате реализации».
+- Нельзя: «проверка гипотез показала позитивный сценарий», «выполнен пакет мероприятий», «итог моделирования».
+- Не копируй структуру и обороты из предыдущих ответов ниже.
+- Допускай разумные диапазоны и условия, опираясь на вход; не выдумывай названий месторождений и контрактов, если их нет во входе.
+- Не длиннее ${SUMMARY_MAX_CHARS} символов.
 
 СЦЕНАРИЙ: ${scenarioLabel}
-КЛЮЧЕВАЯ ГИПОТЕЗА (ОТВЕЧАЙ ИМЕННО ПО НЕЙ):
+КЛЮЧЕВАЯ ГИПОТЕЗА:
 ${focus}
-ГИПОТЕЗЫ:
+РЫЧАГИ (ОБЯЗАТЕЛЬНО ИСПОЛЬЗУЙ ИХ ФОРМУЛИРОВКИ В ТЕКСТЕ):
+${levers}
+ВСЕ ГИПОТЕЗЫ В ВЕТКЕ:
 ${hyps}
 ЦД ОБЪЕКТЫ: ${twins}
 ИСХОДНЫЙ ЗАПРОС ПОЛЬЗОВАТЕЛЯ:
@@ -134,14 +171,23 @@ function extractSummaryFromModelContent(content) {
 
 function makeZeroBaselineFallback(payload) {
 	const label = String(payload?.scenarioLabel || "сценарий").trim()
-	const n = Math.max(1, (payload?.hypotheses || []).length)
 	const twins = Array.isArray(payload?.digitalTwins) && payload.digitalTwins.length
 		? payload.digitalTwins.join(", ")
 		: "ЦД скважин и пласта"
-	return [
-		`Добыча по сценарию ${label} ориентировочно растёт в умеренном диапазоне при проверке ${n} гипотез через ${twins}.`,
-		`Экономика улучшается по NPV/денежному потоку, основной риск — рост обводнённости и OPEX без поэтапного внедрения.`,
-	].join(" ")
+	const levers = Array.isArray(payload?.hypothesisLevers) ? payload.hypothesisLevers.filter(Boolean) : []
+	const a = levers[0] || String(payload?.focusHypothesis || "").trim().slice(0, 140) || "заданных мер"
+	const b = levers[1]
+	const first = `На ${twins}: «${a}» в модельном контуре даёт рост добычи и денежного потока в умеренных диапазонах; `
+	const second = b
+		? `часть «${b}» сдвигает профиль обводнённости и OPEX; риск — несогласованность графика работ и логистики.`
+		: `NPV и IRR улучшаются при соблюдении поэтапного внедрения; риск — опережающий рост обводнённости и OPEX.`
+	let out = (first + second).replace(/\s+/g, " ").trim()
+	if (out.length > SUMMARY_MAX_CHARS) {
+		out = out.slice(0, SUMMARY_MAX_CHARS)
+		const cut = Math.max(out.lastIndexOf("."), out.lastIndexOf("!"), out.lastIndexOf("?"))
+		if (cut > 80) out = out.slice(0, cut + 1)
+	}
+	return out || `Сценарий ${label}: эффекты по гипотезе умеренно позитивны на фоне контроля обводнённости (модель ${twins}).`
 }
 
 function compactSummary(raw) {
@@ -161,8 +207,8 @@ function compactSummary(raw) {
 		.filter(Boolean)
 		.slice(0, 3)
 	let out = sentences.join(" ")
-	if (out.length > 300) {
-		out = out.slice(0, 300)
+	if (out.length > SUMMARY_MAX_CHARS) {
+		out = out.slice(0, SUMMARY_MAX_CHARS)
 		const cut = Math.max(out.lastIndexOf("."), out.lastIndexOf("!"), out.lastIndexOf("?"))
 		if (cut > 120) out = out.slice(0, cut + 1)
 	}
@@ -175,7 +221,12 @@ function compactSummary(raw) {
  */
 export async function generateScenarioSummaryDetailed(payload) {
 	const key = getApiKey()
-	const fallback = makeZeroBaselineFallback(payload)
+	const levers =
+		Array.isArray(payload?.hypothesisLevers) && payload.hypothesisLevers.length
+			? payload.hypothesisLevers
+			: extractHypothesisLevers(payload?.focusHypothesis)
+	const enrichedPayload = { ...payload, hypothesisLevers: levers }
+	const fallback = makeZeroBaselineFallback(enrichedPayload)
 	if (!key) {
 		debugLog("fallback: missing api key")
 		return {
@@ -203,12 +254,15 @@ export async function generateScenarioSummaryDetailed(payload) {
 						messages: [
 							{
 								role: "user",
-								content: buildPrompt({ ...payload, previousSummaries }),
+								content: buildPrompt({
+									...enrichedPayload,
+									previousSummaries,
+								}),
 							},
 						],
 						temperature: attempt === 0 ? 0.95 : 1.1,
 						top_p: 0.95,
-						max_tokens: 220,
+						max_tokens: 300,
 					}),
 				})
 				if (!response.ok) {

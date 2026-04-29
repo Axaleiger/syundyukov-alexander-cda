@@ -791,6 +791,15 @@ function buildIncomingMap(edges) {
   return incoming
 }
 
+/** Стабильный порядок hyp-1, hyp-2, … для focusHypothesis и списка гипотез. */
+function sortHypothesisIds(ids) {
+  return [...ids].sort((a, b) => {
+    const na = Number(String(a).replace(/^hyp-/, '')) || 0
+    const nb = Number(String(b).replace(/^hyp-/, '')) || 0
+    return na - nb
+  })
+}
+
 function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
   const node = nodesById.get(nodeId)
   if (!node) return null
@@ -811,7 +820,7 @@ function buildScenarioSummaryPayload(nodeId, nodesById, incomingMap) {
       }
     }
   }
-  const hypotheses = [...hypIds]
+  const hypotheses = sortHypothesisIds([...hypIds])
     .map((id) => String(nodesById.get(id)?.detailText || '').trim())
     .filter(Boolean)
   const focusHypothesis = hypotheses[0] || ''
