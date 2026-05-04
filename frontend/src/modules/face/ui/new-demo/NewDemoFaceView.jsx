@@ -18,6 +18,8 @@ export function NewDemoFaceView() {
 	const [activeTopPanel, setActiveTopPanel] = useState(null)
 	const [lifecycleViewMode, setLifecycleViewMode] = useState("sum")
 	const [lifecycleLegendOnly, setLifecycleLegendOnly] = useState(null)
+	const [healthMetricLeft, setHealthMetricLeft] = useState("coverage")
+	const [healthMetricRight, setHealthMetricRight] = useState("coverage")
 	const assetSidebarPanelRef = useRef(null)
 	const [assetSidebarSafeInset, setAssetSidebarSafeInset] = useState(0)
 
@@ -42,6 +44,7 @@ export function NewDemoFaceView() {
 	} = useFacePageModel(routePrefix, {
 		newDemoRightObjectsList: NEW_DEMO_HEALTH_RIGHT_OBJECTS,
 		newDemoPercentRange: { min: 45, max: 80 },
+		newDemoHealthMetricMode: { left: healthMetricLeft, right: healthMetricRight },
 	})
 
 	const selectedAsset = useMemo(
@@ -131,6 +134,7 @@ export function NewDemoFaceView() {
 							isActive={isHealthOpen}
 							isCompact={isTopRowCompact}
 							onToggle={toggleHealthPanel}
+							targetLevelPercent={healthMetricLeft === "coverage" ? 100 : 40}
 						/>
 						<NewDemoLifecycleCard
 							isActive={isLifecycleOpen}
@@ -166,6 +170,10 @@ export function NewDemoFaceView() {
 						onLeftSegmentClick={handleLeftSegmentClick}
 						onRightSegmentClick={handleRightSegmentClick}
 						onClose={() => setActiveTopPanel(null)}
+						metricLeft={healthMetricLeft}
+						metricRight={healthMetricRight}
+						onMetricLeftChange={setHealthMetricLeft}
+						onMetricRightChange={setHealthMetricRight}
 					/>
 				) : null}
 				{isLifecycleOpen ? (

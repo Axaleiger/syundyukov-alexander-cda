@@ -9,6 +9,7 @@ export function NewDemoHealthCard({
 	isActive,
 	isCompact,
 	onToggle,
+	targetLevelPercent = 100,
 }) {
 	const handleKeyDown = (event) => {
 		if (event.key === "Enter" || event.key === " ") {
@@ -43,6 +44,7 @@ export function NewDemoHealthCard({
 							showLabels
 							variant="collapsedCard"
 							getItemLabel={(item) => getNewDemoHealthStageRoseLabel(item.name)}
+							targetLevelPercent={targetLevelPercent}
 						/>
 					)}
 				</div>

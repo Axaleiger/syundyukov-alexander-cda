@@ -12,6 +12,7 @@ export function NewDemoWindRoseRadar({
 	showLabels = true,
 	variant = "default",
 	getItemLabel = (item) => item.name,
+	targetLevelPercent = 100,
 }) {
 	const isSmall = size === "small"
 	// Семантика как в main: порядок сегментов и индексы строго из `data` без ротаций.
@@ -69,6 +70,16 @@ export function NewDemoWindRoseRadar({
 		})
 		.join(" ")
 
+	const targetClamped = Math.max(0, Math.min(100, Number(targetLevelPercent) || 0))
+	const targetRosePoints = items
+		.map((_, index) => {
+			const spokeAngle = segments[index].spokeAngle
+			const tr = (radius * targetClamped) / 100
+			const tp = point(center, center, tr, spokeAngle)
+			return `${tp.x},${tp.y}`
+		})
+		.join(" ")
+
 	return (
 		<div
 			className={`${styles.ndRadar} ${isSmall ? styles.ndRadarSmall : styles.ndRadarLarge}`}
@@ -102,6 +113,7 @@ export function NewDemoWindRoseRadar({
 						className={`${styles.ndRadarRay} ${isSmall ? styles.ndRadarRaySmall : ""}`}
 					/>
 				) : null}
+				<polygon points={targetRosePoints} className={styles.ndRadarAreaTarget} />
 				<polygon points={rosePoints} className={styles.ndRadarArea} />
 				<circle cx={center} cy={center} r="3" className={styles.ndRadarCore} />
 			</svg>

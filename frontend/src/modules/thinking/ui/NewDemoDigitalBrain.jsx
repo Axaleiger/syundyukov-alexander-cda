@@ -70,17 +70,35 @@ export default function NewDemoDigitalBrain({
 		const ctx = canvas.getContext("2d")
 		if (!ctx) return
 
+		let resizeRaf = 0
 		const resize = () => {
 			const rect = canvas.getBoundingClientRect()
+			const w = Math.max(0, Math.round(rect.width))
+			const h = Math.max(0, Math.round(rect.height))
+			if (w < 2 || h < 2) return
 			const dpr = Math.min(window.devicePixelRatio || 1, 2)
-			canvas.width = Math.round(rect.width * dpr)
-			canvas.height = Math.round(rect.height * dpr)
+			const nextW = Math.round(w * dpr)
+			const nextH = Math.round(h * dpr)
+			if (canvas.width === nextW && canvas.height === nextH) {
+				centerRef.current = { x: w / 2, y: h / 2 }
+				return
+			}
+			canvas.width = nextW
+			canvas.height = nextH
 			ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-			centerRef.current = { x: rect.width / 2, y: rect.height / 2 }
+			centerRef.current = { x: w / 2, y: h / 2 }
+		}
+
+		const scheduleResize = () => {
+			if (resizeRaf) cancelAnimationFrame(resizeRaf)
+			resizeRaf = requestAnimationFrame(() => {
+				resizeRaf = 0
+				resize()
+			})
 		}
 
 		resize()
-		const ro = new ResizeObserver(resize)
+		const ro = new ResizeObserver(scheduleResize)
 		ro.observe(canvas)
 
 		const render = (timeMs) => {
@@ -205,6 +223,7 @@ export default function NewDemoDigitalBrain({
 
 		rafRef.current = requestAnimationFrame(render)
 		return () => {
+			if (resizeRaf) cancelAnimationFrame(resizeRaf)
 			if (rafRef.current) cancelAnimationFrame(rafRef.current)
 			ro.disconnect()
 		}

@@ -4,13 +4,19 @@ function point(cx, cy, radius, angle) {
 	return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) }
 }
 
-function labelPositionClamped(cx, cy, r, angle, margin = 7) {
+function labelPositionClamped(cx, cy, r, angle, margin = 4) {
 	const x = cx + r * Math.cos(angle)
 	const y = cy + r * Math.sin(angle)
 	return {
 		x: Math.min(100 - margin, Math.max(margin, x)),
 		y: Math.min(100 - margin, Math.max(margin, y)),
 	}
+}
+
+/** Дальше от центра при большем числе лепестков — меньше налезания на контур. */
+function labelRadiusPercent(numItems) {
+	if (!numItems) return 66
+	return Math.min(78, 60 + 140 / Math.max(numItems, 2))
 }
 
 /** «ЦД энергетики» → три строки: ЦД / энергетики / % (без разрыва слов). */
@@ -34,7 +40,12 @@ function arcPath(cx, cy, radius, start, end) {
 	].join(" ")
 }
 
-export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegmentClick }) {
+export function NewDemoExpandedRightWindRoseRadar({
+	data,
+	selectedIndex,
+	onSegmentClick,
+	targetLevelPercent = 100,
+}) {
 	const items = data || []
 	const numItems = items.length
 	const angleStep = numItems > 0 ? (2 * Math.PI) / numItems : 0
@@ -58,6 +69,15 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 	})
 
 	const rosePoints = segments.map((segment) => `${segment.valuePoint.x},${segment.valuePoint.y}`).join(" ")
+
+	const targetClamped = Math.max(0, Math.min(100, Number(targetLevelPercent) || 0))
+	const targetRosePoints = segments
+		.map((segment) => {
+			const tr = (radius * targetClamped) / 100
+			const tp = point(center, center, tr, segment.spokeAngle)
+			return `${tp.x},${tp.y}`
+		})
+		.join(" ")
 	const ringPolygons = Array.from({ length: ringCount }, (_, ringIndex) => {
 		const ringRadius = (radius * (ringIndex + 1)) / ringCount
 		return segments
@@ -89,6 +109,10 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 						className={styles.expandedRightAxis}
 					/>
 				))}
+				<polygon
+					points={targetRosePoints}
+					className={styles.expandedRightContourTarget}
+				/>
 				<polygon
 					points={rosePoints}
 					className={`${styles.expandedRightContour} ${
@@ -127,8 +151,8 @@ export function NewDemoExpandedRightWindRoseRadar({ data, selectedIndex, onSegme
 			</svg>
 			<div className={styles.expandedRightLabels}>
 				{segments.map((segment, idx) => {
-					/* Чуть дальше от контура; clamp только от края блока. Две строки: имя / % — без разрыва слов. */
-					const p = labelPositionClamped(50, 50, 58, segment.spokeAngle)
+					const lr = labelRadiusPercent(numItems)
+					const p = labelPositionClamped(50, 50, lr, segment.spokeAngle)
 					const isSelected = displayedSelectedIndex != null && idx === displayedSelectedIndex
 					const { head, body } = splitCdObjectLabel(segment.item.name)
 					const pct = `${Math.round(segment.item.value || 0)}%`

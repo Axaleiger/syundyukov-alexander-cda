@@ -22,6 +22,7 @@ export function NewDemoExpandedLeftWindRoseRadar({
 	selectedIndex,
 	onSegmentClick,
 	getItemLabel = (item) => item.name,
+	targetLevelPercent = 100,
 }) {
 	const items = data || []
 	const numItems = items.length
@@ -62,6 +63,15 @@ export function NewDemoExpandedLeftWindRoseRadar({
 
 	const contourPoints = segments.map((segment) => `${segment.valuePoint.x},${segment.valuePoint.y}`).join(" ")
 
+	const targetClamped = Math.max(0, Math.min(100, Number(targetLevelPercent) || 0))
+	const targetContourPoints = segments
+		.map((segment) => {
+			const tr = (radius * targetClamped) / 100
+			const tp = point(center, center, tr, segment.spokeAngle)
+			return `${tp.x},${tp.y}`
+		})
+		.join(" ")
+
 	return (
 		<div className={styles.expandedLeftRadar} role="group" aria-label="Диаграмма производственных этапов">
 			<svg viewBox={`0 0 ${box} ${box}`} className={styles.expandedChartSvg} aria-hidden>
@@ -78,6 +88,10 @@ export function NewDemoExpandedLeftWindRoseRadar({
 						className={styles.expandedLeftAxis}
 					/>
 				))}
+				<polygon
+					points={targetContourPoints}
+					className={styles.expandedLeftContourTarget}
+				/>
 				<polygon
 					points={contourPoints}
 					className={`${styles.expandedLeftContour} ${

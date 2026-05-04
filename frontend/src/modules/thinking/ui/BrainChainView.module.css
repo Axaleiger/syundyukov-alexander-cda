@@ -212,6 +212,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+  /* iPad/Safari: по умолчанию stretch выравнивает строку по высоте цепочки —
+     карточка мозга растягивается → ResizeObserver на canvas → лишние перерисовки/«уезд» вниз */
+  align-items: start;
 }
 
 .boardCardHead {
@@ -251,6 +254,11 @@
 
 .boardChainWrap {
   padding: 12px 14px 14px;
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .boardChainTitleRow {
@@ -354,7 +362,10 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
+  height: 286px;
   min-height: 286px;
+  max-height: 286px;
+  flex-shrink: 0;
 }
 
 

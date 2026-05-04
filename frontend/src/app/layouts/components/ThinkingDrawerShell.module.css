@@ -14,13 +14,28 @@
   width: 720px;
   max-width: calc(100vw - 48px);
   height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
   overscroll-behavior: contain;
   background: #f9fafb;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
   z-index: 9999;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   animation: thinkingDrawerSlide 0.25s ease;
+}
+
+@supports (height: 100dvh) {
+  .drawer {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .drawerNewDemo {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
 }
 
 @keyframes thinkingDrawerFade {
@@ -73,6 +88,7 @@
 
 .body {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -130,6 +146,7 @@
   width: 80%;
   max-width: 1000px;
   height: 100vh;
+  max-height: 100vh;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), -24px 0 56px rgba(2, 12, 24, 0.46);
 }
 
