@@ -145,7 +145,7 @@ export function NewDemoLifecycleExpandedPanel({
 				</div>
 
 				<div className={styles.stagesNav}>
-					{stages.map((stage) => {
+					{[...stages].reverse().map((stage) => {
 						const isActive = legendOnly === stage.key
 						return (
 							<button
@@ -287,15 +287,15 @@ export function NewDemoLifecycleExpandedPanel({
 
 					<div className={styles.legendRow}>
 						<span className={styles.legendItem}>
-							История до {CURRENT_YEAR}
+							Фактический период
 							<i className={styles.legendLineBlue} />
 						</span>
 						<span className={styles.legendItem}>
-							Прогноз
+							Прогнозный период
 							<i className={styles.legendLineOrange} />
 						</span>
 						<span className={styles.legendItem}>
-							Прогноз
+							Граница факт-прогноз
 							<i className={styles.legendDashed} />
 						</span>
 					</div>

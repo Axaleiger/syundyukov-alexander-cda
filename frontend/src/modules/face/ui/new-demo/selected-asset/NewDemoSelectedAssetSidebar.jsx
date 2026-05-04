@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react"
-import { useRepositories } from "../../../../../app/providers/DataRepositoriesProvider"
+import { useState } from "react"
 import { useMergedAssetScenarioComparison } from "../../../../../widgets/right-panel/RightPanel/model/useMergedAssetScenarioComparison"
 import { ScenarioMetricRow } from "../../../../../widgets/right-panel/RightPanel/ScenarioMetricRow"
 import { STRATEGY_DECISIONS } from "../../../data/strategyDecisions"
@@ -8,13 +7,11 @@ import styles from "./NewDemoSelectedAssetSidebar.module.css"
 const TAB_KEYS = {
 	scenarios: "scenarios",
 	strategy: "strategy",
-	twins: "twins",
 }
 
 const TAB_ITEMS = [
 	{ key: TAB_KEYS.scenarios, label: "Сравнение сценариев развития актива" },
 	{ key: TAB_KEYS.strategy, label: "Контекст текущей стратегии" },
-	{ key: TAB_KEYS.twins, label: "Цифровые двойники" },
 ]
 
 export function NewDemoSelectedAssetSidebar({
@@ -26,14 +23,9 @@ export function NewDemoSelectedAssetSidebar({
 	onClose,
 	panelRef,
 }) {
-	const { mapGlobe } = useRepositories()
 	const { metricDefs: scenarioMetricDefs, comparison } = useMergedAssetScenarioComparison(assetId)
 	const [activeTab, setActiveTab] = useState(TAB_KEYS.scenarios)
 	const showAiDeltas = scenarioComparisonRevision > 0
-	const twinsChain = useMemo(() => {
-		const chains = mapGlobe.getChains()
-		return chains?.[assetId] || null
-	}, [mapGlobe, assetId])
 
 	const statusMark =
 		assetStatusIcon?.type === "check"
@@ -163,34 +155,6 @@ export function NewDemoSelectedAssetSidebar({
 									</article>
 								))}
 							</div>
-						</section>
-					) : null}
-
-					{activeTab === TAB_KEYS.twins ? (
-						<section className={styles.sectionRow}>
-							<p className={styles.sectionNote}>
-								Цепочка взаимосвязанных цифровых двойников выбранного актива
-							</p>
-							{twinsChain?.nodes?.length ? (
-								<>
-									<div className={styles.twinsMeta}>
-										<span>Узлов: {twinsChain.nodes.length}</span>
-										<span>Связей: {twinsChain.edges?.length || 0}</span>
-									</div>
-									<div className={styles.twinsList}>
-										{twinsChain.nodes.map((nodeName, index) => (
-											<div key={`${nodeName}-${index}`} className={styles.twinsItem}>
-												<span className={styles.twinsIndex}>{index + 1}</span>
-												<span>{nodeName}</span>
-											</div>
-										))}
-									</div>
-								</>
-							) : (
-								<p className={styles.emptyState}>
-									Для выбранного актива цепочка цифровых двойников пока не задана.
-								</p>
-							)}
 						</section>
 					) : null}
 				</div>
